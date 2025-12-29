@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام الحضور والانصراف الذكي</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .login-section, .main-section, .admin-section {
+            display: none;
+        }
+
+        .login-section.active, .main-section.active, .admin-section.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus, .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(17, 153, 142, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(235, 51, 73, 0.4);
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .user-info {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            text-align: center;
+        }
+
+        .user-info h2 {
+            font-size: 24px;
+            margin-bottom: 5px;
+        }
+
+        .user-info p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            border-right: 5px solid #667eea;
+        }
+
+        .status-card h3 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+
+        .status-card p {
+            color: #666;
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .status-card .time {
+            font-size: 24px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .location-info {
+            background: #e8f5e9;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            border-right: 4px solid #4caf50;
+        }
+
+        .location-info.invalid {
+            background: #ffebee;
+            border-right-color: #f44336;
+        }
+
+        .location-info p {
+            color: #333;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .alert {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .alert-success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .alert-danger {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .alert-warning {
+            background: #fff3cd;
+            color: #856404;
+            border: 1px solid #ffeeba;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading::after {
+            content: '';
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .records-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .record-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 10px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .record-item h4 {
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+
+        .record-item p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .stat-box h3 {
+            font-size: 32px;
+            margin-bottom: 5px;
+        }
+
+        .stat-box p {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .tab-buttons {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #667eea;
+            background: white;
+            color: #667eea;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .tab-btn:hover {
+            transform: translateY(-2px);
+        }
+
+        .export-section {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 15px;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                border-radius: 0;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⏰ نظام الحضور والانصراف الذكي</h1>
+            <p>نظام متقدم مع تتبع الموقع الجغرافي</p>
+        </div>
+
+        <div class="content">
+            <!-- Login Section -->
+            <div class="login-section active" id="loginSection">
+                <div class="form-group">
+                    <label>اختر نوع الدخول</label>
+                    <select id="userType" class="form-control">
+                        <option value="employee">موظف</option>
+                        <option value="admin">مدير النظام</option>
+                    </select>
+                </div>
+
+                <div id="employeeLogin">
+                    <div class="form-group">
+                        <label>رقم الموظف</label>
+                        <input type="text" id="employeeId" placeholder="أدخل رقم الموظف">
+                    </div>
+                    <div class="form-group">
+                        <label>الاسم الكامل</label>
+                        <input type="text" id="employeeName" placeholder="أدخل الاسم الكامل">
+                    </div>
+                    <div class="form-group">
+                        <label>القسم</label>
+                        <input type="text" id="employeeDepartment" placeholder="القسم أو الإدارة">
+                    </div>
+                </div>
+
+                <div id="adminLogin" style="display: none;">
+                    <div class="form-group">
+                        <label>اسم المستخدم</label>
+                        <input type="text" id="adminUsername" value="admin">
+                    </div>
+                    <div class="form-group">
+                        <label>كلمة المرور</label>
+                        <input type="password" id="adminPassword" value="admin123">
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="login()">تسجيل الدخول</button>
+                <div id="loginMessage"></div>
+            </div>
+
+            <!-- Main Employee Section -->
+            <div class="main-section" id="mainSection">
+                <div class="user-info">
+                    <h2 id="userName">مرحباً</h2>
+                    <p id="userDetails"></p>
+                </div>
+
+                <div class="status-card" id="statusCard">
+                    <h3>الحالة الحالية</h3>
+                    <p class="time" id="currentTime">--:--:--</p>
+                    <p id="statusText">لم يتم التسجيل بعد</p>
+                </div>
+
+                <div id="locationStatus" class="location-info" style="display: none;">
+                    <p><strong>📍 الموقع:</strong> <span id="locationText">جاري تحديد الموقع...</span></p>
+                    <p><strong>📏 المسافة من العمل:</strong> <span id="distanceText">--</span></p>
+                </div>
+
+                <button class="btn btn-success" id="checkInBtn" onclick="checkIn()">
+                    ✅ تسجيل حضور
+                </button>
+                <button class="btn btn-danger" id="checkOutBtn" onclick="checkOut()" style="display: none;">
+                    🚪 تسجيل انصراف
+                </button>
+
+                <button class="btn btn-secondary" onclick="viewMyRecords()">
+                    📊 سجلاتي
+                </button>
+                <button class="btn btn-secondary" onclick="logout()">
+                    🚪 تسجيل خروج
+                </button>
+
+                <div id="myRecordsSection" style="display: none; margin-top: 20px;">
+                    <h3 style="margin-bottom: 15px;">سجلات الحضور والانصراف</h3>
+                    <div id="myRecordsList" class="records-list"></div>
+                </div>
+            </div>
+
+            <!-- Admin Section -->
+            <div class="admin-section" id="adminSection">
+                <div class="user-info">
+                    <h2>👨‍💼 لوحة تحكم المدير</h2>
+                    <p>إدارة شاملة للحضور والانصراف</p>
+                </div>
+
+                <div class="stats-grid" id="statsGrid">
+                    <div class="stat-box">
+                        <h3 id="totalEmployees">0</h3>
+                        <p>إجمالي الموظفين</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3 id="presentToday">0</h3>
+                        <p>الحاضرون اليوم</p>
+                    </div>
+                    <div class="stat-box">
+                        <h3 id="totalRecords">0</h3>
+                        <p>إجمالي السجلات</p>
+                    </div>
+                </div>
+
+                <div class="tab-buttons">
+                    <button class="tab-btn active" onclick="showAdminTab('all')">كل السجلات</button>
+                    <button class="tab-btn" onclick="showAdminTab('today')">اليوم</button>
+                    <button class="tab-btn" onclick="showAdminTab('employees')">الموظفين</button>
+                </div>
+
+                <div class="export-section">
+                    <button class="btn btn-success" onclick="exportToExcel()">
+                        📥 تصدير إلى Excel
+                    </button>
+                </div>
+
+                <div id="adminRecordsList" class="records-list" style="margin-top: 20px;"></div>
+
+                <button class="btn btn-secondary" onclick="logout()" style="margin-top: 20px;">
+                    🚪 تسجيل خروج
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, push, get, query, orderByChild, equalTo, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFg_vrchXpE",
+            authDomain: "hedor-bea3c.firebaseapp.com",
+            databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
+            projectId: "hedor-bea3c",
+            storageBucket: "hedor-bea3c.firebasestorage.app",
+            messagingSenderId: "369239455736",
+            appId: "1:369239455736:web:116295854269abecf6480d",
+            measurementId: "G-R2MG1YKQEP"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+                // إعدادات الموقع الجغرافي لمقر العمل
+        const OFFICE_LOCATION = {
+            latitude: 31.193788059713373,  // موقعك الفعلي
+            longitude: 31.981236556896377, // موقعك الفعلي
+            maxDistance: 20 // المسافة المسموحة بالمتر (يمكنك تعديلها حسب الحاجة)
+        };
+
+
+        let currentUser = null;
+        let currentLocation = null;
+
+        // تحديث الوقت الحالي
+        function updateCurrentTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ar-EG');
+            const timeElement = document.getElementById('currentTime');
+            if (timeElement) {
+                timeElement.textContent = timeString;
+            }
+        }
+        setInterval(updateCurrentTime, 1000);
+
+        // حساب المسافة بين نقطتين
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // نصف قطر الأرض بالمتر
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                    Math.cos(φ1) * Math.cos(φ2) *
+                    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+            return R * c;
+        }
+
+        // الحصول على الموقع الحالي
+        function getCurrentLocation() {
+            return new Promise((resolve, reject) => {
+                if (!navigator.geolocation) {
+                    reject(new Error('المتصفح لا يدعم تحديد الموقع'));
+                    return;
+                }
+
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const location = {
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                            accuracy: position.coords.accuracy,
+                            timestamp: new Date().toISOString()
+                        };
+                        
+                        const distance = calculateDistance(
+                            location.latitude,
+                            location.longitude,
+                            OFFICE_LOCATION.latitude,
+                            OFFICE_LOCATION.longitude
+                        );
+                        
+                        location.distance = Math.round(distance);
+                        location.isValid = distance <= OFFICE_LOCATION.maxDistance;
+                        
+                        currentLocation = location;
+                        resolve(location);
+                    },
+                    (error) => {
+                        reject(error);
+                    },
+                    {
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
+                    }
+                );
+            });
+        }
+
+        // عرض معلومات الموقع
+        function displayLocationInfo(location) {
+            const locationStatus = document.getElementById('locationStatus');
+            const locationText = document.getElementById('locationText');
+            const distanceText = document.getElementById('distanceText');
+
+            locationStatus.style.display = 'block';
+            locationText.textContent = `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+            distanceText.textContent = `${location.distance} متر`;
+
+            if (location.isValid) {
+                locationStatus.className = 'location-info';
+                distanceText.textContent += ' ✅';
+            } else {
+                locationStatus.className = 'location-info invalid';
+                distanceText.textContent += ' ❌ (خارج النطاق المسموح)';
+            }
+        }
+
+        // تسجيل الدخول
+        window.login = async function() {
+            const userType = document.getElementById('userType').value;
+
+            if (userType === 'employee') {
+                const employeeId = document.getElementById('employeeId').value.trim();
+                const employeeName = document.getElementById('employeeName').value.trim();
+                const employeeDepartment = document.getElementById('employeeDepartment').value.trim();
+
+                if (!employeeId || !employeeName || !employeeDepartment) {
+                    showMessage('loginMessage', 'يرجى ملء جميع الحقول', 'danger');
+                    return;
+                }
+
+                currentUser = {
+                    type: 'employee',
+                    id: employeeId,
+                    name: employeeName,
+                    department: employeeDepartment
+                };
+
+                // حفظ بيانات الموظف
+                const employeeRef = ref(database, `employees/${employeeId}`);
+                await set(employeeRef, {
+                    name: employeeName,
+                    department: employeeDepartment,
+                    id: employeeId,
+                    lastLogin: new Date().toISOString()
+                });
+
+                showEmployeeSection();
+            } else {
+                const username = document.getElementById('adminUsername').value;
+                const password = document.getElementById('adminPassword').value;
+
+                if (username === 'admin' && password === 'admin123') {
+                    currentUser = {
+                        type: 'admin',
+                        name: 'المدير'
+                    };
+                    showAdminSection();
+                } else {
+                    showMessage('loginMessage', 'اسم المستخدم أو كلمة المرور غير صحيحة', 'danger');
+                }
+            }
+        };
+
+        // عرض قسم الموظف
+        async function showEmployeeSection() {
+            document.getElementById('loginSection').classList.remove('active');
+            document.getElementById('mainSection').classList.add('active');
+
+            document.getElementById('userName').textContent = `مرحباً، ${currentUser.name}`;
+            document.getElementById('userDetails').textContent = `${currentUser.department} - رقم: ${currentUser.id}`;
+
+            // الحصول على الموقع
+            try {
+                const location = await getCurrentLocation();
+                displayLocationInfo(location);
+            } catch (error) {
+                showMessage('locationStatus', `خطأ في تحديد الموقع: ${error.message}`, 'danger');
+            }
+
+            // تحديث الحالة
+            checkCurrentStatus();
+        }
+
+        // التحقق من الحالة الحالية
+        async function checkCurrentStatus() {
+            const today = new Date().toISOString().split('T')[0];
+            const recordsRef = ref(database, 'attendance');
+            const q = query(recordsRef, orderByChild('employeeId'), equalTo(currentUser.id));
+
+            const snapshot = await get(q);
+            let todayCheckIn = null;
+
+            snapshot.forEach((child) => {
+                const record = child.val();
+                if (record.date === today && record.type === 'checkin') {
+                    todayCheckIn = record;
+                }
+            });
+
+            if (todayCheckIn) {
+                document.getElementById('checkInBtn').style.display = 'none';
+                document.getElementById('checkOutBtn').style.display = 'block';
+                document.getElementById('statusText').textContent = `تم تسجيل الحضور في ${todayCheckIn.time}`;
+            } else {
+                document.getElementById('checkInBtn').style.display = 'block';
+                document.getElementById('checkOutBtn').style.display = 'none';
+            }
+        }
+
+        // تسجيل الحضور
+        window.checkIn = async function() {
+            try {
+                const location = await getCurrentLocation();
+                displayLocationInfo(location);
+
+                if (!location.isValid) {
+                    if (!confirm('أنت خارج النطاق المسموح للعمل. هل تريد المتابعة؟')) {
+                        return;
+                    }
+                }
+
+                const now = new Date();
+                const record = {
+                    employeeId: currentUser.id,
+                    employeeName: currentUser.name,
+                    department: currentUser.department,
+                    type: 'checkin',
+                    date: now.toISOString().split('T')[0],
+                    time: now.toLocaleTimeString('ar-EG'),
+                    timestamp: now.toISOString(),
+                    location: {
+                        latitude: location.latitude,
+                        longitude: location.longitude,
+                        distance: location.distance,
+                        isValid: location.isValid
+                    }
+                };
+
+                const newRecordRef = push(ref(database, 'attendance'));
+                await set(newRecordRef, record);
+
+                alert('✅ تم تسجيل الحضور بنجاح');
+                checkCurrentStatus();
+
+            } catch (error) {
+                alert(`خطأ: ${error.message}`);
+            }
+        };
+
+        // تسجيل الانصراف
+        window.checkOut = async function() {
+            try {
+                const location = await getCurrentLocation();
+                displayLocationInfo(location);
+
+                const now = new Date();
+                const record = {
+                    employeeId: currentUser.id,
+                    employeeName: currentUser.name,
+                    department: currentUser.department,
+                    type: 'checkout',
+                    date: now.toISOString().split('T')[0],
+                    time: now.toLocaleTimeString('ar-EG'),
+                    timestamp: now.toISOString(),
+                    location: {
+                        latitude: location.latitude,
+                        longitude: location.longitude,
+                        distance: location.distance,
+                        isValid: location.isValid
+                    }
+                };
+
+                const newRecordRef = push(ref(database, 'attendance'));
+                await set(newRecordRef, record);
+
+                alert('✅ تم تسجيل الانصراف بنجاح');
+                checkCurrentStatus();
+
+            } catch (error) {
+                alert(`خطأ: ${error.message}`);
+            }
+        };
+
+        // عرض سجلات الموظف
+        window.viewMyRecords = async function() {
+            const section = document.getElementById('myRecordsSection');
+            const list = document.getElementById('myRecordsList');
+
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                list.innerHTML = '<div class="loading"></div>';
+
+                const recordsRef = ref(database, 'attendance');
+                const q = query(recordsRef, orderByChild('employeeId'), equalTo(currentUser.id));
+                const snapshot = await get(q);
+
+                let html = '';
+                const records = [];
+
+                snapshot.forEach((child) => {
+                    records.push(child.val());
+                });
+
+                records.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+                if (records.length === 0) {
+                    html = '<p style="text-align: center; color: #999;">لا توجد سجلات</p>';
+                } else {
+                    records.forEach((record) => {
+                        const typeText = record.type === 'checkin' ? '✅ حضور' : '🚪 انصراف';
+                        const locationStatus = record.location.isValid ? '✅' : '❌';
+                        
+                        html += `
+                            <div class="record-item">
+                                <h4>${typeText} - ${record.date}</h4>
+                                <p>⏰ الوقت: ${record.time}</p>
+                                <p>📍 الموقع: ${locationStatus} ${record.location.distance} متر</p>
+                            </div>
+                        `;
+                    });
+                }
+
+                list.innerHTML = html;
+            } else {
+                section.style.display = 'none';
+            }
+        };
+
+        // عرض قسم المدير
+        function showAdminSection() {
+            document.getElementById('loginSection').classList.remove('active');
+            document.getElementById('adminSection').classList.add('active');
+            loadAdminDashboard();
+        }
+
+        // تحميل لوحة المدير
+        async function loadAdminDashboard() {
+            const recordsRef = ref(database, 'attendance');
+            const employeesRef = ref(database, 'employees');
+
+            const [recordsSnapshot, employeesSnapshot] = await Promise.all([
+                get(recordsRef),
+                get(employeesRef)
+            ]);
+
+            const records = [];
+            recordsSnapshot.forEach((child) => {
+                records.push({ id: child.key, ...child.val() });
+            });
+
+            const employees = [];
+            employeesSnapshot.forEach((child) => {
+                employees.push(child.val());
+            });
+
+            // الإحصائيات
+            const today = new Date().toISOString().split('T')[0];
+            const presentToday = new Set(
+                records.filter(r => r.date === today && r.type === 'checkin')
+                    .map(r => r.employeeId)
+            ).size;
+
+            document.getElementById('totalEmployees').textContent = employees.length;
+            document.getElementById('presentToday').textContent = presentToday;
+            document.getElementById('totalRecords').textContent = records.length;
+
+            // حفظ السجلات للتصدير
+            window.allRecords = records;
+            window.allEmployees = employees;
+
+            showAdminTab('today');
+        }
+
+        // عرض تبويب المدير
+        window.showAdminTab = function(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            const list = document.getElementById('adminRecordsList');
+            list.innerHTML = '<div class="loading"></div>';
+
+            const today = new Date().toISOString().split('T')[0];
+            let filteredRecords = [...window.allRecords];
+
+            if (tab === 'today') {
+                filteredRecords = filteredRecords.filter(r => r.date === today);
+            }
+
+            filteredRecords.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            let html = '';
+
+            if (tab === 'employees') {
+                window.allEmployees.forEach(emp => {
+                    const empRecords = window.allRecords.filter(r => r.employeeId === emp.id);
+                    html += `
+                        <div class="record-item">
+                            <h4>${emp.name}</h4>
+                            <p>🆔 الرقم: ${emp.id}</p>
+                            <p>🏢 القسم: ${emp.department}</p>
+                            <p>📊 عدد السجلات: ${empRecords.length}</p>
+                        </div>
+                    `;
+                });
+            } else {
+                filteredRecords.forEach(record => {
+                    const typeText = record.type === 'checkin' ? '✅ حضور' : '🚪 انصراف';
+                    const locationStatus = record.location.isValid ? '✅' : '❌';
+                    
+                    html += `
+                        <div class="record-item">
+                            <h4>${record.employeeName} - ${typeText}</h4>
+                            <p>📅 التاريخ: ${record.date}</p>
+                            <p>⏰ الوقت: ${record.time}</p>
+                            <p>🏢 القسم: ${record.department}</p>
+                            <p>📍 الموقع: ${locationStatus} ${record.location.distance} متر</p>
+                        </div>
+                    `;
+                });
+            }
+
+            if (html === '') {
+                html = '<p style="text-align: center; color: #999;">لا توجد سجلات</p>';
+            }
+
+            list.innerHTML = html;
+        };
+
+        // تصدير إلى Excel
+        window.exportToExcel = function() {
+            let csv = 'اسم الموظف,رقم الموظف,القسم,النوع,التاريخ,الوقت,المسافة,صحة الموقع\n';
+
+            window.allRecords.forEach(record => {
+                const type = record.type === 'checkin' ? 'حضور' : 'انصراف';
+                const locationValid = record.location.isValid ? 'صحيح' : 'خارج النطاق';
+                csv += `${record.employeeName},${record.employeeId},${record.department},${type},${record.date},${record.time},${record.location.distance},${locationValid}\n`;
+            });
+
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `attendance_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        };
+
+        // تسجيل الخروج
+        window.logout = function() {
+            currentUser = null;
+            currentLocation = null;
+            
+            document.getElementById('mainSection').classList.remove('active');
+            document.getElementById('adminSection').classList.remove('active');
+            document.getElementById('loginSection').classList.add('active');
+            
+            document.getElementById('employeeId').value = '';
+            document.getElementById('employeeName').value = '';
+            document.getElementById('employeeDepartment').value = '';
+        };
+
+        // عرض رسالة
+        function showMessage(elementId, message, type) {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            setTimeout(() => {
+                element.innerHTML = '';
+            }, 3000);
+        }
+
+        // تبديل نوع المستخدم
+        document.getElementById('userType').addEventListener('change', function() {
+            if (this.value === 'admin') {
+                document.getElementById('employeeLogin').style.display = 'none';
+                document.getElementById('adminLogin').style.display = 'block';
+            } else {
+                document.getElementById('employeeLogin').style.display = 'block';
+                document.getElementById('adminLogin').style.display = 'none';
+            }
+        });
+
+        // بدء تحديث الوقت
+        updateCurrentTime();
+    </script>
+</body>
+</html>
