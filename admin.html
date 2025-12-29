@@ -1,0 +1,1204 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#6366f1">
+    <title>📊 لوحة الإحصائيات</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --info: #3b82f6;
+            --dark: #1f2937;
+            --light: #f9fafb;
+            --shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+            --shadow-lg: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .dashboard-container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 40px;
+            border-radius: 25px;
+            margin-bottom: 30px;
+            box-shadow: var(--shadow-lg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .dashboard-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+            animation: rotate 20s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        .header-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .header-title h1 {
+            font-size: 36px;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .header-title p {
+            opacity: 0.9;
+            font-size: 16px;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: var(--shadow);
+        }
+
+        .btn-white {
+            background: white;
+            color: var(--primary);
+        }
+
+        .btn-white:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.2);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success), #059669);
+            color: white;
+        }
+
+        .btn-success:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger), #dc2626);
+            color: white;
+        }
+
+        .stats-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 5px;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+        }
+
+        .stat-card.success::before {
+            background: linear-gradient(90deg, var(--success), #059669);
+        }
+
+        .stat-card.warning::before {
+            background: linear-gradient(90deg, var(--warning), #d97706);
+        }
+
+        .stat-card.danger::before {
+            background: linear-gradient(90deg, var(--danger), #dc2626);
+        }
+
+        .stat-card.info::before {
+            background: linear-gradient(90deg, var(--info), #2563eb);
+        }
+
+        .stat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .stat-icon {
+            font-size: 48px;
+            opacity: 0.2;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            color: #6b7280;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 42px;
+            font-weight: bold;
+            color: var(--dark);
+            margin-bottom: 5px;
+        }
+
+        .stat-change {
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .stat-change.positive {
+            color: var(--success);
+        }
+
+        .stat-change.negative {
+            color: var(--danger);
+        }
+
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f3f4f6;
+        }
+
+        .card-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--dark);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 25px;
+            background: #f3f4f6;
+            padding: 5px;
+            border-radius: 12px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            color: #6b7280;
+        }
+
+        .tab.active {
+            background: white;
+            color: var(--primary);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .employee-list {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .employee-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            background: #f9fafb;
+            border-radius: 15px;
+            transition: all 0.3s;
+            border: 2px solid transparent;
+        }
+
+        .employee-item:hover {
+            background: white;
+            border-color: var(--primary);
+            box-shadow: var(--shadow);
+        }
+
+        .employee-avatar {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .employee-info {
+            flex: 1;
+        }
+
+        .employee-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: var(--dark);
+            margin-bottom: 3px;
+        }
+
+        .employee-details {
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        .employee-status {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 5px;
+        }
+
+        .badge {
+            padding: 6px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .badge-danger {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .badge-info {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .record-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .record-table thead {
+            background: #f9fafb;
+        }
+
+        .record-table th {
+            padding: 15px;
+            text-align: right;
+            font-size: 13px;
+            font-weight: 700;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .record-table td {
+            padding: 18px 15px;
+            border-bottom: 1px solid #f3f4f6;
+            font-size: 14px;
+            color: var(--dark);
+        }
+
+        .record-table tbody tr {
+            transition: all 0.3s;
+        }
+
+        .record-table tbody tr:hover {
+            background: #f9fafb;
+        }
+
+        .time-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 6px 12px;
+            background: #f3f4f6;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .filter-section {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .filter-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .filter-group select,
+        .filter-group input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+
+        .filter-group select:focus,
+        .filter-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #9ca3af;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+
+        .empty-state h3 {
+            font-size: 20px;
+            margin-bottom: 10px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f4f6;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .chart-container {
+            height: 300px;
+            margin-top: 20px;
+        }
+
+        .quick-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .quick-stat {
+            padding: 15px;
+            background: linear-gradient(135deg, #f9fafb, white);
+            border-radius: 12px;
+            border-right: 4px solid var(--primary);
+        }
+
+        .quick-stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .quick-stat-label {
+            font-size: 12px;
+            color: #6b7280;
+            font-weight: 600;
+        }
+
+        @media (max-width: 1024px) {
+            .content-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .stats-overview {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .dashboard-header {
+                padding: 25px;
+            }
+
+            .header-title h1 {
+                font-size: 24px;
+            }
+
+            .stats-overview {
+                grid-template-columns: 1fr;
+            }
+
+            .header-actions {
+                width: 100%;
+            }
+
+            .btn {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            backdrop-filter: blur(5px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+
+        .modal.show {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 40px;
+            border-radius: 25px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: var(--shadow-lg);
+            animation: modalSlideIn 0.3s ease;
+        }
+
+        @keyframes modalSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .modal-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .modal-icon {
+            font-size: 64px;
+            margin-bottom: 15px;
+        }
+
+        .modal-header h3 {
+            font-size: 26px;
+            color: var(--dark);
+            margin-bottom: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: var(--dark);
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .form-group input {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .form-actions .btn {
+            flex: 1;
+        }
+
+        .btn-outline {
+            background: white;
+            color: #6b7280;
+            border: 2px solid #e5e7eb;
+        }
+
+        .btn-outline:hover {
+            background: #f9fafb;
+            border-color: #d1d5db;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <div class="header-content">
+                <div class="header-title">
+                    <h1>📊 لوحة الإحصائيات المتقدمة</h1>
+                    <p id="currentDate">الثلاثاء، 30 ديسمبر 2025</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-white" onclick="showAddEmployeeModal()">
+                        👤 إضافة موظف
+                    </button>
+                    <button class="btn btn-success" onclick="exportData()">
+                        📥 تصدير Excel
+                    </button>
+                    <button class="btn btn-white" onclick="window.location.href='index.html'">
+                        🏠 العودة
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div class="stats-overview">
+            <div class="stat-card success">
+                <div class="stat-header">
+                    <div>
+                        <div class="stat-label">إجمالي الموظفين</div>
+                        <div class="stat-value" id="totalEmployees">0</div>
+                        <div class="stat-change positive">
+                            <span>↑</span> نشط
+                        </div>
+                    </div>
+                    <div class="stat-icon">👥</div>
+                </div>
+            </div>
+
+            <div class="stat-card info">
+                <div class="stat-header">
+                    <div>
+                        <div class="stat-label">الحاضرون اليوم</div>
+                        <div class="stat-value" id="presentToday">0</div>
+                        <div class="stat-change positive" id="presentChange">
+                            <span>↑</span> 0%
+                        </div>
+                    </div>
+                    <div class="stat-icon">✅</div>
+                </div>
+            </div>
+
+            <div class="stat-card warning">
+                <div class="stat-header">
+                    <div>
+                        <div class="stat-label">متوسط ساعات العمل</div>
+                        <div class="stat-value" id="avgWorkHours">0:00</div>
+                        <div class="stat-change">
+                            اليوم
+                        </div>
+                    </div>
+                    <div class="stat-icon">⏱️</div>
+                </div>
+            </div>
+
+            <div class="stat-card danger">
+                <div class="stat-header">
+                    <div>
+                        <div class="stat-label">إجمالي السجلات</div>
+                        <div class="stat-value" id="totalRecords">0</div>
+                        <div class="stat-change">
+                            جميع الأوقات
+                        </div>
+                    </div>
+                    <div class="stat-icon">📝</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="content-grid">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">📋 سجلات الحضور والانصراف</h2>
+                </div>
+
+                <div class="filter-section">
+                    <div class="filter-group">
+                        <label>الموظف</label>
+                        <select id="filterEmployee" onchange="filterRecords()">
+                            <option value="">جميع الموظفين</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label>التاريخ</label>
+                        <input type="date" id="filterDate" onchange="filterRecords()">
+                    </div>
+                    <div class="filter-group">
+                        <label>النوع</label>
+                        <select id="filterType" onchange="filterRecords()">
+                            <option value="">الكل</option>
+                            <option value="checkin">حضور</option>
+                            <option value="checkout">انصراف</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="tabs">
+                    <button class="tab active" onclick="switchTab('all')">الكل</button>
+                    <button class="tab" onclick="switchTab('today')">اليوم</button>
+                    <button class="tab" onclick="switchTab('week')">الأسبوع</button>
+                    <button class="tab" onclick="switchTab('month')">الشهر</button>
+                </div>
+
+                <div id="recordsContainer">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <p>جاري تحميل السجلات...</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="card-title">👥 الموظفين</h2>
+                </div>
+
+                <div class="quick-stats">
+                    <div class="quick-stat">
+                        <div class="quick-stat-value" id="activeEmployees">0</div>
+                        <div class="quick-stat-label">نشط الآن</div>
+                    </div>
+                    <div class="quick-stat">
+                        <div class="quick-stat-value" id="offlineEmployees">0</div>
+                        <div class="quick-stat-label">خارج العمل</div>
+                    </div>
+                </div>
+
+                <div id="employeeList" class="employee-list">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Employee Modal -->
+    <div class="modal" id="addEmployeeModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-icon">👤</div>
+                <h3>إضافة موظف جديد</h3>
+                <p style="color: #6b7280; font-size: 14px;">أدخل بيانات الموظف</p>
+            </div>
+            <form onsubmit="return addEmployee(event)">
+                <div class="form-group">
+                    <label>رقم الموظف</label>
+                    <input type="text" id="newEmployeeId" placeholder="مثال: EMP001" required>
+                </div>
+                <div class="form-group">
+                    <label>الاسم الكامل</label>
+                    <input type="text" id="newEmployeeName" placeholder="أدخل الاسم الكامل" required>
+                </div>
+                <div class="form-group">
+                    <label>القسم</label>
+                    <input type="text" id="newEmployeeDepartment" placeholder="مثال: المبيعات" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn btn-outline" onclick="closeAddEmployeeModal()">
+                        إلغاء
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        ✅ إضافة
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js';
+        import { getDatabase, ref, set, push, get, query, orderByChild, onValue } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js';
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFg_vrchXpE",
+            authDomain: "hedor-bea3c.firebaseapp.com",
+            databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
+            projectId: "hedor-bea3c",
+            storageBucket: "hedor-bea3c.firebasestorage.app",
+            messagingSenderId: "369239455736",
+            appId: "1:369239455736:web:116295854269abecf6480d",
+            measurementId: "G-R2MG1YKQEP"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const database = getDatabase(app);
+
+        let allRecords = [];
+        let allEmployees = [];
+        let currentFilter = 'all';
+
+        // تحديث التاريخ
+        function updateDate() {
+            const now = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('ar-EG', options);
+        }
+        updateDate();
+
+        // تحميل البيانات
+        async function loadData() {
+            const recordsRef = ref(database, 'attendance');
+            const employeesRef = ref(database, 'employees');
+
+            onValue(recordsRef, (snapshot) => {
+                allRecords = [];
+                snapshot.forEach((child) => {
+                    allRecords.push({ id: child.key, ...child.val() });
+                });
+                allRecords.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                updateStats();
+                displayRecords();
+            });
+
+            onValue(employeesRef, (snapshot) => {
+                allEmployees = [];
+                snapshot.forEach((child) => {
+                    allEmployees.push(child.val());
+                });
+                displayEmployees();
+                updateEmployeeFilter();
+            });
+        }
+
+        // تحديث الإحصائيات
+        function updateStats() {
+            const today = new Date().toISOString().split('T')[0];
+            const todayRecords = allRecords.filter(r => r.date === today);
+            
+            const uniqueEmployeesToday = new Set(todayRecords.filter(r => r.type === 'checkin').map(r => r.employeeId));
+            
+            // حساب متوسط ساعات العمل
+            const employeeWorkHours = {};
+            todayRecords.forEach(record => {
+                if (!employeeWorkHours[record.employeeId]) {
+                    employeeWorkHours[record.employeeId] = { checkins: [], checkouts: [] };
+                }
+                if (record.type === 'checkin') {
+                    employeeWorkHours[record.employeeId].checkins.push(new Date(record.timestamp));
+                } else {
+                    employeeWorkHours[record.employeeId].checkouts.push(new Date(record.timestamp));
+                }
+            });
+
+            let totalWorkMinutes = 0;
+            let employeeCount = 0;
+            
+            Object.values(employeeWorkHours).forEach(emp => {
+                const checkins = emp.checkins.sort((a, b) => a - b);
+                const checkouts = emp.checkouts.sort((a, b) => a - b);
+                
+                for (let i = 0; i < Math.min(checkins.length, checkouts.length); i++) {
+                    totalWorkMinutes += (checkouts[i] - checkins[i]) / 1000 / 60;
+                }
+                
+                // إذا كان هناك حضور بدون انصراف، احسب حتى الآن
+                if (checkins.length > checkouts.length) {
+                    totalWorkMinutes += (new Date() - checkins[checkins.length - 1]) / 1000 / 60;
+                }
+                
+                employeeCount++;
+            });
+
+            const avgMinutes = employeeCount > 0 ? totalWorkMinutes / employeeCount : 0;
+            const avgHours = Math.floor(avgMinutes / 60);
+            const avgMins = Math.floor(avgMinutes % 60);
+
+            document.getElementById('totalEmployees').textContent = allEmployees.length;
+            document.getElementById('presentToday').textContent = uniqueEmployeesToday.size;
+            document.getElementById('avgWorkHours').textContent = `${avgHours}:${avgMins.toString().padStart(2, '0')}`;
+            document.getElementById('totalRecords').textContent = allRecords.length;
+
+            const percentage = allEmployees.length > 0 ? Math.round((uniqueEmployeesToday.size / allEmployees.length) * 100) : 0;
+            document.getElementById('presentChange').innerHTML = `<span>↑</span> ${percentage}%`;
+        }
+
+        // عرض السجلات
+        function displayRecords() {
+            const container = document.getElementById('recordsContainer');
+            let filteredRecords = getFilteredRecords();
+
+            if (filteredRecords.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">📋</div>
+                        <h3>لا توجد سجلات</h3>
+                        <p>لم يتم العثور على سجلات حضور وانصراف</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = `
+                <table class="record-table">
+                    <thead>
+                        <tr>
+                            <th>الموظف</th>
+                            <th>القسم</th>
+                            <th>النوع</th>
+                            <th>التاريخ</th>
+                            <th>الوقت</th>
+                            <th>الموقع</th>
+                            <th>المسافة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+
+            filteredRecords.forEach(record => {
+                const typeIcon = record.type === 'checkin' ? '✅' : '🚪';
+                const typeText = record.type === 'checkin' ? 'حضور' : 'انصراف';
+                const typeBadge = record.type === 'checkin' ? 'badge-success' : 'badge-danger';
+                const locationBadge = record.location.isValid ? 'badge-success' : 'badge-danger';
+                const locationText = record.location.isValid ? '✅ صحيح' : '❌ خارج النطاق';
+
+                html += `
+                    <tr>
+                        <td><strong>${record.employeeName}</strong><br><small style="color: #9ca3af;">${record.employeeId}</small></td>
+                        <td>${record.department}</td>
+                        <td><span class="badge ${typeBadge}">${typeIcon} ${typeText}</span></td>
+                        <td>${record.date}</td>
+                        <td><span class="time-badge">⏰ ${record.time}</span></td>
+                        <td><span class="badge ${locationBadge}">${locationText}</span></td>
+                        <td>${record.location.distance} متر</td>
+                    </tr>
+                `;
+            });
+
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        // الفلترة
+        function getFilteredRecords() {
+            let filtered = [...allRecords];
+
+            // فلتر حسب الوقت
+            const today = new Date().toISOString().split('T')[0];
+            const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+            if (currentFilter === 'today') {
+                filtered = filtered.filter(r => r.date === today);
+            } else if (currentFilter === 'week') {
+                filtered = filtered.filter(r => r.date >= weekAgo);
+            } else if (currentFilter === 'month') {
+                filtered = filtered.filter(r => r.date >= monthAgo);
+            }
+
+            // فلتر حسب الموظف
+            const employeeFilter = document.getElementById('filterEmployee').value;
+            if (employeeFilter) {
+                filtered = filtered.filter(r => r.employeeId === employeeFilter);
+            }
+
+            // فلتر حسب التاريخ
+            const dateFilter = document.getElementById('filterDate').value;
+            if (dateFilter) {
+                filtered = filtered.filter(r => r.date === dateFilter);
+            }
+
+            // فلتر حسب النوع
+            const typeFilter = document.getElementById('filterType').value;
+            if (typeFilter) {
+                filtered = filtered.filter(r => r.type === typeFilter);
+            }
+
+            return filtered;
+        }
+
+        window.switchTab = function(tab) {
+            currentFilter = tab;
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            event.target.classList.add('active');
+            displayRecords();
+        };
+
+        window.filterRecords = function() {
+            displayRecords();
+        };
+
+        // عرض الموظفين
+        function displayEmployees() {
+            const container = document.getElementById('employeeList');
+            const today = new Date().toISOString().split('T')[0];
+            
+            let activeCount = 0;
+            let offlineCount = 0;
+
+            if (allEmployees.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-state-icon">👥</div>
+                        <p>لا يوجد موظفين</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '';
+
+            allEmployees.forEach(emp => {
+                const empRecords = allRecords.filter(r => r.employeeId === emp.id && r.date === today);
+                empRecords.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                const lastRecord = empRecords[0];
+                const isActive = lastRecord && lastRecord.type === 'checkin';
+                
+                if (isActive) activeCount++;
+                else offlineCount++;
+
+                const statusBadge = isActive ? 'badge-success' : 'badge-danger';
+                const statusText = isActive ? '🟢 نشط' : '🔴 خارج العمل';
+                const lastTime = lastRecord ? lastRecord.time : '-';
+
+                // حساب ساعات العمل اليوم
+                let workMinutes = 0;
+                for (let i = 0; i < empRecords.length - 1; i += 2) {
+                    if (empRecords[i].type === 'checkout' && empRecords[i + 1].type === 'checkin') {
+                        const checkout = new Date(empRecords[i].timestamp);
+                        const checkin = new Date(empRecords[i + 1].timestamp);
+                        workMinutes += (checkout - checkin) / 1000 / 60;
+                    }
+                }
+
+                if (isActive && lastRecord) {
+                    const now = new Date();
+                    const checkin = new Date(lastRecord.timestamp);
+                    workMinutes += (now - checkin) / 1000 / 60;
+                }
+
+                const workHours = Math.floor(workMinutes / 60);
+                const workMins = Math.floor(workMinutes % 60);
+
+                html += `
+                    <div class="employee-item">
+                        <div class="employee-avatar">${emp.name.charAt(0)}</div>
+                        <div class="employee-info">
+                            <div class="employee-name">${emp.name}</div>
+                            <div class="employee-details">${emp.department} • ${emp.id}</div>
+                            <div class="employee-details" style="margin-top: 5px;">⏱️ ${workHours}:${workMins.toString().padStart(2, '0')} ساعة اليوم</div>
+                        </div>
+                        <div class="employee-status">
+                            <span class="badge ${statusBadge}">${statusText}</span>
+                            <span style="font-size: 12px; color: #9ca3af;">${lastTime}</span>
+                        </div>
+                    </div>
+                `;
+            });
+
+            container.innerHTML = html;
+            document.getElementById('activeEmployees').textContent = activeCount;
+            document.getElementById('offlineEmployees').textContent = offlineCount;
+        }
+
+        // تحديث قائمة الموظفين في الفلتر
+        function updateEmployeeFilter() {
+            const select = document.getElementById('filterEmployee');
+            let html = '<option value="">جميع الموظفين</option>';
+            
+            allEmployees.forEach(emp => {
+                html += `<option value="${emp.id}">${emp.name} (${emp.id})</option>`;
+            });
+            
+            select.innerHTML = html;
+        }
+
+        // إضافة موظف
+        window.showAddEmployeeModal = function() {
+            document.getElementById('addEmployeeModal').classList.add('show');
+        };
+
+        window.closeAddEmployeeModal = function() {
+            document.getElementById('addEmployeeModal').classList.remove('show');
+        };
+
+        window.addEmployee = async function(event) {
+            event.preventDefault();
+            
+            const id = document.getElementById('newEmployeeId').value.trim();
+            const name = document.getElementById('newEmployeeName').value.trim();
+            const department = document.getElementById('newEmployeeDepartment').value.trim();
+
+            if (!id || !name || !department) {
+                alert('يرجى ملء جميع الحقول');
+                return false;
+            }
+
+            // التحقق من عدم تكرار الرقم
+            if (allEmployees.some(emp => emp.id === id)) {
+                alert('رقم الموظف موجود بالفعل');
+                return false;
+            }
+
+            await set(ref(database, `employees/${id}`), {
+                id: id,
+                name: name,
+                department: department,
+                createdAt: new Date().toISOString()
+            });
+
+            alert('✅ تم إضافة الموظف بنجاح');
+            closeAddEmployeeModal();
+            
+            // إعادة تعيين النموذج
+            document.getElementById('newEmployeeId').value = '';
+            document.getElementById('newEmployeeName').value = '';
+            document.getElementById('newEmployeeDepartment').value = '';
+            
+            return false;
+        };
+
+        // تصدير البيانات
+        window.exportData = function() {
+            let csv = '\ufeffالموظف,رقم الموظف,القسم,النوع,التاريخ,الوقت,الموقع صحيح,المسافة\n';
+
+            allRecords.forEach(record => {
+                const type = record.type === 'checkin' ? 'حضور' : 'انصراف';
+                const locationValid = record.location.isValid ? 'نعم' : 'لا';
+                csv += `${record.employeeName},${record.employeeId},${record.department},${type},${record.date},${record.time},${locationValid},${record.location.distance}\n`;
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `attendance_report_${new Date().toISOString().split('T')[0]}.csv`;
+            link.click();
+        };
+
+        // تحميل البيانات عند بدء الصفحة
+        loadData();
+    </script>
+</body>
+</html>
