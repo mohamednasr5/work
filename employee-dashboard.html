@@ -1,35 +1,1101 @@
-{
-  "settings": {
-    "workLocation": {
-      "lat": 24.7136,
-      "lng": 46.6753,
-      "radius": 20
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes" />
+  <title>نظام إدارة المنزلة (النسخة النهائية - بحث ذكي)</title>
+  
+  <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --glass: rgba(255, 255, 255, 0.98);
+      --primary: #2563eb;   
+      --secondary: #059669; 
+      --danger: #dc2626;    
+      --accent: #d97706;    
+      --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+      --radius: 12px;
     }
-  },
-  "employees": {
-    "emp_001": {
-      "name": "أحمد محمد",
-      "department": "المبيعات",
-      "hireDate": "2023-01-15",
-      "password": "123456"  // سيتم تشفيرها لاحقاً
-    },
-    "emp_002": {
-      "name": "سارة خالد",
-      "department": "التسويق", 
-      "hireDate": "2023-03-20",
-      "password": "654321"
+
+    * { box-sizing: border-box; outline: none; }
+    body { margin: 0; padding: 15px; font-family: 'Tajawal', sans-serif; background: var(--bg); color: #1e293b; }
+
+    /* === Header === */
+    .header {
+      background: var(--glass); padding: 15px 20px; border-radius: var(--radius);
+      box-shadow: var(--shadow); margin-bottom: 20px; border: 1px solid white;
+      display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 15px;
     }
-  },
-  "attendance": {
-    "emp_001": {
-      "1738321200000": {
-        "state": "IN",
-        "timestamp": 1738321200000,
-        "location": {
-          "lat": 24.7135,
-          "lng": 46.6752
+    
+    .auth-section {
+      display: flex; align-items: center; gap: 10px; padding: 8px 15px;
+      background: #f1f5f9; border-radius: 50px;
+    }
+    .user-info {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .user-avatar {
+      width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--primary);
+    }
+    .btn-logout {
+      background: var(--danger); color: white; border: none; padding: 5px 12px;
+      border-radius: 20px; cursor: pointer; font-family: inherit; font-size: 0.85rem;
+    }
+    
+    .search-wrapper {
+      flex: 1; max-width: 500px; display: flex; align-items: center;
+      background: #f1f5f9; border-radius: 50px; padding: 5px 15px;
+      border: 2px solid transparent; transition: 0.3s;
+    }
+    .search-wrapper:focus-within { border-color: var(--primary); background: white; }
+    .search-input { border: none; background: transparent; flex: 1; padding: 8px; font-family: inherit; font-size: 1rem; }
+    
+    .btn {
+      padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer;
+      font-weight: 700; color: white; display: inline-flex; align-items: center; gap: 8px;
+      transition: 0.2s; font-family: inherit;
+    }
+    .btn:hover { transform: translateY(-2px); opacity: 0.9; }
+    .btn-blue { background: var(--primary); }
+    .btn-green { background: var(--secondary); }
+    .btn-purple { background: #7c3aed; }
+    .btn-dark { background: #334155; }
+
+    /* === Grid === */
+    .grid {
+      display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 15px;
+      height: calc(100vh - 100px);
+    }
+    @media (max-width: 1000px) { .grid { grid-template-columns: 1fr; height: auto; } }
+
+    .card {
+      background: var(--glass); border-radius: var(--radius); padding: 15px;
+      box-shadow: var(--shadow); border: 1px solid white; display: flex; flex-direction: column;
+      height: 100%;
+    }
+    .card-head {
+      font-weight: 800; font-size: 1.1rem; border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 10px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .scroll { flex: 1; overflow-y: auto; padding: 2px; }
+
+    /* === Items === */
+    .item {
+      background: white; padding: 12px; margin-bottom: 8px; border-radius: 8px;
+      border: 1px solid #e2e8f0; cursor: pointer; transition: 0.2s;
+      border-right: 4px solid transparent;
+    }
+    .item:hover { transform: translateX(-3px); }
+    .item.selected { background: #eff6ff; border-color: #bfdbfe; }
+    
+    .lvl-1 { border-right-color: var(--primary); }
+    .lvl-2 { border-right-color: var(--secondary); }
+    .lvl-3 { border-right-color: var(--accent); }
+
+    .item-top { display: flex; justify-content: space-between; align-items: center; }
+    
+    .stats-container { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+    
+    .badge { 
+      font-size: 0.7rem; padding: 3px 8px; border-radius: 6px; font-weight: bold; 
+      display: flex; align-items: center; gap: 4px; border: 1px solid transparent;
+    }
+    .badge.count { background: #f1f5f9; color: #475569; border-color: #e2e8f0; } 
+    .badge.red { background: #fef2f2; color: #dc2626; border-color: #fecaca; }   
+    .badge.green { background: #f0fdf4; color: #16a34a; border-color: #bbf7d0; } 
+    
+    .actions { display: flex; gap: 5px; margin-top: 8px; justify-content: flex-end; opacity: 0.5; }
+    .item:hover .actions { opacity: 1; }
+    .icon-btn { width: 24px; height: 24px; border-radius: 4px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .ib-edit { background: #dbeafe; color: var(--primary); }
+    .ib-del { background: #fee2e2; color: var(--danger); }
+
+    /* === Details === */
+    .details-sec {
+      margin-top: 15px; border-top: 2px dashed #cbd5e1; padding-top: 10px;
+      background: #f8fafc; padding: 10px; border-radius: 8px; flex-shrink: 0;
+    }
+    .det-row {
+      background: white; padding: 10px; border-radius: 6px; margin-bottom: 5px;
+      border: 1px solid #e2e8f0; font-size: 0.95rem; display: flex; justify-content: space-between;
+    }
+    
+    .text-issue { color: #dc2626; font-weight: bold; }
+    .text-plan { color: #16a34a; font-weight: bold; }
+    .visit-tag { background: #e0e7ff; color: var(--primary); font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; font-weight: bold; }
+
+    /* === Search Highlight === */
+    .highlight {
+      background-color: #fef3c7;
+      padding: 0 2px;
+      border-radius: 3px;
+      font-weight: bold;
+      color: #92400e;
+    }
+
+    /* === Login Screen === */
+    .login-screen {
+      position: fixed; inset: 0; background: linear-gradient(135deg, var(--primary), var(--secondary));
+      display: flex; align-items: center; justify-content: center; z-index: 10000;
+    }
+    .login-box {
+      background: white; padding: 40px; border-radius: 20px; text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 400px;
+    }
+    .login-box h2 { color: var(--primary); margin-bottom: 10px; }
+    .login-box p { color: #64748b; margin-bottom: 30px; }
+    .btn-github {
+      background: #24292e; color: white; padding: 12px 24px; border: none;
+      border-radius: 8px; cursor: pointer; font-size: 1rem; font-weight: bold;
+      display: inline-flex; align-items: center; gap: 10px; font-family: inherit;
+    }
+    .btn-github:hover { background: #1a1f24; }
+
+    /* === Print === */
+    #printArea { display: none; }
+    @media print {
+      body * { visibility: hidden; }
+      #printArea, #printArea * { visibility: visible; }
+      #printArea { position: absolute; left: 0; top: 0; width: 100%; display: block; background: white; color: black; padding: 20px; direction: rtl; }
+      .p-page { page-break-after: always; margin-bottom: 20px; border-bottom: 1px dashed #000; }
+      .p-title { text-align: center; border-bottom: 2px solid black; padding-bottom: 10px; margin-bottom: 20px; }
+      
+      .print-red { color: #dc2626 !important; font-weight: bold; -webkit-print-color-adjust: exact; }
+      .print-green { color: #16a34a !important; font-weight: bold; -webkit-print-color-adjust: exact; }
+      .print-blue { color: #2563eb !important; -webkit-print-color-adjust: exact; }
+
+      ul { margin: 2px 0; padding-right: 15px; list-style-type: square; }
+      li { margin-bottom: 2px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11pt; }
+      th, td { border: 1px solid #000; padding: 6px; text-align: right; vertical-align: top; }
+      th { background: #f0f0f0 !important; font-weight: bold; }
+    }
+
+    /* === Modal & PPT === */
+    .modal-ov { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: none; align-items: center; justify-content: center; z-index: 9999; }
+    .modal-box { background: white; padding: 25px; border-radius: 12px; width: 90%; max-width: 400px; }
+    .inp { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 10px; font-family: inherit; }
+    
+    .ppt-ov { position: fixed; inset: 0; background: #1e293b; display: none; flex-direction: column; z-index: 9999; }
+    .ppt-card { background: white; width: 90%; height: 80vh; margin: auto; border-radius: 20px; padding: 40px; overflow-y: auto; font-size: 1.2rem; }
+    .ppt-h { color: var(--primary); font-size: 1.8rem; border-bottom: 3px solid #eee; padding-bottom: 10px; margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+
+<div id="loginScreen" class="login-screen">
+  <div class="login-box animate__animated animate__zoomIn">
+    <h2>🔐 نظام إدارة المنزلة</h2>
+    <p>يرجى تسجيل الدخول للمتابعة</p>
+    <button class="btn-github" id="githubLoginBtn">
+      <i class="fab fa-github"></i>
+      تسجيل الدخول بـ GitHub
+    </button>
+  </div>
+</div>
+
+<div id="mainApp" style="display:none">
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
+  import { getDatabase, ref, set, get, remove, push, update } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+  import { getAuth, GithubAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyDqwVpiB_jrnWek_Pemns7hI7aUgMQOHas",
+    authDomain: "twap-59d3e.firebaseapp.com",
+    databaseURL: "https://twap-59d3e-default-rtdb.firebaseio.com",
+    projectId: "twap-59d3e",
+    storageBucket: "twap-59d3e.firebasestorage.app",
+    messagingSenderId: "193674884546",
+    appId: "1:193674884546:web:ca5a7aee2fcb4361d6925b",
+    measurementId: "G-WX3X03B2KV"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+  const auth = getAuth(app);
+  const githubProvider = new GithubAuthProvider();
+
+  // تصدير المتغيرات للنطاق العام
+  window.db = db; 
+  window.ref = ref; 
+  window.set = set; 
+  window.get = get; 
+  window.remove = remove; 
+  window.push = push; 
+  window.update = update;
+  window.auth = auth;
+  window.githubProvider = githubProvider;
+  window.signInWithPopup = signInWithPopup;
+  window.signOut = signOut;
+  window.currentUser = null;
+
+  // دالة تسجيل الدخول
+  window.signInWithGitHub = function() {
+    signInWithPopup(auth, githubProvider)
+      .then((result) => {
+        const user = result.user;
+        console.log('تم تسجيل الدخول:', user);
+        const credential = GithubAuthProvider.credentialFromResult(result);
+        const token = credential.accessToken;
+        console.log('GitHub Access Token:', token);
+      })
+      .catch((error) => {
+        console.error('خطأ في تسجيل الدخول:', error);
+        alert('فشل تسجيل الدخول: ' + error.message);
+      });
+  };
+
+  // دالة تسجيل الخروج
+  window.signOutUser = function() {
+    if(confirm('هل تريد تسجيل الخروج؟')) {
+      signOut(auth).then(() => {
+        console.log('تم تسجيل الخروج');
+      }).catch((error) => {
+        console.error('خطأ في تسجيل الخروج:', error);
+      });
+    }
+  };
+
+  // مراقبة حالة المصادقة
+  onAuthStateChanged(auth, (user) => {
+    if (user) {
+      window.currentUser = user;
+      document.getElementById('loginScreen').style.display = 'none';
+      document.getElementById('mainApp').style.display = 'block';
+      updateUserUI(user);
+      window.dispatchEvent(new Event('firebaseLoaded'));
+    } else {
+      window.currentUser = null;
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('mainApp').style.display = 'none';
+    }
+  });
+
+  // تحديث واجهة المستخدم
+  function updateUserUI(user) {
+    const userSection = document.getElementById('userSection');
+    const photoURL = user.photoURL || 'https://via.placeholder.com/32';
+    const displayName = user.displayName || user.email || 'مستخدم';
+    
+    userSection.innerHTML = `
+      <div class="user-info">
+        <img src="${photoURL}" alt="User" class="user-avatar" />
+        <span style="font-weight:bold; font-size:0.9rem">${displayName}</span>
+      </div>
+      <button class="btn-logout" onclick="signOutUser()">
+        <i class="fas fa-sign-out-alt"></i> خروج
+      </button>
+    `;
+  }
+
+  // ربط زر تسجيل الدخول
+  document.getElementById('githubLoginBtn').addEventListener('click', window.signInWithGitHub);
+</script>
+
+<div class="modal-ov" id="modal">
+  <div class="modal-box animate__animated animate__zoomIn">
+    <h3 id="mTitle" style="text-align:center; margin-bottom:15px;"></h3>
+    <div id="mBody"></div>
+  </div>
+</div>
+
+<div class="ppt-ov" id="ppt">
+  <div id="pptContent"></div>
+  <div style="text-align:center; padding:15px;">
+    <button class="btn btn-dark" onclick="slide(-1)">السابق</button>
+    <button class="btn btn-blue" onclick="slide(1)">التالي</button>
+    <button class="btn btn-dark" style="background:#dc2626" onclick="document.getElementById('ppt').style.display='none'">خروج</button>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<div class="header">
+  <div>
+    <h1 style="margin:0; color:#1e293b">نظام إدارة المنزلة</h1>
+    <small style="color:#64748b">بحث شامل | طباعة ملونة</small>
+  </div>
+  
+  <div class="auth-section" id="userSection"></div>
+  
+  <div class="search-wrapper">
+    <input id="search" class="search-input" placeholder="بحث شامل (مناطق، قرى، مشاكل، خطط)..." oninput="doSearch(this.value)">
+    <i class="fas fa-microphone" style="cursor:pointer; color:var(--primary)" onclick="startVoice()"></i>
+  </div>
+  <div style="display:flex; gap:10px; flex-wrap:wrap">
+    <button class="btn btn-blue" onclick="openM('addMain')">+ منطقة</button>
+    <button class="btn btn-purple" onclick="ppt()">عرض</button>
+    <button class="btn btn-green" onclick="printR('curr')">طباعة المحدد</button>
+    <button class="btn btn-dark" onclick="printR('all')">طباعة الكل</button>
+  </div>
+</div>
+
+<div class="grid">
+  <div class="card">
+    <div class="card-head">
+      <span style="color:var(--primary)">المناطق الرئيسية</span>
+      <span id="cMain" style="background:#dbeafe; padding:2px 8px; border-radius:10px; font-size:0.8rem">0</span>
+    </div>
+    <div class="scroll" id="lMain">جاري التحميل...</div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span id="tMid" style="color:var(--secondary)">القرى / التوابع</span>
+      <button class="icon-btn ib-edit" onclick="openM('addMid')">+</button>
+    </div>
+    <div class="scroll" id="lMid"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-head">
+      <span style="color:var(--accent)">التوابع والمتابعة</span>
+    </div>
+    <div style="flex:1; display:flex; flex-direction:column; min-height:150px;">
+        <div style="display:flex; justify-content:space-between; margin-bottom:5px;">
+           <small style="font-weight:bold; color:#64748b">توابع القرية</small>
+           <button class="icon-btn ib-edit" onclick="openM('addSub')">+</button>
+        </div>
+        <div class="scroll" id="lSub" style="background:white; border-radius:8px; border:1px solid #f1f5f9; padding:5px;"></div>
+    </div>
+    
+    <div class="details-sec">
+        <div id="dTarget" style="text-align:center; font-weight:bold; margin-bottom:10px;">لم يتم التحديد</div>
+        <div style="max-height:300px; overflow-y:auto;">
+            <div style="margin-bottom:10px;">
+               <div style="display:flex; justify-content:space-between; color:var(--primary); font-weight:bold; margin-bottom:5px;">
+                  <span>الزيارات</span> <button class="icon-btn ib-edit" onclick="openM('addVisit')">+</button>
+               </div>
+               <div id="dVisits"></div>
+            </div>
+            <div style="margin-bottom:10px;">
+               <div style="display:flex; justify-content:space-between; color:var(--danger); font-weight:bold; margin-bottom:5px;">
+                  <span>المشاكل</span> <button class="icon-btn ib-del" onclick="openM('addIssue')">+</button>
+               </div>
+               <div id="dIssues"></div>
+            </div>
+            <div>
+               <div style="display:flex; justify-content:space-between; color:var(--secondary); font-weight:bold; margin-bottom:5px;">
+                  <span>إقتراحات حياة كريمة</span> <button class="icon-btn ib-edit" onclick="openM('addPlan')">+</button>
+               </div>
+               <div id="dPlans"></div>
+            </div>
+        </div>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+let allData = [], filtered = [];
+let sel = { main:null, mid:null, sub:null, lvl:'none', name:'' };
+let searchQuery = ''; // تخزين الاستعلام الحالي للبحث
+
+window.addEventListener('firebaseLoaded', loadData);
+
+function loadData() {
+  const dbRef = window.ref(window.db, 'mainAreas');
+  window.get(dbRef).then(snap => {
+    if(snap.exists()) {
+      const v = snap.val();
+      allData = Object.keys(v).map(k => ({id:k, ...v[k]}));
+      filtered = allData;
+      renderMain();
+      renderMid();
+      renderSub();
+      renderDet();
+      if(sel.main) restore();
+    } else {
+      allData = []; filtered = []; renderMain();
+    }
+  }).catch(e => {
+      document.getElementById('lMain').innerHTML = '<div style="color:red; text-align:center">خطأ في الاتصال</div>';
+      console.error(e);
+  });
+}
+
+function restore() {
+    selectMain(sel.main);
+    if(sel.mid) selectMid(sel.mid);
+    if(sel.sub) selectSub(sel.sub);
+}
+
+function getStats(item) {
+    let i = (item.details?.issues || []).length;
+    let p = (item.details?.plans || []).length;
+    if (item.subAreas) {
+        Object.values(item.subAreas).forEach(s => { i += (s.details?.issues || []).length; p += (s.details?.plans || []).length; });
+    }
+    if (item.villages) {
+        Object.values(item.villages).forEach(v => {
+            i += (v.details?.issues || []).length; p += (v.details?.plans || []).length;
+            if(v.subAreas) Object.values(v.subAreas).forEach(s => { i += (s.details?.issues || []).length; p += (s.details?.plans || []).length; });
+        });
+    }
+    if (item.directSubAreas) {
+         Object.values(item.directSubAreas).forEach(s => { i += (s.details?.issues || []).length; p += (s.details?.plans || []).length; });
+    }
+    return {i, p};
+}
+
+// دالة التطبيع الذكية للبحث
+function normalizeForSearch(text) {
+    if(!text) return "";
+    
+    return text.toString()
+        .toLowerCase()
+        .trim()
+        // تجاهل الهمزات والأشكال المختلفة للألف
+        .replace(/[أإآٱ]/g, 'ا')
+        // تجاهل التشكيل
+        .replace(/[ًٌٍَُِّْ]/g, '')
+        // تحويل التاء المربوطة إلى هاء
+        .replace(/ة/g, 'ه')
+        // تحويل الألف المقصورة إلى ياء
+        .replace(/ى/g, 'ي')
+        // تحويل الياء المنقوطة إلى ياء عادية
+        .replace(/ئ/g, 'ي')
+        // تحويل الكاف الفارسية
+        .replace(/ك/g, 'ك')
+        // مسح المسافات الزائدة
+        .replace(/\s+/g, ' ')
+        // حذف أي رموز غير عربية أو أرقام (اختياري)
+        .replace(/[^\u0600-\u06FF\s0-9]/g, '');
+}
+
+// دالة لتظليل النص المطابق
+function highlightText(text, query) {
+    if (!query || !text) return text;
+    
+    const normalizedText = normalizeForSearch(text);
+    const normalizedQuery = normalizeForSearch(query);
+    
+    if (!normalizedText.includes(normalizedQuery)) return text;
+    
+    // البحث عن المواضع المطابقة في النص الأصلي
+    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+    return text.replace(regex, '<span class="highlight">$1</span>');
+}
+
+// دالة البحث الذكية المحسنة
+function doSearch(q) {
+    searchQuery = q;
+    
+    if(!q || q.trim() === '') { 
+        filtered = allData; 
+        renderMain();
+        renderMid();
+        renderSub();
+        renderDet();
+        return; 
+    }
+    
+    const normalizedQuery = normalizeForSearch(q);
+    
+    // تصفية المناطق الرئيسية بناء على البحث في جميع المستويات
+    filtered = [];
+    
+    allData.forEach(mainArea => {
+        // البحث في المنطقة الرئيسية
+        if(searchItem(mainArea, normalizedQuery)) {
+            filtered.push(mainArea);
+            return;
         }
-      }
+        
+        let found = false;
+        
+        // البحث في القرى إذا كانت المنطقة بها قرى
+        if(mainArea.villages) {
+            for(let villageId in mainArea.villages) {
+                let village = mainArea.villages[villageId];
+                
+                if(searchItem(village, normalizedQuery)) {
+                    found = true;
+                    break;
+                }
+                
+                // البحث في توابع القرية
+                if(village.subAreas) {
+                    for(let subId in village.subAreas) {
+                        let sub = village.subAreas[subId];
+                        if(searchItem(sub, normalizedQuery)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if(found) break;
+            }
+        }
+        
+        // البحث في التوابع المباشرة
+        if(!found && mainArea.directSubAreas) {
+            for(let subId in mainArea.directSubAreas) {
+                let sub = mainArea.directSubAreas[subId];
+                if(searchItem(sub, normalizedQuery)) {
+                    found = true;
+                    break;
+                }
+            }
+        }
+        
+        if(found) {
+            filtered.push(mainArea);
+        }
+    });
+    
+    // تحديث جميع الأقسام مع التظليل
+    renderMain();
+    renderMid();
+    renderSub();
+    renderDet();
+}
+
+// دالة البحث في عنصر واحد (منطقة/قرية/تابع)
+function searchItem(item, query) {
+    if(!item) return false;
+    
+    // البحث في الاسم
+    if(item.name && normalizeForSearch(item.name).includes(query)) {
+        return true;
     }
+    
+    // البحث في التفاصيل
+    if(item.details) {
+        // البحث في المشاكل
+        if(item.details.issues && Array.isArray(item.details.issues)) {
+            for(let issue of item.details.issues) {
+                if(issue && normalizeForSearch(issue).includes(query)) {
+                    return true;
+                }
+            }
+        }
+        
+        // البحث في الخطط
+        if(item.details.plans && Array.isArray(item.details.plans)) {
+            for(let plan of item.details.plans) {
+                if(plan && normalizeForSearch(plan).includes(query)) {
+                    return true;
+                }
+            }
+        }
+        
+        // البحث في الزيارات
+        if(item.details.visits && Array.isArray(item.details.visits)) {
+            for(let visit of item.details.visits) {
+                if(typeof visit === 'string') {
+                    if(normalizeForSearch(visit).includes(query)) {
+                        return true;
+                    }
+                } else if(visit) {
+                    if(visit.desc && normalizeForSearch(visit.desc).includes(query)) {
+                        return true;
+                    }
+                    if(visit.date && normalizeForSearch(visit.date).includes(query)) {
+                        return true;
+                    }
+                }
+            }
+        }
+    }
+    
+    return false;
+}
+
+function startVoice() {
+    const S = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!S) { alert("غير مدعوم في هذا المتصفح"); return; }
+    const r = new S(); 
+    r.lang='ar-EG'; 
+    r.start();
+    r.onresult = e => { 
+        const t = e.results[0][0].transcript; 
+        document.getElementById('search').value=t; 
+        doSearch(t); 
+    };
+    r.onerror = e => {
+        console.error('خطأ في التعرف الصوتي:', e);
+    };
+}
+
+function renderMain() {
+  const c = document.getElementById('lMain');
+  c.innerHTML = '';
+  document.getElementById('cMain').innerText = filtered.length;
+  
+  filtered.forEach(m => {
+    const isSel = sel.main === m.id;
+    const stats = getStats(m);
+    const subCount = m.hasVillages==='yes' ? (m.villages?Object.keys(m.villages).length:0) : (m.directSubAreas?Object.keys(m.directSubAreas).length:0);
+    const label = m.hasVillages==='yes' ? 'قرى' : 'توابع';
+    
+    // استخدام التظليل للاسم إذا كان هناك بحث
+    const nameDisplay = searchQuery ? highlightText(m.name, searchQuery) : m.name;
+    
+    c.innerHTML += `
+      <div class="item lvl-1 ${isSel?'selected':''}" onclick="selectMain('${m.id}')">
+        <div class="item-top">
+           <span style="font-weight:bold">${nameDisplay}</span>
+        </div>
+        <div class="stats-container">
+           <span class="badge count">${subCount} ${label}</span>
+           ${stats.i > 0 ? `<span class="badge red">${stats.i} مشاكل</span>` : ''}
+           ${stats.p > 0 ? `<span class="badge green">${stats.p} خطط</span>` : ''}
+        </div>
+        <div class="actions">
+           <button class="icon-btn ib-edit" onclick="event.stopPropagation(); openM('editMain','${m.id}')"><i class="fas fa-pen"></i></button>
+           <button class="icon-btn ib-del" onclick="event.stopPropagation(); del('main','${m.id}')"><i class="fas fa-trash"></i></button>
+        </div>
+      </div>
+    `;
+  });
+}
+
+function renderMid() {
+  const c = document.getElementById('lMid');
+  c.innerHTML = '';
+  
+  // إذا كان هناك بحث، عرض كل العناصر المطابقة
+  if (searchQuery && searchQuery.trim() !== '') {
+    const normalizedQuery = normalizeForSearch(searchQuery);
+    const allMidItems = [];
+    
+    allData.forEach(m => {
+      if(m.hasVillages==='yes' && m.villages) {
+        Object.keys(m.villages).forEach(k => {
+          const village = m.villages[k];
+          if(searchItem(village, normalizedQuery)) {
+            allMidItems.push({...village, id: k, mainId: m.id});
+          }
+        });
+      } else if(m.directSubAreas) {
+        Object.keys(m.directSubAreas).forEach(k => {
+          const sub = m.directSubAreas[k];
+          if(searchItem(sub, normalizedQuery)) {
+            allMidItems.push({...sub, id: k, mainId: m.id});
+          }
+        });
+      }
+    });
+    
+    document.getElementById('tMid').innerText = `نتائج البحث (${allMidItems.length})`;
+    
+    if(allMidItems.length === 0) {
+      c.innerHTML = '<div style="text-align:center; color:#999; padding:20px">لا توجد نتائج للبحث في هذا القسم</div>';
+    } else {
+      allMidItems.forEach(i => {
+        const isSel = sel.main === i.mainId && sel.mid === i.id;
+        const stats = getStats(i);
+        const subC = i.subAreas ? Object.keys(i.subAreas).length : 0;
+        const nameDisplay = searchQuery ? highlightText(i.name, searchQuery) : i.name;
+        
+        c.innerHTML += `
+          <div class="item lvl-2 ${isSel?'selected':''}" onclick="selectMidFromSearch('${i.mainId}', '${i.id}')">
+            <div class="item-top">
+               <span style="font-weight:bold">${nameDisplay}</span>
+            </div>
+            <div class="stats-container">
+               ${subC > 0 ? `<span class="badge count">${subC} توابع</span>` : ''}
+               ${stats.i > 0 ? `<span class="badge red">${stats.i} مشاكل</span>` : ''}
+               ${stats.p > 0 ? `<span class="badge green">${stats.p} خطط</span>` : ''}
+            </div>
+            <div class="actions">
+               <button class="icon-btn ib-edit" onclick="event.stopPropagation(); selectMidFromSearch('${i.mainId}', '${i.id}'); openM('editMid','${i.id}')"><i class="fas fa-pen"></i></button>
+               <button class="icon-btn ib-del" onclick="event.stopPropagation(); selectMidFromSearch('${i.mainId}', '${i.id}'); del('mid','${i.id}')"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+        `;
+      });
+    }
+  } else {
+    // الوضع الطبيعي بدون بحث
+    if(!sel.main) { 
+      c.innerHTML='<div style="text-align:center; color:#999">اختر منطقة</div>'; 
+      document.getElementById('tMid').innerText = 'القرى / التوابع';
+      return; 
+    }
+    
+    const m = allData.find(a=>a.id===sel.main);
+    document.getElementById('tMid').innerText = m.hasVillages==='yes' ? 'القرى' : 'التوابع المباشرة';
+    
+    let items = [];
+    if(m.hasVillages==='yes' && m.villages) items = Object.keys(m.villages).map(k=>({id:k, ...m.villages[k]}));
+    else if(m.directSubAreas) items = Object.keys(m.directSubAreas).map(k=>({id:k, ...m.directSubAreas[k]}));
+    
+    items.forEach(i => {
+      const isSel = sel.mid === i.id;
+      const stats = getStats(i);
+      const subC = i.subAreas ? Object.keys(i.subAreas).length : 0;
+      
+      c.innerHTML += `
+        <div class="item lvl-2 ${isSel?'selected':''}" onclick="selectMid('${i.id}')">
+          <div class="item-top">
+             <span style="font-weight:bold">${i.name}</span>
+          </div>
+          <div class="stats-container">
+             ${m.hasVillages==='yes' ? `<span class="badge count">${subC} توابع</span>` : ''}
+             ${stats.i > 0 ? `<span class="badge red">${stats.i} مشاكل</span>` : ''}
+             ${stats.p > 0 ? `<span class="badge green">${stats.p} خطط</span>` : ''}
+          </div>
+          <div class="actions">
+             <button class="icon-btn ib-edit" onclick="event.stopPropagation(); openM('editMid','${i.id}')"><i class="fas fa-pen"></i></button>
+             <button class="icon-btn ib-del" onclick="event.stopPropagation(); del('mid','${i.id}')"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+      `;
+    });
   }
 }
+
+function renderSub() {
+  const c = document.getElementById('lSub');
+  c.innerHTML = '';
+  
+  // إذا كان هناك بحث، عرض كل العناصر المطابقة
+  if (searchQuery && searchQuery.trim() !== '') {
+    const normalizedQuery = normalizeForSearch(searchQuery);
+    const allSubItems = [];
+    
+    allData.forEach(m => {
+      if(m.hasVillages==='yes' && m.villages) {
+        Object.keys(m.villages).forEach(vk => {
+          const village = m.villages[vk];
+          if(village.subAreas) {
+            Object.keys(village.subAreas).forEach(sk => {
+              const sub = village.subAreas[sk];
+              if(searchItem(sub, normalizedQuery)) {
+                allSubItems.push({...sub, id: sk, mainId: m.id, villageId: vk});
+              }
+            });
+          }
+        });
+      }
+    });
+    
+    if(allSubItems.length === 0) {
+      c.innerHTML = '<div style="text-align:center; color:#999; padding:20px">لا توجد نتائج للبحث في التوابع</div>';
+    } else {
+      allSubItems.forEach(i => {
+        const isSel = sel.main === i.mainId && sel.mid === i.villageId && sel.sub === i.id;
+        const stats = getStats(i);
+        const nameDisplay = searchQuery ? highlightText(i.name, searchQuery) : i.name;
+        
+        c.innerHTML += `
+          <div class="item lvl-3 ${isSel?'selected':''}" onclick="selectSubFromSearch('${i.mainId}', '${i.villageId}', '${i.id}')">
+            <div class="item-top">
+               <span style="font-weight:bold">${nameDisplay}</span>
+            </div>
+            <div class="stats-container">
+               ${stats.i > 0 ? `<span class="badge red">${stats.i} مشاكل</span>` : ''}
+               ${stats.p > 0 ? `<span class="badge green">${stats.p} خطط</span>` : ''}
+            </div>
+            <div class="actions">
+               <button class="icon-btn ib-edit" onclick="event.stopPropagation(); selectSubFromSearch('${i.mainId}', '${i.villageId}', '${i.id}'); openM('editSub','${i.id}')"><i class="fas fa-pen"></i></button>
+               <button class="icon-btn ib-del" onclick="event.stopPropagation(); selectSubFromSearch('${i.mainId}', '${i.villageId}', '${i.id}'); del('sub','${i.id}')"><i class="fas fa-trash"></i></button>
+            </div>
+          </div>
+        `;
+      });
+    }
+  } else {
+    // الوضع الطبيعي بدون بحث
+    if(sel.lvl!=='mid' && sel.lvl!=='sub') { 
+      c.innerHTML='<div style="text-align:center; color:#999; padding:10px">اختر قرية</div>'; 
+      return; 
+    }
+    
+    const m = allData.find(a=>a.id===sel.main);
+    if(m.hasVillages!=='yes') { 
+      c.innerHTML='<div style="text-align:center; color:#999; padding:10px">لا يوجد (توابع مباشرة)</div>'; 
+      return; 
+    }
+    
+    const v = m.villages[sel.mid];
+    const items = v.subAreas ? Object.keys(v.subAreas).map(k=>({id:k, ...v.subAreas[k]})) : [];
+    
+    items.forEach(i => {
+      const isSel = sel.sub === i.id;
+      const stats = getStats(i);
+      c.innerHTML += `
+        <div class="item lvl-3 ${isSel?'selected':''}" onclick="selectSub('${i.id}')">
+          <div class="item-top">
+             <span style="font-weight:bold">${i.name}</span>
+          </div>
+          <div class="stats-container">
+             ${stats.i > 0 ? `<span class="badge red">${stats.i} مشاكل</span>` : ''}
+             ${stats.p > 0 ? `<span class="badge green">${stats.p} خطط</span>` : ''}
+          </div>
+          <div class="actions">
+             <button class="icon-btn ib-edit" onclick="event.stopPropagation(); openM('editSub','${i.id}')"><i class="fas fa-pen"></i></button>
+             <button class="icon-btn ib-del" onclick="event.stopPropagation(); del('sub','${i.id}')"><i class="fas fa-trash"></i></button>
+          </div>
+        </div>
+      `;
+    });
+  }
+}
+
+function renderDet() {
+  const obj = getActive();
+  document.getElementById('dTarget').innerText = sel.name || "لم يتم التحديد";
+  const vDiv = document.getElementById('dVisits');
+  const iDiv = document.getElementById('dIssues');
+  const pDiv = document.getElementById('dPlans');
+  vDiv.innerHTML=''; iDiv.innerHTML=''; pDiv.innerHTML='';
+  
+  if(!obj) return;
+  const d = obj.details || {issues:[],plans:[],visits:[]};
+  
+  // عرض الزيارات مع التظليل
+  (d.visits||[]).forEach((v,i) => {
+      let date = v.date || '-';
+      let txt = v.desc || v;
+      
+      // تطبيق التظليل إذا كان هناك بحث
+      let displayDate = searchQuery ? highlightText(date, searchQuery) : date;
+      let displayTxt = searchQuery ? highlightText(txt, searchQuery) : txt;
+      
+      vDiv.innerHTML += `<div class="det-row"><div><span class="visit-tag">${displayDate}</span> ${displayTxt}</div><i class="fas fa-times" style="color:red;cursor:pointer" onclick="delDet('visit',${i})"></i></div>`;
+  });
+  
+  // عرض المشاكل مع التظليل
+  (d.issues||[]).forEach((v,i) => {
+      let displayIssue = searchQuery ? highlightText(v, searchQuery) : v;
+      iDiv.innerHTML += `<div class="det-row"><div class="text-issue">• ${displayIssue}</div><i class="fas fa-times" style="color:red;cursor:pointer" onclick="delDet('issue',${i})"></i></div>`;
+  });
+  
+  // عرض الخطط مع التظليل
+  (d.plans||[]).forEach((v,i) => {
+      let displayPlan = searchQuery ? highlightText(v, searchQuery) : v;
+      pDiv.innerHTML += `<div class="det-row"><div class="text-plan">• ${displayPlan}</div><i class="fas fa-times" style="color:red;cursor:pointer" onclick="delDet('plan',${i})"></i></div>`;
+  });
+}
+
+// دوال الاختيار من البحث
+function selectMidFromSearch(mainId, midId) {
+    selectMain(mainId);
+    setTimeout(() => selectMid(midId), 100);
+}
+
+function selectSubFromSearch(mainId, villageId, subId) {
+    selectMain(mainId);
+    setTimeout(() => selectMid(villageId), 100);
+    setTimeout(() => selectSub(subId), 150);
+}
+
+// دوال الاختيار الأصلية
+function selectMain(id) { 
+    const m=allData.find(a=>a.id===id); 
+    sel={main:id,mid:null,sub:null,lvl:'main',name:m.name}; 
+    renderMain(); 
+    renderMid(); 
+    renderSub(); 
+    renderDet(); 
+}
+
+function selectMid(id) { 
+    const m=allData.find(a=>a.id===sel.main); 
+    let name = m.hasVillages==='yes' ? m.villages[id].name : m.directSubAreas[id].name; 
+    sel.mid=id; 
+    sel.sub=null; 
+    sel.lvl='mid'; 
+    sel.name=name; 
+    renderMid(); 
+    renderSub(); 
+    renderDet(); 
+}
+
+function selectSub(id) { 
+    const m=allData.find(a=>a.id===sel.main); 
+    const v=m.villages[sel.mid]; 
+    sel.sub=id; 
+    sel.lvl='sub'; 
+    sel.name=v.subAreas[id].name; 
+    renderSub(); 
+    renderDet(); 
+}
+
+function getActive() {
+    if(!sel.main) return null;
+    const m = allData.find(a=>a.id===sel.main);
+    if(sel.lvl==='main') return m;
+    if(m.hasVillages==='yes') {
+        if(!sel.mid) return null;
+        const v = m.villages[sel.mid];
+        if(sel.lvl==='mid') return v;
+        if(sel.lvl==='sub') return v.subAreas[sel.sub];
+    } else {
+        if(sel.lvl==='mid') return m.directSubAreas[sel.mid];
+    }
+    return null;
+}
+
+let actData = {};
+function openM(act, id=null) {
+    document.getElementById('modal').style.display='flex';
+    actData = {act, id};
+    const b = document.getElementById('mBody');
+    const t = document.getElementById('mTitle');
+    let h = '';
+    
+    if(act==='addMain') { t.innerText="إضافة منطقة"; h=`<input id="f1" class="inp" placeholder="الاسم"><select id="f2" class="inp"><option value="yes">بها قرى</option><option value="no">توابع مباشرة</option></select><button class="btn btn-blue" onclick="save()">حفظ</button>`; }
+    else if(act==='addMid' || act==='addSub') { t.innerText="إضافة"; h=`<input id="f1" class="inp" placeholder="الاسم"><button class="btn btn-blue" onclick="save()">حفظ</button>`; }
+    else if(act==='addVisit') { t.innerText="زيارة"; h=`<input type="date" id="f1" class="inp"><textarea id="f2" class="inp" placeholder="الوصف"></textarea><button class="btn btn-blue" onclick="save()">حفظ</button>`; }
+    else if(act==='addIssue' || act==='addPlan') { t.innerText=act==='addIssue'?'مشكلة':'خطة'; h=`<textarea id="f1" class="inp"></textarea><button class="btn btn-blue" onclick="save()">حفظ</button>`; }
+    else if(act.includes('edit')) { t.innerText="تعديل"; h=`<input id="f1" class="inp" placeholder="الاسم الجديد"><button class="btn btn-blue" onclick="save()">تحديث</button>`; }
+    
+    b.innerHTML = h;
+}
+
+function save() {
+    const {act, id} = actData;
+    const f1 = document.getElementById('f1').value;
+    const f2 = document.getElementById('f2')?.value;
+    
+    if(act==='addMain') window.set(window.push(window.ref(window.db, 'mainAreas')), {name:f1, hasVillages:f2});
+    else if(act==='editMain') window.update(window.ref(window.db, `mainAreas/${id}`), {name:f1});
+    else if(act==='addMid') {
+        const m = allData.find(a=>a.id===sel.main);
+        const p = `mainAreas/${m.id}/${m.hasVillages==='yes'?'villages':'directSubAreas'}`;
+        window.set(window.push(window.ref(window.db, p)), {name:f1});
+    }
+    else if(act==='editMid') {
+        const m = allData.find(a=>a.id===sel.main);
+        window.update(window.ref(window.db, `mainAreas/${m.id}/${m.hasVillages==='yes'?'villages':'directSubAreas'}/${id}`), {name:f1});
+    }
+    else if(act==='addSub') window.set(window.push(window.ref(window.db, `mainAreas/${sel.main}/villages/${sel.mid}/subAreas`)), {name:f1});
+    else if(act==='editSub') window.update(window.ref(window.db, `mainAreas/${sel.main}/villages/${sel.mid}/subAreas/${id}`), {name:f1});
+    else if(act==='addVisit') {
+        const o = getActive(); let arr = o.details?.visits||[];
+        arr.push({date:f1, desc:f2});
+        window.set(window.ref(window.db, getPath()+'/visits'), arr);
+    }
+    else if(act==='addIssue' || act==='addPlan') {
+        const t = act==='addIssue'?'issues':'plans';
+        const o = getActive(); let arr = o.details?.[t]||[];
+        arr.push(f1);
+        window.set(window.ref(window.db, getPath()+'/'+t), arr);
+    }
+    
+    document.getElementById('modal').style.display='none';
+    setTimeout(loadData, 500);
+}
+
+function del(lvl, id) {
+    if(!confirm("حذف؟")) return;
+    let p = `mainAreas/${id}`;
+    if(lvl==='mid') { const m=allData.find(a=>a.id===sel.main); p=`mainAreas/${m.id}/${m.hasVillages==='yes'?'villages':'directSubAreas'}/${id}`; }
+    if(lvl==='sub') p=`mainAreas/${sel.main}/villages/${sel.mid}/subAreas/${id}`;
+    window.remove(window.ref(window.db, p));
+    setTimeout(()=>{ if(lvl==='main') sel.main=null; loadData(); }, 500);
+}
+
+function delDet(t, i) {
+    if(!confirm("حذف؟")) return;
+    const o = getActive();
+    let arr = t==='visit' ? o.details.visits : (t==='issue' ? o.details.issues : o.details.plans);
+    arr.splice(i, 1);
+    let key = t==='visit'?'visits':(t+'s');
+    window.set(window.ref(window.db, getPath()+'/'+key), arr);
+    setTimeout(loadData, 300);
+}
+
+function getPath() {
+    let p = `mainAreas/${sel.main}`;
+    const m = allData.find(a=>a.id===sel.main);
+    if(sel.lvl==='mid') p += `/${m.hasVillages==='yes'?'villages':'directSubAreas'}/${sel.mid}`;
+    else if(sel.lvl==='sub') p += `/villages/${sel.mid}/subAreas/${sel.sub}`;
+    return p + '/details';
+}
+
+function printR(mode) {
+    const area = document.getElementById('printArea');
+    let html = `<div class="p-title"><h2>تقرير المتابعة - المنزلة</h2></div>`;
+    let targets = mode==='curr' ? [allData.find(a=>a.id===sel.main)] : allData;
+    
+    if(!targets[0]) { alert('حدد منطقة'); return; }
+    
+    targets.forEach(m => {
+        html += `<div class="p-page"><h3>${m.name}</h3>${printDet(m.details)}`;
+        
+        let kids = [];
+        if(m.hasVillages==='yes' && m.villages) kids = Object.values(m.villages);
+        else if(m.directSubAreas) kids = Object.values(m.directSubAreas);
+        
+        if(kids.length) {
+            html += `<table><thead><tr><th>الاسم</th><th>التفاصيل</th></tr></thead><tbody>`;
+            kids.forEach(k => {
+                let subH = '';
+                if(k.subAreas) {
+                    Object.values(k.subAreas).forEach(s => {
+                        subH += `<div style="border-top:1px dashed #ccc; margin-top:5px; padding-top:5px;"><b>• تابع: ${s.name}</b>${printDet(s.details)}</div>`;
+                    });
+                }
+                html += `<tr><td style="width:25%"><b>${k.name}</b></td><td>${printDet(k.details)}${subH}</td></tr>`;
+            });
+            html += `</tbody></table>`;
+        }
+        html += `</div>`;
+    });
+    area.innerHTML = html;
+    window.print();
+}
+
+function printDet(d) {
+    if(!d) return '';
+    let h = '';
+    if(d.issues?.length) { 
+        h += `<div class="print-red">المشاكل:</div><ul>`; 
+        d.issues.forEach(x=>h+=`<li class="print-red">${x}</li>`); 
+        h+=`</ul>`; 
+    }
+    if(d.plans?.length) { 
+        h += `<div class="print-green">إقتراحات حياة كريمة:</div><ul>`; 
+        d.plans.forEach(x=>h+=`<li class="print-green">${x}</li>`); 
+        h+=`</ul>`; 
+    }
+    if(d.visits?.length) { 
+        h += `<div class="print-blue">الزيارات:</div><ul>`; 
+        d.visits.forEach(x=>h+=`<li>${x.date}: ${x.desc||x}</li>`); 
+        h+=`</ul>`; 
+    }
+    return h;
+}
+
+let slides=[], sIdx=0;
+function ppt() {
+    slides = [];
+    let targets = sel.main ? [allData.find(a=>a.id===sel.main)] : allData;
+    
+    targets.forEach(m => {
+        slides.push(`<div class="ppt-h">${m.name}</div>${printDet(m.details)}`);
+        
+        let kids = [];
+        if(m.hasVillages==='yes' && m.villages) kids = Object.values(m.villages);
+        else if(m.directSubAreas) kids = Object.values(m.directSubAreas);
+        
+        kids.forEach(k => {
+            let subH = '';
+            if(k.subAreas) Object.values(k.subAreas).forEach(s => subH += `<div><b>${s.name}</b>${printDet(s.details)}</div><hr>`);
+            slides.push(`<div class="ppt-h">${k.name} <small>(${m.name})</small></div>${printDet(k.details)}${subH}`);
+        });
+    });
+    
+    if(!slides.length) slides.push('لا توجد بيانات');
+    sIdx=0; document.getElementById('ppt').style.display='flex'; renS();
+}
+function renS() { document.getElementById('pptContent').innerHTML=`<div class="ppt-card animate__animated animate__zoomIn">${slides[sIdx]}</div>`; }
+function slide(d) { sIdx+=d; if(sIdx<0) sIdx=0; if(sIdx>=slides.length) sIdx=slides.length-1; renS(); }
+
+document.getElementById('modal').onclick = e => { if(e.target.id==='modal') document.getElementById('modal').style.display='none'; }
+</script>
+</body>
+</html>
