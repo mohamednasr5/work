@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة التحكم - نظام الحضور</title>
+    <title>لوحة التحكم المتقدمة - نظام الحضور</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * {
@@ -12,48 +12,298 @@
             box-sizing: border-box;
         }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
+        :root {
+            --primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            --success: linear-gradient(135deg, #48c774 0%, #3EB489 100%);
+            --danger: linear-gradient(135deg, #f14668 0%, #D63864 100%);
+            --warning: linear-gradient(135deg, #ffdd57 0%, #F7A400 100%);
+            --info: linear-gradient(135deg, #3e8ed0 0%, #2E6FB3 100%);
         }
 
-        .container {
-            max-width: 1400px;
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* خلفية متحركة */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            background: rgba(102,126,234,0.3);
+            border-radius: 50%;
+            animation: rise 20s infinite ease-in;
+        }
+
+        @keyframes rise {
+            0% {
+                bottom: -100px;
+                opacity: 0;
+            }
+            50% {
+                opacity: 0.5;
+            }
+            100% {
+                bottom: 100%;
+                opacity: 0;
+                transform: translateX(100px);
+            }
+        }
+
+        /* Login Screen */
+        .login-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+        }
+
+        .login-box {
+            background: rgba(255,255,255,0.95);
+            padding: 50px;
+            border-radius: 30px;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+            text-align: center;
+            transform: perspective(1000px);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+
+        .login-box h2 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .password-input {
+            width: 100%;
+            padding: 20px;
+            font-size: 1.5em;
+            border: 3px solid #667eea;
+            border-radius: 15px;
+            text-align: center;
+            margin-bottom: 25px;
+            letter-spacing: 10px;
+        }
+
+        .password-input:focus {
+            outline: none;
+            box-shadow: 0 0 0 5px rgba(102,126,234,0.2);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 20px;
+            font-size: 1.3em;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .login-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        /* Dashboard */
+        .dashboard {
+            position: relative;
+            z-index: 1;
+            padding: 20px;
+            max-width: 1800px;
             margin: 0 auto;
         }
 
         .header {
-            background: rgba(255,255,255,0.95);
-            padding: 30px;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(20px);
             border-radius: 25px;
+            padding: 30px;
             margin-bottom: 30px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-            text-align: center;
+            border: 1px solid rgba(255,255,255,0.2);
         }
 
         .header h1 {
-            color: #667eea;
+            color: white;
             font-size: 2.5em;
-            margin-bottom: 10px;
+            text-align: center;
+            text-shadow: 2px 2px 20px rgba(0,0,0,0.5);
         }
 
-        .card {
+        .header .stats-row {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin-top: 20px;
+            color: white;
+            font-size: 1.1em;
+        }
+
+        .logout-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 12px 25px;
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            transition: all 0.3s;
+        }
+
+        .logout-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.4);
+        }
+
+        /* Statistics Cards */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
             background: rgba(255,255,255,0.95);
             border-radius: 25px;
             padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            transform: perspective(1000px);
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
+        }
+
+        .stat-card:hover::before {
+            left: 100%;
+        }
+
+        .stat-card:hover {
+            transform: perspective(1000px) rotateY(-5deg) translateY(-10px);
+            box-shadow: 0 30px 80px rgba(0,0,0,0.4);
+        }
+
+        .stat-icon {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2.5em;
+            margin: 0 auto 20px;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .stat-value {
+            font-size: 3em;
+            font-weight: bold;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .stat-label {
+            text-align: center;
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            padding: 15px 30px;
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 50px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 1.1em;
+        }
+
+        .tab:hover {
+            background: rgba(255,255,255,0.2);
+            transform: translateY(-2px);
+        }
+
+        .tab.active {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 10px 30px rgba(255,255,255,0.3);
+        }
+
+        /* Content Cards */
+        .content-card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 25px;
+            padding: 35px;
             margin-bottom: 30px;
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
 
-        .card h2 {
+        .content-card h2 {
             color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.8em;
+            font-size: 2em;
+            margin-bottom: 25px;
+            display: flex;
+            align-items: center;
+            gap: 15px;
         }
 
-        #adminMap {
+        /* Map */
+        #liveMap {
             width: 100%;
             height: 600px;
             border-radius: 20px;
@@ -61,111 +311,532 @@
             margin-bottom: 20px;
         }
 
-        .btn {
-            padding: 15px 35px;
-            font-size: 1.1em;
-            border: none;
-            border-radius: 50px;
-            cursor: pointer;
-            color: white;
-            font-weight: bold;
-            transition: all 0.3s;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-
-        .btn:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
-        }
-
-        .btn-primary {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        }
-
-        .btn-success {
-            background: linear-gradient(135deg, #48c774 0%, #3EB489 100%);
-        }
-
-        .info-box {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 20px;
-            border-radius: 15px;
+        /* Table */
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
             margin-top: 20px;
         }
 
-        .input {
-            width: 100%;
-            padding: 15px 20px;
-            font-size: 1.1em;
-            border: 2px solid #e0e0e0;
-            border-radius: 15px;
-            margin-bottom: 15px;
+        .data-table thead {
+            background: var(--primary);
+            color: white;
         }
 
-        .input:focus {
+        .data-table th {
+            padding: 20px;
+            text-align: right;
+            font-size: 1.1em;
+            font-weight: bold;
+        }
+
+        .data-table tbody tr {
+            background: white;
+            border-bottom: 2px solid #f0f0f0;
+            transition: all 0.3s;
+        }
+
+        .data-table tbody tr:hover {
+            background: #f8f9ff;
+            transform: scale(1.01);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .data-table td {
+            padding: 18px;
+            font-size: 1.05em;
+        }
+
+        /* Filters */
+        .filters {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+
+        .filter-input {
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 15px;
+            font-size: 1.05em;
+            background: white;
+        }
+
+        .filter-input:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 0 5px rgba(102,126,234,0.1);
         }
 
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
+        .filter-btn {
+            padding: 15px 30px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
 
-        .pulse {
-            animation: pulse 2s infinite;
+        .filter-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        /* Employee Card */
+        .employee-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 25px;
+            border-radius: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.4s;
+        }
+
+        .employee-card:hover {
+            transform: translateX(-10px);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.2);
+        }
+
+        .employee-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .employee-name {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .hours-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .hour-box {
+            background: white;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+
+        .hour-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .hour-label {
+            color: #666;
+            margin-top: 5px;
+            font-size: 0.9em;
+        }
+
+        /* Badge */
+        .badge {
+            display: inline-block;
+            padding: 8px 15px;
+            border-radius: 50px;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        .badge-success {
+            background: var(--success);
+        }
+
+        .badge-danger {
+            background: var(--danger);
+        }
+
+        .badge-warning {
+            background: var(--warning);
+            color: #333;
+        }
+
+        .badge-info {
+            background: var(--info);
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #667eea;
+            font-size: 1.3em;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 50px;
+            height: 50px;
+            border: 5px solid rgba(102,126,234,0.2);
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Export Button */
+        .export-btn {
+            padding: 15px 30px;
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1.1em;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+
+        .export-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 1.8em;
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+            }
+
+            #liveMap {
+                height: 400px;
+            }
+
+            .data-table {
+                font-size: 0.9em;
+            }
+
+            .filters {
+                flex-direction: column;
+            }
+
+            .filter-input, .filter-btn {
+                width: 100%;
+            }
+        }
+
+        /* Animations */
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(50px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in {
+            animation: slideIn 0.6s ease-out;
+        }
+
+        /* Status Indicator */
+        .status-online {
+            width: 12px;
+            height: 12px;
+            background: #48c774;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 8px;
+            box-shadow: 0 0 10px #48c774;
+            animation: pulse-online 2s infinite;
+        }
+
+        @keyframes pulse-online {
+            0%, 100% {
+                box-shadow: 0 0 10px #48c774;
+            }
+            50% {
+                box-shadow: 0 0 20px #48c774;
+            }
+        }
+
+        .status-offline {
+            width: 12px;
+            height: 12px;
+            background: #999;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: 8px;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            position: relative;
+            height: 400px;
+            margin-top: 20px;
+        }
+
+        /* Location Marker Info */
+        .marker-info {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            max-width: 250px;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1><i class="fas fa-cog"></i> لوحة التحكم</h1>
-            <p style="color: #888;">إدارة موقع العمل والإعدادات</p>
+    <!-- خلفية متحركة -->
+    <div class="animated-bg"></div>
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="login-screen">
+        <div class="login-box">
+            <h2><i class="fas fa-shield-alt"></i> لوحة التحكم</h2>
+            <p style="color: #666; margin-bottom: 30px; font-size: 1.1em;">أدخل كلمة المرور للدخول</p>
+            <input 
+                type="password" 
+                id="passwordInput" 
+                class="password-input" 
+                placeholder="••••••"
+                maxlength="6"
+                onkeypress="if(event.key==='Enter') adminLogin()">
+            <button onclick="adminLogin()" class="login-btn">
+                <i class="fas fa-sign-in-alt"></i> دخول
+            </button>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div id="dashboard" class="dashboard" style="display: none;">
+        <button onclick="logout()" class="logout-btn">
+            <i class="fas fa-sign-out-alt"></i> خروج
+        </button>
+
+        <!-- Header -->
+        <div class="header fade-in">
+            <h1><i class="fas fa-chart-line"></i> لوحة التحكم المتقدمة</h1>
+            <div class="stats-row">
+                <div><i class="fas fa-calendar-day"></i> <span id="currentDate"></span></div>
+                <div><i class="fas fa-clock"></i> <span id="currentTime"></span></div>
+            </div>
         </div>
 
-        <div class="card">
-            <h2><i class="fas fa-map-marker-alt"></i> تحديد موقع العمل</h2>
-            <p style="margin-bottom: 20px; color: #666;">
-                انقر على الخريطة لتحديد موقع العمل، أو استخدم البحث بالعنوان
-            </p>
+        <!-- Statistics Cards -->
+        <div class="stats-grid fade-in">
+            <div class="stat-card">
+                <div class="stat-icon" style="background: var(--primary);">
+                    <i class="fas fa-users"></i>
+                </div>
+                <div class="stat-value" id="totalEmployees" style="color: #667eea;">0</div>
+                <div class="stat-label">إجمالي الموظفين</div>
+            </div>
 
-            <input type="text" id="searchAddress" class="input" placeholder="ابحث عن عنوان...">
-            <button onclick="searchAddress()" class="btn btn-primary" style="margin-bottom: 20px;">
-                <i class="fas fa-search"></i> بحث
-            </button>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: var(--success);">
+                    <i class="fas fa-user-check"></i>
+                </div>
+                <div class="stat-value" id="presentToday" style="color: #48c774;">0</div>
+                <div class="stat-label">الحضور اليوم</div>
+            </div>
 
-            <div id="adminMap"></div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: var(--danger);">
+                    <i class="fas fa-user-times"></i>
+                </div>
+                <div class="stat-value" id="absentToday" style="color: #f14668;">0</div>
+                <div class="stat-label">الغياب اليوم</div>
+            </div>
 
-            <div class="info-box">
-                <h3 style="margin-bottom: 15px;"><i class="fas fa-info-circle"></i> الموقع الحالي</h3>
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                    <div>
-                        <strong>خط الطول:</strong>
-                        <div id="currentLng">غير محدد</div>
-                    </div>
-                    <div>
-                        <strong>خط العرض:</strong>
-                        <div id="currentLat">غير محدد</div>
-                    </div>
+            <div class="stat-card">
+                <div class="stat-icon" style="background: var(--warning);">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-value" id="avgWorkHours" style="color: #F7A400;">0</div>
+                <div class="stat-label">متوسط ساعات العمل</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon" style="background: var(--info);">
+                    <i class="fas fa-history"></i>
+                </div>
+                <div class="stat-value" id="totalRecords" style="color: #3e8ed0;">0</div>
+                <div class="stat-label">إجمالي السجلات</div>
+            </div>
+
+            <div class="stat-card">
+                <div class="stat-icon" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);">
+                    <i class="fas fa-map-marked-alt"></i>
+                </div>
+                <div class="stat-value" id="activeNow" style="color: #f5576c;">0</div>
+                <div class="stat-label">نشط الآن</div>
+            </div>
+        </div>
+
+        <!-- Tabs -->
+        <div class="tabs fade-in">
+            <div class="tab active" onclick="switchTab('overview')">
+                <i class="fas fa-home"></i> نظرة عامة
+            </div>
+            <div class="tab" onclick="switchTab('live')">
+                <i class="fas fa-map-marker-alt"></i> المواقع المباشرة
+            </div>
+            <div class="tab" onclick="switchTab('records')">
+                <i class="fas fa-list"></i> جميع السجلات
+            </div>
+            <div class="tab" onclick="switchTab('employees')">
+                <i class="fas fa-users"></i> إحصائيات الموظفين
+            </div>
+            <div class="tab" onclick="switchTab('settings')">
+                <i class="fas fa-cog"></i> الإعدادات
+            </div>
+        </div>
+
+        <!-- Overview Tab -->
+        <div id="overviewTab" class="tab-content">
+            <div class="content-card fade-in">
+                <h2><i class="fas fa-chart-bar"></i> إحصائيات سريعة</h2>
+                <div class="chart-container">
+                    <canvas id="attendanceChart"></canvas>
                 </div>
             </div>
 
-            <button onclick="saveWorkplaceLocation()" class="btn btn-success" style="width: 100%; margin-top: 20px;">
-                <i class="fas fa-save"></i> حفظ الموقع
-            </button>
+            <div class="content-card fade-in">
+                <h2><i class="fas fa-trophy"></i> أفضل الموظفين (ساعات العمل)</h2>
+                <div id="topEmployees"></div>
+            </div>
         </div>
 
-        <div class="card">
-            <h2><i class="fas fa-users"></i> إضافة موظف جديد</h2>
-            <input type="text" id="newEmployeeId" class="input" placeholder="رقم الموظف">
-            <input type="text" id="newEmployeeName" class="input" placeholder="اسم الموظف">
-            <input type="text" id="newEmployeeDept" class="input" placeholder="القسم">
-            <button onclick="addEmployee()" class="btn btn-success" style="width: 100%;">
-                <i class="fas fa-user-plus"></i> إضافة موظف
-            </button>
+        <!-- Live Locations Tab -->
+        <div id="liveTab" class="tab-content" style="display: none;">
+            <div class="content-card fade-in">
+                <h2><i class="fas fa-map-marked-alt"></i> المواقع المباشرة للموظفين</h2>
+                <div id="liveMap"></div>
+                <div id="employeesList" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+
+        <!-- Records Tab -->
+        <div id="recordsTab" class="tab-content" style="display: none;">
+            <div class="content-card fade-in">
+                <h2><i class="fas fa-list"></i> جميع سجلات الحضور والانصراف</h2>
+                
+                <div class="filters">
+                    <input type="date" id="filterDate" class="filter-input">
+                    <select id="filterEmployee" class="filter-input">
+                        <option value="">جميع الموظفين</option>
+                    </select>
+                    <select id="filterType" class="filter-input">
+                        <option value="">جميع الأنواع</option>
+                        <option value="حضور">حضور</option>
+                        <option value="انصراف">انصراف</option>
+                    </select>
+                    <button onclick="applyFilters()" class="filter-btn">
+                        <i class="fas fa-filter"></i> تطبيق
+                    </button>
+                    <button onclick="exportToExcel()" class="export-btn">
+                        <i class="fas fa-file-excel"></i> تصدير Excel
+                    </button>
+                </div>
+
+                <div style="overflow-x: auto;">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>الموظف</th>
+                                <th>رقم الموظف</th>
+                                <th>النوع</th>
+                                <th>التاريخ</th>
+                                <th>الوقت</th>
+                                <th>الموقع</th>
+                                <th>المسافة من العمل</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recordsTableBody">
+                            <tr>
+                                <td colspan="7" class="loading">
+                                    <div class="spinner"></div>
+                                    <div>جاري تحميل السجلات...</div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Employees Tab -->
+        <div id="employeesTab" class="tab-content" style="display: none;">
+            <div class="content-card fade-in">
+                <h2><i class="fas fa-users"></i> إحصائيات تفصيلية للموظفين</h2>
+                
+                <div class="filters">
+                    <select id="periodFilter" class="filter-input" onchange="updateEmployeeStats()">
+                        <option value="today">اليوم</option>
+                        <option value="week">هذا الأسبوع</option>
+                        <option value="month">هذا الشهر</option>
+                    </select>
+                </div>
+
+                <div id="employeesStatsContainer"></div>
+            </div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div id="settingsTab" class="tab-content" style="display: none;">
+            <div class="content-card fade-in">
+                <h2><i class="fas fa-map-marker-alt"></i> تحديد موقع العمل</h2>
+                <p style="margin-bottom: 20px; color: #666;">انقر على الخريطة لتحديد موقع العمل، أو استخدم البحث بالعنوان</p>
+
+                <input type="text" id="searchAddress" class="filter-input" placeholder="ابحث عن عنوان..." style="width: 100%; margin-bottom: 15px;">
+                <button onclick="searchAddress()" class="filter-btn" style="margin-bottom: 20px;">
+                    <i class="fas fa-search"></i> بحث
+                </button>
+
+                <div id="adminMap" style="width: 100%; height: 500px; border-radius: 20px; border: 3px solid rgba(102,126,234,0.3);"></div>
+
+                <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 15px; margin-top: 20px;">
+                    <h3 style="margin-bottom: 15px;"><i class="fas fa-info-circle"></i> الموقع الحالي</h3>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                        <div>
+                            <strong>خط الطول:</strong>
+                            <div id="currentLng">غير محدد</div>
+                        </div>
+                        <div>
+                            <strong>خط العرض:</strong>
+                            <div id="currentLat">غير محدد</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="saveWorkplaceLocation()" class="export-btn" style="width: 100%; margin-top: 20px;">
+                    <i class="fas fa-save"></i> حفظ الموقع
+                </button>
+            </div>
+
+            <div class="content-card fade-in">
+                <h2><i class="fas fa-user-plus"></i> إضافة موظف جديد</h2>
+                <input type="text" id="newEmployeeId" class="filter-input" placeholder="رقم الموظف" style="width: 100%;">
+                <input type="text" id="newEmployeeName" class="filter-input" placeholder="اسم الموظف" style="width: 100%;">
+                <input type="text" id="newEmployeeDept" class="filter-input" placeholder="القسم" style="width: 100%;">
+                <button onclick="addEmployee()" class="export-btn" style="width: 100%;">
+                    <i class="fas fa-user-plus"></i> إضافة موظف
+                </button>
+            </div>
         </div>
     </div>
 
@@ -174,55 +845,617 @@
     <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-database-compat.js"></script>
 
     <!-- Google Maps -->
-    <script src="https://maps.googleapis.com/maps/api/js?language=ar&libraries=places"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?language=ar&libraries=places,geometry"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
     <script>
+        // إضافة الحبيبات المتحركة
+        for(let i = 0; i < 30; i++) {
+            const particle = document.createElement('div');
+            particle.className = 'particle';
+            particle.style.width = Math.random() * 8 + 3 + 'px';
+            particle.style.height = particle.style.width;
+            particle.style.left = Math.random() * 100 + '%';
+            particle.style.animationDelay = Math.random() * 20 + 's';
+            particle.style.animationDuration = (Math.random() * 15 + 15) + 's';
+            document.querySelector('.animated-bg').appendChild(particle);
+        }
+
         // Firebase Configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFg_vrchXpE",
-            authDomain: "hedor-bea3c.firebaseapp.com",
-            databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
-            projectId: "hedor-bea3c",
-            storageBucket: "hedor-bea3c.firebasestorage.app",
-            messagingSenderId: "369239455736",
-            appId: "1:369239455736:web:116295854269abecf6480d",
-            measurementId: "G-R2MG1YKQEP"
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_AUTH_DOMAIN",
+            databaseURL: "YOUR_DATABASE_URL",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_STORAGE_BUCKET",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+            appId: "YOUR_APP_ID"
         };
-
 
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
-        let map;
-        let marker;
-        let selectedLocation = null;
-        let geocoder;
-        let autocomplete;
+        // المتغيرات العامة
+        let allRecords = [];
+        let allEmployees = {};
+        let workplaceLocation = null;
+        let adminMap = null;
+        let liveMap = null;
+        let mapMarkers = [];
+        let adminMarker = null;
+        let attendanceChart = null;
 
-        // تهيئة الخريطة
-        async function initAdminMap() {
-            // جلب الموقع الحالي من Firebase
+        // تحديث الساعة
+        function updateClock() {
+            const now = new Date();
+            const dateOptions = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('ar-EG', dateOptions);
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('ar-EG');
+        }
+        setInterval(updateClock, 1000);
+
+        // Login
+        function adminLogin() {
+            const password = document.getElementById('passwordInput').value;
+            
+            if (password === '742018') {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+                initDashboard();
+            } else {
+                alert('كلمة المرور غير صحيحة');
+                document.getElementById('passwordInput').value = '';
+            }
+        }
+
+        // Logout
+        function logout() {
+            if (confirm('هل تريد تسجيل الخروج؟')) {
+                document.getElementById('loginScreen').style.display = 'flex';
+                document.getElementById('dashboard').style.display = 'none';
+                document.getElementById('passwordInput').value = '';
+            }
+        }
+
+        // Initialize Dashboard
+        async function initDashboard() {
+            updateClock();
+            await loadWorkplaceLocation();
+            await loadEmployees();
+            await loadAllRecords();
+            updateStatistics();
+            initAdminMap();
+            createAttendanceChart();
+        }
+
+        // Load Workplace Location
+        async function loadWorkplaceLocation() {
             const snapshot = await database.ref('settings/workplace').once('value');
-            const savedLocation = snapshot.val() || { lat: 30.0444, lng: 31.2357 };
-            selectedLocation = savedLocation;
+            workplaceLocation = snapshot.val() || { lat: 30.0444, lng: 31.2357 };
+        }
 
-            map = new google.maps.Map(document.getElementById('adminMap'), {
-                zoom: 15,
-                center: savedLocation,
-                mapTypeId: 'hybrid',
-                zoomControl: true,
-                mapTypeControl: true,
-                scaleControl: true,
-                streetViewControl: true,
-                fullscreenControl: true
+        // Load Employees
+        async function loadEmployees() {
+            const snapshot = await database.ref('employees').once('value');
+            allEmployees = snapshot.val() || {};
+            
+            // Update employee filter
+            const filterSelect = document.getElementById('filterEmployee');
+            filterSelect.innerHTML = '<option value="">جميع الموظفين</option>';
+            
+            Object.entries(allEmployees).forEach(([id, employee]) => {
+                const option = document.createElement('option');
+                option.value = id;
+                option.textContent = `${employee.name} (${id})`;
+                filterSelect.appendChild(option);
+            });
+        }
+
+        // Load All Records
+        async function loadAllRecords() {
+            const snapshot = await database.ref('attendance').once('value');
+            allRecords = [];
+            
+            snapshot.forEach(child => {
+                allRecords.push({
+                    id: child.key,
+                    ...child.val()
+                });
             });
 
-            marker = new google.maps.Marker({
-                position: savedLocation,
-                map: map,
+            // Sort by timestamp (newest first)
+            allRecords.sort((a, b) => b.timestamp - a.timestamp);
+            
+            displayRecords(allRecords);
+        }
+
+        // Update Statistics
+        function updateStatistics() {
+            const today = new Date().toLocaleDateString('ar-EG');
+            const totalEmployees = Object.keys(allEmployees).length;
+            
+            // Today's attendance
+            const todayRecords = allRecords.filter(r => r.date === today);
+            const checkedInToday = new Set(todayRecords.filter(r => r.type === 'حضور').map(r => r.employeeId));
+            const presentToday = checkedInToday.size;
+            const absentToday = totalEmployees - presentToday;
+
+            // Calculate average work hours
+            const workHours = calculateWorkHours(todayRecords);
+            const avgHours = workHours.length > 0 
+                ? (workHours.reduce((a, b) => a + b, 0) / workHours.length).toFixed(1)
+                : 0;
+
+            // Active now (checked in but not checked out)
+            const activeNow = todayRecords.filter(r => {
+                const employeeRecords = todayRecords.filter(rec => rec.employeeId === r.employeeId);
+                const lastRecord = employeeRecords[employeeRecords.length - 1];
+                return lastRecord && lastRecord.type === 'حضور';
+            }).length;
+
+            // Update UI
+            document.getElementById('totalEmployees').textContent = totalEmployees;
+            document.getElementById('presentToday').textContent = presentToday;
+            document.getElementById('absentToday').textContent = absentToday;
+            document.getElementById('avgWorkHours').textContent = avgHours + 'س';
+            document.getElementById('totalRecords').textContent = allRecords.length;
+            document.getElementById('activeNow').textContent = activeNow;
+        }
+
+        // Calculate Work Hours
+        function calculateWorkHours(records) {
+            const hours = [];
+            const employeeIds = [...new Set(records.map(r => r.employeeId))];
+
+            employeeIds.forEach(empId => {
+                const empRecords = records.filter(r => r.employeeId === empId).sort((a, b) => a.timestamp - b.timestamp);
+                
+                for (let i = 0; i < empRecords.length - 1; i += 2) {
+                    if (empRecords[i].type === 'حضور' && empRecords[i + 1] && empRecords[i + 1].type === 'انصراف') {
+                        const duration = (empRecords[i + 1].timestamp - empRecords[i].timestamp) / (1000 * 60 * 60);
+                        hours.push(duration);
+                    }
+                }
+            });
+
+            return hours;
+        }
+
+        // Display Records
+        function displayRecords(records) {
+            const tbody = document.getElementById('recordsTableBody');
+            
+            if (records.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #888;">لا توجد سجلات</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = records.map(record => {
+                const distance = workplaceLocation && record.location 
+                    ? google.maps.geometry.spherical.computeDistanceBetween(
+                        new google.maps.LatLng(record.location.lat, record.location.lng),
+                        new google.maps.LatLng(workplaceLocation.lat, workplaceLocation.lng)
+                    ).toFixed(1)
+                    : 'غير متوفر';
+
+                return `
+                    <tr>
+                        <td><strong>${record.employeeName || 'غير محدد'}</strong></td>
+                        <td>${record.employeeId}</td>
+                        <td>
+                            <span class="badge ${record.type === 'حضور' ? 'badge-success' : 'badge-danger'}">
+                                <i class="fas fa-${record.type === 'حضور' ? 'sign-in-alt' : 'sign-out-alt'}"></i>
+                                ${record.type}
+                            </span>
+                        </td>
+                        <td>${record.date}</td>
+                        <td>${record.time}</td>
+                        <td>
+                            ${record.location ? `
+                                <a href="https://maps.google.com/?q=${record.location.lat},${record.location.lng}" target="_blank" style="color: #667eea;">
+                                    <i class="fas fa-map-marker-alt"></i> عرض على الخريطة
+                                </a>
+                            ` : 'غير متوفر'}
+                        </td>
+                        <td>${distance !== 'غير متوفر' ? distance + ' متر' : distance}</td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // Apply Filters
+        function applyFilters() {
+            const date = document.getElementById('filterDate').value;
+            const employeeId = document.getElementById('filterEmployee').value;
+            const type = document.getElementById('filterType').value;
+
+            let filtered = [...allRecords];
+
+            if (date) {
+                const selectedDate = new Date(date).toLocaleDateString('ar-EG');
+                filtered = filtered.filter(r => r.date === selectedDate);
+            }
+
+            if (employeeId) {
+                filtered = filtered.filter(r => r.employeeId === employeeId);
+            }
+
+            if (type) {
+                filtered = filtered.filter(r => r.type === type);
+            }
+
+            displayRecords(filtered);
+        }
+
+        // Switch Tab
+        function switchTab(tabName) {
+            // Update tab buttons
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.closest('.tab').classList.add('active');
+
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+
+            // Show selected tab
+            document.getElementById(tabName + 'Tab').style.display = 'block';
+
+            // Initialize specific tab features
+            if (tabName === 'live') {
+                initLiveMap();
+            } else if (tabName === 'employees') {
+                updateEmployeeStats();
+            }
+        }
+
+        // Initialize Live Map
+        function initLiveMap() {
+            if (!liveMap) {
+                liveMap = new google.maps.Map(document.getElementById('liveMap'), {
+                    zoom: 15,
+                    center: workplaceLocation,
+                    mapTypeId: 'hybrid'
+                });
+
+                // Workplace marker
+                new google.maps.Marker({
+                    position: workplaceLocation,
+                    map: liveMap,
+                    title: 'موقع العمل',
+                    icon: {
+                        path: google.maps.SymbolPath.CIRCLE,
+                        scale: 15,
+                        fillColor: '#f14668',
+                        fillOpacity: 1,
+                        strokeColor: '#fff',
+                        strokeWeight: 3
+                    }
+                });
+
+                new google.maps.Circle({
+                    map: liveMap,
+                    center: workplaceLocation,
+                    radius: 100,
+                    fillColor: '#f14668',
+                    fillOpacity: 0.2,
+                    strokeColor: '#f14668',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2
+                });
+            }
+
+            updateLiveEmployeeLocations();
+        }
+
+        // Update Live Employee Locations
+        function updateLiveEmployeeLocations() {
+            const today = new Date().toLocaleDateString('ar-EG');
+            const todayRecords = allRecords.filter(r => r.date === today);
+
+            // Clear existing markers
+            mapMarkers.forEach(marker => marker.setMap(null));
+            mapMarkers = [];
+
+            const employeesList = document.getElementById('employeesList');
+            let listHTML = '<h3 style="margin-bottom: 15px;">الموظفون النشطون</h3>';
+
+            Object.entries(allEmployees).forEach(([empId, employee]) => {
+                const empRecords = todayRecords.filter(r => r.employeeId === empId).sort((a, b) => b.timestamp - a.timestamp);
+                
+                if (empRecords.length > 0 && empRecords[0].type === 'حضور' && empRecords[0].location) {
+                    const location = empRecords[0].location;
+                    
+                    // Add marker
+                    const marker = new google.maps.Marker({
+                        position: { lat: location.lat, lng: location.lng },
+                        map: liveMap,
+                        title: employee.name,
+                        icon: {
+                            path: google.maps.SymbolPath.CIRCLE,
+                            scale: 10,
+                            fillColor: '#48c774',
+                            fillOpacity: 1,
+                            strokeColor: '#fff',
+                            strokeWeight: 2
+                        }
+                    });
+
+                    const infoWindow = new google.maps.InfoWindow({
+                        content: `
+                            <div class="marker-info">
+                                <h4 style="color: #667eea; margin-bottom: 10px;">${employee.name}</h4>
+                                <p><i class="fas fa-id-badge"></i> ${empId}</p>
+                                <p><i class="fas fa-clock"></i> ${empRecords[0].time}</p>
+                            </div>
+                        `
+                    });
+
+                    marker.addListener('click', () => infoWindow.open(liveMap, marker));
+                    mapMarkers.push(marker);
+
+                    listHTML += `
+                        <div class="employee-card" style="cursor: pointer;" onclick="focusOnEmployee(${location.lat}, ${location.lng})">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong style="font-size: 1.2em; color: #667eea;">${employee.name}</strong>
+                                    <div style="color: #666; margin-top: 5px;">
+                                        <i class="fas fa-id-badge"></i> ${empId} | 
+                                        <i class="fas fa-clock"></i> ${empRecords[0].time}
+                                    </div>
+                                </div>
+                                <span class="status-online"></span>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+
+            if (mapMarkers.length === 0) {
+                listHTML += '<p style="text-align: center; color: #888; padding: 30px;">لا يوجد موظفون نشطون حالياً</p>';
+            }
+
+            employeesList.innerHTML = listHTML;
+        }
+
+        // Focus on Employee
+        function focusOnEmployee(lat, lng) {
+            liveMap.setZoom(18);
+            liveMap.panTo({ lat, lng });
+        }
+
+        // Update Employee Stats
+        function updateEmployeeStats() {
+            const period = document.getElementById('periodFilter').value;
+            const container = document.getElementById('employeesStatsContainer');
+
+            let filteredRecords = [];
+            const now = new Date();
+
+            if (period === 'today') {
+                const today = now.toLocaleDateString('ar-EG');
+                filteredRecords = allRecords.filter(r => r.date === today);
+            } else if (period === 'week') {
+                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                filteredRecords = allRecords.filter(r => new Date(r.timestamp) >= weekAgo);
+            } else if (period === 'month') {
+                const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+                filteredRecords = allRecords.filter(r => new Date(r.timestamp) >= monthAgo);
+            }
+
+            let html = '';
+
+            Object.entries(allEmployees).forEach(([empId, employee]) => {
+                const empRecords = filteredRecords.filter(r => r.employeeId === empId).sort((a, b) => a.timestamp - b.timestamp);
+                
+                let totalWorkHours = 0;
+                let totalBreakHours = 0;
+                let workDays = 0;
+
+                for (let i = 0; i < empRecords.length - 1; i += 2) {
+                    if (empRecords[i].type === 'حضور' && empRecords[i + 1] && empRecords[i + 1].type === 'انصراف') {
+                        const duration = (empRecords[i + 1].timestamp - empRecords[i].timestamp) / (1000 * 60 * 60);
+                        totalWorkHours += duration;
+                        workDays++;
+
+                        // Calculate break (assuming 8 hours standard, rest is break)
+                        if (duration > 8) {
+                            totalBreakHours += (duration - 8);
+                        }
+                    }
+                }
+
+                const avgWorkHours = workDays > 0 ? (totalWorkHours / workDays).toFixed(1) : 0;
+
+                html += `
+                    <div class="employee-card">
+                        <div class="employee-header">
+                            <div>
+                                <div class="employee-name">${employee.name}</div>
+                                <div style="color: #666;"><i class="fas fa-id-badge"></i> ${empId} | ${employee.department || 'غير محدد'}</div>
+                            </div>
+                            <div>
+                                <span class="badge badge-info">${workDays} يوم عمل</span>
+                            </div>
+                        </div>
+
+                        <div class="hours-grid">
+                            <div class="hour-box">
+                                <div class="hour-value">${totalWorkHours.toFixed(1)}</div>
+                                <div class="hour-label">إجمالي ساعات العمل</div>
+                            </div>
+                            <div class="hour-box">
+                                <div class="hour-value">${avgWorkHours}</div>
+                                <div class="hour-label">متوسط ساعات اليوم</div>
+                            </div>
+                            <div class="hour-box">
+                                <div class="hour-value">${totalBreakHours.toFixed(1)}</div>
+                                <div class="hour-label">ساعات الراحة</div>
+                            </div>
+                            <div class="hour-box">
+                                <div class="hour-value">${empRecords.length}</div>
+                                <div class="hour-label">عدد السجلات</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            if (html === '') {
+                html = '<p style="text-align: center; color: #888; padding: 40px;">لا توجد بيانات للفترة المحددة</p>';
+            }
+
+            container.innerHTML = html;
+
+            // Update top employees in overview
+            updateTopEmployees(filteredRecords);
+        }
+
+        // Update Top Employees
+        function updateTopEmployees(records) {
+            const employeeHours = {};
+
+            Object.keys(allEmployees).forEach(empId => {
+                employeeHours[empId] = 0;
+            });
+
+            Object.keys(allEmployees).forEach(empId => {
+                const empRecords = records.filter(r => r.employeeId === empId).sort((a, b) => a.timestamp - b.timestamp);
+                
+                for (let i = 0; i < empRecords.length - 1; i += 2) {
+                    if (empRecords[i].type === 'حضور' && empRecords[i + 1] && empRecords[i + 1].type === 'انصراف') {
+                        const duration = (empRecords[i + 1].timestamp - empRecords[i].timestamp) / (1000 * 60 * 60);
+                        employeeHours[empId] += duration;
+                    }
+                }
+            });
+
+            const sorted = Object.entries(employeeHours)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 5);
+
+            const container = document.getElementById('topEmployees');
+            
+            if (sorted.length === 0 || sorted[0][1] === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #888; padding: 30px;">لا توجد بيانات متاحة</p>';
+                return;
+            }
+
+            container.innerHTML = sorted.map(([empId, hours], index) => {
+                const employee = allEmployees[empId];
+                const medals = ['🥇', '🥈', '🥉', '4️⃣', '5️⃣'];
+                
+                return `
+                    <div class="employee-card">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <div style="font-size: 2.5em;">${medals[index]}</div>
+                                <div>
+                                    <div style="font-size: 1.3em; font-weight: bold; color: #667eea;">${employee.name}</div>
+                                    <div style="color: #666;"><i class="fas fa-id-badge"></i> ${empId}</div>
+                                </div>
+                            </div>
+                            <div style="text-align: left;">
+                                <div style="font-size: 2em; font-weight: bold; color: #48c774;">${hours.toFixed(1)}س</div>
+                                <div style="color: #666;">ساعات عمل</div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Create Attendance Chart
+        function createAttendanceChart() {
+            const ctx = document.getElementById('attendanceChart').getContext('2d');
+            
+            // Get last 7 days data
+            const days = [];
+            const presentData = [];
+            const absentData = [];
+
+            for (let i = 6; i >= 0; i--) {
+                const date = new Date();
+                date.setDate(date.getDate() - i);
+                const dateStr = date.toLocaleDateString('ar-EG');
+                days.push(date.toLocaleDateString('ar-EG', { weekday: 'short', day: 'numeric' }));
+
+                const dayRecords = allRecords.filter(r => r.date === dateStr);
+                const present = new Set(dayRecords.filter(r => r.type === 'حضور').map(r => r.employeeId)).size;
+                const total = Object.keys(allEmployees).length;
+                
+                presentData.push(present);
+                absentData.push(total - present);
+            }
+
+            attendanceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: days,
+                    datasets: [
+                        {
+                            label: 'حضور',
+                            data: presentData,
+                            backgroundColor: 'rgba(72, 199, 116, 0.8)',
+                            borderColor: 'rgba(72, 199, 116, 1)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'غياب',
+                            data: absentData,
+                            backgroundColor: 'rgba(241, 70, 104, 0.8)',
+                            borderColor: 'rgba(241, 70, 104, 1)',
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 14,
+                                    family: 'Segoe UI'
+                                }
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: 'إحصائيات الحضور - آخر 7 أيام',
+                            font: {
+                                size: 18,
+                                family: 'Segoe UI'
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Initialize Admin Map
+        async function initAdminMap() {
+            adminMap = new google.maps.Map(document.getElementById('adminMap'), {
+                zoom: 15,
+                center: workplaceLocation,
+                mapTypeId: 'hybrid'
+            });
+
+            adminMarker = new google.maps.Marker({
+                position: workplaceLocation,
+                map: adminMap,
                 draggable: true,
                 title: 'موقع العمل',
-                animation: google.maps.Animation.BOUNCE,
                 icon: {
                     path: google.maps.SymbolPath.CIRCLE,
                     scale: 20,
@@ -230,13 +1463,13 @@
                     fillOpacity: 1,
                     strokeColor: '#fff',
                     strokeWeight: 4
-                }
+                },
+                animation: google.maps.Animation.BOUNCE
             });
 
-            // دائرة حول الموقع
             new google.maps.Circle({
-                map: map,
-                center: savedLocation,
+                map: adminMap,
+                center: workplaceLocation,
                 radius: 100,
                 fillColor: '#f14668',
                 fillOpacity: 0.2,
@@ -245,32 +1478,26 @@
                 strokeWeight: 2
             });
 
-            // عند السحب
-            marker.addListener('dragend', function(event) {
-                selectedLocation = {
+            adminMarker.addListener('dragend', function(event) {
+                workplaceLocation = {
                     lat: event.latLng.lat(),
                     lng: event.latLng.lng()
                 };
                 updateLocationDisplay();
             });
 
-            // عند النقر على الخريطة
-            map.addListener('click', function(event) {
-                const newLocation = {
+            adminMap.addListener('click', function(event) {
+                workplaceLocation = {
                     lat: event.latLng.lat(),
                     lng: event.latLng.lng()
                 };
-                marker.setPosition(newLocation);
-                selectedLocation = newLocation;
+                adminMarker.setPosition(workplaceLocation);
                 updateLocationDisplay();
-                marker.setAnimation(google.maps.Animation.BOUNCE);
-                setTimeout(() => marker.setAnimation(null), 2000);
+                adminMarker.setAnimation(google.maps.Animation.BOUNCE);
+                setTimeout(() => adminMarker.setAnimation(null), 2000);
             });
 
-            geocoder = new google.maps.Geocoder();
-            
-            // البحث التلقائي
-            autocomplete = new google.maps.places.Autocomplete(
+            const autocomplete = new google.maps.places.Autocomplete(
                 document.getElementById('searchAddress'),
                 { componentRestrictions: { country: 'eg' } }
             );
@@ -278,13 +1505,12 @@
             autocomplete.addListener('place_changed', function() {
                 const place = autocomplete.getPlace();
                 if (place.geometry) {
-                    const newLocation = {
+                    workplaceLocation = {
                         lat: place.geometry.location.lat(),
                         lng: place.geometry.location.lng()
                     };
-                    map.setCenter(newLocation);
-                    marker.setPosition(newLocation);
-                    selectedLocation = newLocation;
+                    adminMap.setCenter(workplaceLocation);
+                    adminMarker.setPosition(workplaceLocation);
                     updateLocationDisplay();
                 }
             });
@@ -292,55 +1518,55 @@
             updateLocationDisplay();
         }
 
-        // البحث بالعنوان
+        // Search Address
         function searchAddress() {
+            const geocoder = new google.maps.Geocoder();
             const address = document.getElementById('searchAddress').value;
             
             if (!address) return;
 
             geocoder.geocode({ address: address, region: 'EG' }, function(results, status) {
                 if (status === 'OK') {
-                    const newLocation = {
+                    workplaceLocation = {
                         lat: results[0].geometry.location.lat(),
                         lng: results[0].geometry.location.lng()
                     };
-                    map.setCenter(newLocation);
-                    marker.setPosition(newLocation);
-                    selectedLocation = newLocation;
+                    adminMap.setCenter(workplaceLocation);
+                    adminMarker.setPosition(workplaceLocation);
                     updateLocationDisplay();
-                    marker.setAnimation(google.maps.Animation.BOUNCE);
-                    setTimeout(() => marker.setAnimation(null), 2000);
+                    adminMarker.setAnimation(google.maps.Animation.BOUNCE);
+                    setTimeout(() => adminMarker.setAnimation(null), 2000);
                 } else {
                     alert('لم يتم العثور على العنوان');
                 }
             });
         }
 
-        // تحديث عرض الموقع
+        // Update Location Display
         function updateLocationDisplay() {
-            if (selectedLocation) {
-                document.getElementById('currentLat').textContent = selectedLocation.lat.toFixed(6);
-                document.getElementById('currentLng').textContent = selectedLocation.lng.toFixed(6);
+            if (workplaceLocation) {
+                document.getElementById('currentLat').textContent = workplaceLocation.lat.toFixed(6);
+                document.getElementById('currentLng').textContent = workplaceLocation.lng.toFixed(6);
             }
         }
 
-        // حفظ موقع العمل
+        // Save Workplace Location
         async function saveWorkplaceLocation() {
-            if (!selectedLocation) {
+            if (!workplaceLocation) {
                 alert('يرجى تحديد موقع على الخريطة');
                 return;
             }
 
             try {
-                await database.ref('settings/workplace').set(selectedLocation);
-                alert('تم حفظ موقع العمل بنجاح ✓');
+                await database.ref('settings/workplace').set(workplaceLocation);
+                alert('✓ تم حفظ موقع العمل بنجاح');
             } catch (error) {
                 console.error('خطأ:', error);
                 alert('حدث خطأ أثناء الحفظ');
             }
         }
 
-        // إضافة موظف
+        // Add Employee
         async function addEmployee() {
             const id = document.getElementById('newEmployeeId').value.trim();
             const name = document.getElementById('newEmployeeName').value.trim();
@@ -358,18 +1584,51 @@
                     createdAt: Date.now()
                 });
 
-                alert('تم إضافة الموظف بنجاح ✓');
+                alert('✓ تم إضافة الموظف بنجاح');
                 document.getElementById('newEmployeeId').value = '';
                 document.getElementById('newEmployeeName').value = '';
                 document.getElementById('newEmployeeDept').value = '';
+                
+                await loadEmployees();
+                updateStatistics();
             } catch (error) {
                 console.error('خطأ:', error);
                 alert('حدث خطأ أثناء إضافة الموظف');
             }
         }
 
-        // التهيئة
-        window.onload = initAdminMap;
+        // Export to Excel
+        function exportToExcel() {
+            let csv = 'الموظف,رقم الموظف,النوع,التاريخ,الوقت,خط الطول,خط العرض\n';
+            
+            const records = allRecords;
+            records.forEach(record => {
+                csv += `${record.employeeName || 'غير محدد'},${record.employeeId},${record.type},${record.date},${record.time},`;
+                csv += record.location ? `${record.location.lng},${record.location.lat}` : ',';
+                csv += '\n';
+            });
+
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', `attendance_records_${new Date().toISOString().split('T')[0]}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Real-time updates
+        database.ref('attendance').on('child_added', function(snapshot) {
+            if (document.getElementById('dashboard').style.display !== 'none') {
+                loadAllRecords();
+                updateStatistics();
+                if (document.getElementById('liveTab').style.display !== 'none') {
+                    updateLiveEmployeeLocations();
+                }
+            }
+        });
     </script>
 </body>
 </html>
