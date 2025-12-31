@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحكم المدير - نظام الحضور الذكي</title>
+    <title>لوحة التحكم - نظام الحضور والانصراف</title>
+    
     <!-- Bootstrap 5 Arabic -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap RTL -->
@@ -12,10 +13,9 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <!-- DataTables -->
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
+    
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -251,12 +251,29 @@
             box-shadow: 0 10px 20px rgba(0,0,0,0.1);
         }
         
-        .present .stat-icon { background: linear-gradient(135deg, var(--success-color), #27ae60); }
-        .absent .stat-icon { background: linear-gradient(135deg, var(--danger-color), #c0392b); }
-        .late .stat-icon { background: linear-gradient(135deg, var(--warning-color), #d35400); }
-        .total .stat-icon { background: linear-gradient(135deg, var(--secondary-color), #2980b9); }
-        .hours .stat-icon { background: linear-gradient(135deg, var(--info-color), #16a085); }
-        .active .stat-icon { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+        .present .stat-icon {
+            background: linear-gradient(135deg, var(--success-color), #27ae60);
+        }
+        
+        .absent .stat-icon {
+            background: linear-gradient(135deg, var(--danger-color), #c0392b);
+        }
+        
+        .late .stat-icon {
+            background: linear-gradient(135deg, var(--warning-color), #d35400);
+        }
+        
+        .total .stat-icon {
+            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
+        }
+        
+        .hours .stat-icon {
+            background: linear-gradient(135deg, var(--info-color), #16a085);
+        }
+        
+        .active .stat-icon {
+            background: linear-gradient(135deg, #9b59b6, #8e44ad);
+        }
         
         .stat-card h2 {
             font-weight: 800;
@@ -292,7 +309,7 @@
             position: relative;
         }
         
-        #map {
+        #map, #liveMap, #modalMap {
             width: 100%;
             height: 100%;
         }
@@ -351,11 +368,30 @@
             gap: 5px;
         }
         
-        .badge-present { background-color: #d4edda; color: #155724; }
-        .badge-absent { background-color: #f8d7da; color: #721c24; }
-        .badge-late { background-color: #fff3cd; color: #856404; }
-        .badge-vacation { background-color: #d1ecf1; color: #0c5460; }
-        .badge-remote { background-color: #d6d8f5; color: #2c3e50; }
+        .badge-present {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-absent {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-late {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .badge-vacation {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        
+        .badge-remote {
+            background-color: #d6d8f5;
+            color: #2c3e50;
+        }
         
         /* Charts */
         .chart-container {
@@ -414,8 +450,14 @@
         
         /* Animations */
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
         .fade-in {
@@ -548,9 +590,9 @@
             <span class="visually-hidden">جاري التحميل...</span>
         </div>
         <h5 class="mt-4 text-primary">جاري تحميل لوحة التحكم...</h5>
-        <p class="text-muted mt-2">يرجى الانتظار</p>
+        <p class="text-muted mt-2">الرجاء الانتظار...</p>
     </div>
-
+    
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
@@ -559,7 +601,8 @@
             </button>
             
             <a class="navbar-brand" href="#">
-                <i class="fas fa-chart-network me-2"></i>نظام الحضور الذكي
+                <i class="fas fa-chart-network me-2"></i>
+                لوحة التحكم
             </a>
             
             <div class="d-flex align-items-center">
@@ -572,7 +615,7 @@
                         </span>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end" style="min-width: 350px;">
-                        <li class="dropdown-header">التنبيهات الحديثة</li>
+                        <li class="dropdown-header">الإشعارات</li>
                         <li>
                             <a class="dropdown-item" href="#">
                                 <div class="d-flex align-items-start">
@@ -580,7 +623,7 @@
                                         <i class="fas fa-user-clock text-warning"></i>
                                     </div>
                                     <div class="flex-grow-1 ms-3">
-                                        <p class="mb-0"><strong>أحمد محمد</strong> لم يسجل دخوله حتى الآن</p>
+                                        <p class="mb-0"><strong>موظف متأخر</strong></p>
                                         <small class="text-muted">منذ 45 دقيقة</small>
                                     </div>
                                 </div>
@@ -593,14 +636,14 @@
                                         <i class="fas fa-user-check text-success"></i>
                                     </div>
                                     <div class="flex-grow-1 ms-3">
-                                        <p class="mb-0"><strong>سارة خالد</strong> سجلت دخولها تلقائياً</p>
-                                        <small class="text-muted">قبل 10 دقائق</small>
+                                        <p class="mb-0"><strong>تم تسجيل حضور جديد</strong></p>
+                                        <small class="text-muted">منذ 10 دقائق</small>
                                     </div>
                                 </div>
                             </a>
                         </li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-center" href="#">عرض جميع التنبيهات</a></li>
+                        <li><a class="dropdown-item text-center" href="#">عرض جميع الإشعارات</a></li>
                     </ul>
                 </div>
                 
@@ -608,26 +651,38 @@
                 <div class="dropdown">
                     <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown">
                         <div class="me-2 d-none d-md-block">
-                            <span id="adminName">مدير النظام</span>
+                            <span id="adminName">المدير العام</span>
                         </div>
                         <i class="fas fa-user-circle fa-lg"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
-                        <li class="dropdown-header">مرحباً، <span id="dropdownAdminName">مدير النظام</span></li>
+                        <li class="dropdown-header">
+                            <span id="dropdownAdminName">المدير العام</span>
+                        </li>
                         <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileModal">
-                            <i class="fas fa-user-edit me-2"></i>تعديل الملف الشخصي
-                        </a></li>
-                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
-                            <i class="fas fa-key me-2"></i>تغيير كلمة المرور
-                        </a></li>
-                        <li><a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#systemSettingsModal">
-                            <i class="fas fa-cogs me-2"></i>إعدادات النظام
-                        </a></li>
+                        <li>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileModal">
+                                <i class="fas fa-user-edit me-2"></i>
+                                تعديل الملف الشخصي
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                                <i class="fas fa-key me-2"></i>
+                                تغيير كلمة المرور
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#systemSettingsModal">
+                                <i class="fas fa-cogs me-2"></i>
+                                إعدادات النظام
+                            </a>
+                        </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <a class="dropdown-item text-danger" href="#" id="logoutBtn">
-                                <i class="fas fa-sign-out-alt me-2"></i>تسجيل الخروج
+                                <i class="fas fa-sign-out-alt me-2"></i>
+                                تسجيل الخروج
                             </a>
                         </li>
                     </ul>
@@ -642,7 +697,7 @@
             </div>
         </div>
     </nav>
-
+    
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
@@ -651,11 +706,12 @@
                     <div class="user-avatar">
                         <div class="user-avatar-text">م</div>
                     </div>
-                    <h5 id="sidebarAdminName">مدير النظام</h5>
-                    <p>صلاحية: مدير كامل</p>
+                    <h5 id="sidebarAdminName">المدير العام</h5>
+                    <p>لوحة التحكم الرئيسية</p>
                     <div class="mt-3">
                         <span class="badge bg-success">
-                            <i class="fas fa-circle me-1"></i>متصل
+                            <i class="fas fa-circle me-1"></i>
+                            متصل
                         </span>
                     </div>
                 </div>
@@ -664,13 +720,13 @@
                     <li class="nav-item">
                         <a href="#" class="nav-link active" data-page="dashboard">
                             <i class="fas fa-tachometer-alt"></i>
-                            <span class="sidebar-text">لوحة التحكم</span>
+                            <span class="sidebar-text">الرئيسية</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="#" class="nav-link" data-page="map">
                             <i class="fas fa-map-marked-alt"></i>
-                            <span class="sidebar-text">الخريطة الحية</span>
+                            <span class="sidebar-text">الخريطة المباشرة</span>
                         </a>
                     </li>
                     <li class="nav-item">
@@ -688,13 +744,13 @@
                     <li class="nav-item">
                         <a href="#" class="nav-link" data-page="reports">
                             <i class="fas fa-chart-bar"></i>
-                            <span class="sidebar-text">التقارير والإحصائيات</span>
+                            <span class="sidebar-text">التقارير</span>
                         </a>
                     </li>
                     <li class="nav-item">
                         <a href="#" class="nav-link" data-page="settings">
                             <i class="fas fa-cog"></i>
-                            <span class="sidebar-text">إعدادات النظام</span>
+                            <span class="sidebar-text">الإعدادات</span>
                         </a>
                     </li>
                 </ul>
@@ -703,25 +759,28 @@
                     <div class="d-flex align-items-center justify-content-between">
                         <div class="text-white-50 small sidebar-text">
                             <i class="fas fa-database me-1"></i>
-                            <span id="dbStatus">قاعدة البيانات متصلة</span>
+                            <span id="dbStatus">متصل</span>
                         </div>
                         <div class="spinner-grow spinner-grow-sm text-success" role="status" id="dbStatusIndicator">
-                            <span class="visually-hidden">جارٍ التحميل...</span>
+                            <span class="visually-hidden">جاري التحميل...</span>
                         </div>
                     </div>
                 </div>
             </div>
-
+            
             <!-- Main Content -->
             <div id="content">
-                <!-- صفحة لوحة التحكم الرئيسية -->
+                <!-- Dashboard Page -->
                 <div id="dashboardPage" class="page-content fade-in">
                     <div class="page-header">
-                        <h3><i class="fas fa-tachometer-alt"></i>لوحة التحكم الرئيسية</h3>
+                        <h3>
+                            <i class="fas fa-tachometer-alt"></i>
+                            لوحة التحكم الرئيسية
+                        </h3>
                         <div class="small text-muted">نظرة عامة على أداء النظام وإحصائيات الحضور</div>
                     </div>
                     
-                    <!-- إحصائيات سريعة -->
+                    <!-- Stats Cards -->
                     <div class="row">
                         <div class="col-xl-3 col-lg-6 col-md-6">
                             <div class="card stat-card present">
@@ -732,11 +791,13 @@
                                     <h2 id="presentCount">0</h2>
                                     <p>موظف حاضر الآن</p>
                                     <div class="stat-change positive">
-                                        <i class="fas fa-arrow-up me-1"></i> +2 من الأمس
+                                        <i class="fas fa-arrow-up me-1"></i>
+                                        +2 من الأمس
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="col-xl-3 col-lg-6 col-md-6">
                             <div class="card stat-card absent">
                                 <div class="card-body">
@@ -746,11 +807,13 @@
                                     <h2 id="absentCount">0</h2>
                                     <p>موظف غائب الآن</p>
                                     <div class="stat-change negative">
-                                        <i class="fas fa-arrow-down me-1"></i> -1 من الأمس
+                                        <i class="fas fa-arrow-down me-1"></i>
+                                        -1 من الأمس
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="col-xl-3 col-lg-6 col-md-6">
                             <div class="card stat-card late">
                                 <div class="card-body">
@@ -760,11 +823,13 @@
                                     <h2 id="lateCount">0</h2>
                                     <p>موظف متأخر</p>
                                     <div class="stat-change positive">
-                                        <i class="fas fa-arrow-down me-1"></i> -3 من الأمس
+                                        <i class="fas fa-arrow-down me-1"></i>
+                                        -3 من الأمس
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="col-xl-3 col-lg-6 col-md-6">
                             <div class="card stat-card hours">
                                 <div class="card-body">
@@ -774,21 +839,24 @@
                                     <h2 id="avgHours">0</h2>
                                     <p>متوسط ساعات العمل</p>
                                     <div class="stat-change positive">
-                                        <i class="fas fa-arrow-up me-1"></i> +0.5 ساعة
+                                        <i class="fas fa-arrow-up me-1"></i>
+                                        +0.5 ساعة
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                     
-                    <!-- الخريطة والرسوم البيانية -->
+                    <!-- Map and Chart Row -->
                     <div class="row mt-4">
                         <div class="col-lg-8">
                             <div class="card">
                                 <div class="card-header">
-                                    <i class="fas fa-map-marked-alt"></i>خريطة موقع العمل والموظفين
+                                    <i class="fas fa-map-marked-alt"></i>
+                                    خريطة موقع العمل والموظفين
                                     <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#workLocationModal">
-                                        <i class="fas fa-edit me-1"></i>تعديل الموقع
+                                        <i class="fas fa-edit me-1"></i>
+                                        تعديل الموقع
                                     </button>
                                 </div>
                                 <div class="card-body p-0">
@@ -796,21 +864,24 @@
                                         <div id="map"></div>
                                         <div class="map-overlay">
                                             <h6><i class="fas fa-info-circle me-2"></i>معلومات الموقع</h6>
-                                            <p class="mb-1"><strong>نصف القطر:</strong> <span id="currentRadius">20</span> متر</p>
-                                            <p class="mb-1"><strong>الموظفين داخل النطاق:</strong> <span id="employeesInRange">0</span></p>
-                                            <p class="mb-3"><strong>الموظفين خارج النطاق:</strong> <span id="employeesOutRange">0</span></p>
+                                            <p class="mb-1"><strong>نطاق التسجيل:</strong> <span id="currentRadius">20</span> متر</p>
+                                            <p class="mb-1"><strong>داخل النطاق:</strong> <span id="employeesInRange">0</span></p>
+                                            <p class="mb-3"><strong>خارج النطاق:</strong> <span id="employeesOutRange">0</span></p>
                                             <button class="btn btn-sm btn-primary w-100" id="refreshLocations">
-                                                <i class="fas fa-sync-alt me-1"></i>تحديث المواقع
+                                                <i class="fas fa-sync-alt me-1"></i>
+                                                تحديث المواقع
                                             </button>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="col-lg-4">
                             <div class="card">
                                 <div class="card-header">
-                                    <i class="fas fa-chart-pie"></i>توزيع الحضور اليوم
+                                    <i class="fas fa-chart-pie"></i>
+                                    توزيع الحضور اليوم
                                 </div>
                                 <div class="card-body">
                                     <div class="chart-container">
@@ -821,17 +892,19 @@
                         </div>
                     </div>
                     
-                    <!-- آخر الحركات والتنبيهات -->
+                    <!-- Recent Attendance and Alerts -->
                     <div class="row mt-4">
                         <div class="col-lg-8">
                             <div class="card">
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <div>
-                                        <i class="fas fa-history"></i>آخر حركات الحضور
+                                        <i class="fas fa-history"></i>
+                                        آخر حركات الحضور
                                     </div>
                                     <div>
                                         <button class="btn btn-sm btn-outline-primary me-2" id="exportRecentBtn">
-                                            <i class="fas fa-download me-1"></i>تصدير
+                                            <i class="fas fa-download me-1"></i>
+                                            تصدير
                                         </button>
                                         <button class="btn btn-sm btn-primary" id="refreshAttendanceBtn">
                                             <i class="fas fa-sync-alt"></i>
@@ -853,26 +926,28 @@
                                                 </tr>
                                             </thead>
                                             <tbody id="recentAttendanceBody">
-                                                <!-- سيتم ملء البيانات بواسطة JavaScript -->
+                                                <!-- JavaScript will populate this -->
                                             </tbody>
                                         </table>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="col-lg-4">
                             <div class="card">
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <div>
-                                        <i class="fas fa-exclamation-circle"></i>تنبيهات النظام
+                                        <i class="fas fa-exclamation-circle"></i>
+                                        تنبيهات النظام
                                     </div>
                                     <button class="btn btn-sm btn-outline-secondary" id="markAllReadBtn">
-                                        تعيين الكل كمقروء
+                                        تجاهل الكل
                                     </button>
                                 </div>
                                 <div class="card-body p-0">
                                     <div id="alertsList" class="list-group list-group-flush">
-                                        <!-- سيتم ملء التنبيهات بواسطة JavaScript -->
+                                        <!-- JavaScript will populate this -->
                                     </div>
                                 </div>
                             </div>
@@ -880,11 +955,14 @@
                     </div>
                 </div>
                 
-                <!-- صفحة الخريطة الحية -->
+                <!-- Map Page -->
                 <div id="mapPage" class="page-content" style="display: none;">
                     <div class="page-header">
-                        <h3><i class="fas fa-map-marked-alt"></i>الخريطة الحية للموظفين</h3>
-                        <div class="small text-muted">تتبع الموظفين في الوقت الفعلي وعرض مواقعهم على الخريطة</div>
+                        <h3>
+                            <i class="fas fa-map-marked-alt"></i>
+                            الخريطة المباشرة
+                        </h3>
+                        <div class="small text-muted">تتبع مواقع الموظفين في الوقت الفعلي</div>
                     </div>
                     
                     <div class="row">
@@ -892,22 +970,23 @@
                             <div class="card">
                                 <div class="card-header d-flex justify-content-between align-items-center">
                                     <div>
-                                        <i class="fas fa-map"></i>خريطة التتبع المباشر
+                                        <i class="fas fa-map"></i>
+                                        خريطة المواقع
                                     </div>
                                     <div>
                                         <div class="btn-group me-2">
                                             <button class="btn btn-sm btn-outline-primary" id="mapTypeRoad">
-                                                <i class="fas fa-road"></i> عادي
+                                                <i class="fas fa-road"></i>
                                             </button>
                                             <button class="btn btn-sm btn-outline-primary" id="mapTypeSatellite">
-                                                <i class="fas fa-satellite"></i> قمر صناعي
+                                                <i class="fas fa-satellite"></i>
                                             </button>
                                         </div>
                                         <button class="btn btn-sm btn-success me-2" id="centerMapBtn">
-                                            <i class="fas fa-crosshairs"></i>توسيط الخريطة
+                                            <i class="fas fa-crosshairs"></i>
                                         </button>
                                         <button class="btn btn-sm btn-primary" id="reloadMapBtn">
-                                            <i class="fas fa-sync-alt"></i>تحديث
+                                            <i class="fas fa-sync-alt"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -915,38 +994,40 @@
                                     <div class="map-container">
                                         <div id="liveMap"></div>
                                         <div class="map-overlay">
-                                            <h6><i class="fas fa-filter me-2"></i>تصفية الموظفين</h6>
+                                            <h6><i class="fas fa-filter me-2"></i>فلترة العرض</h6>
                                             <div class="mb-2">
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" id="filterPresent" checked>
                                                     <label class="form-check-label" for="filterPresent">
-                                                        <span class="badge badge-present">حاضرون</span>
+                                                        <span class="badge badge-present">حاضر</span>
                                                     </label>
                                                 </div>
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="filterAbsent" checked>
-                                                    <label class="form-check-label" for="filterAbsent">
-                                                        <span class="badge badge-absent">غائبون</span>
-                                                    </label>
-                                                </div>
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="filterLate" checked>
-                                                    <label class="form-check-label" for="filterLate">
-                                                        <span class="badge badge-late">متأخرون</span>
-                                                    </label>
-                                                </div>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="filterAbsent" checked>
+                                                <label class="form-check-label" for="filterAbsent">
+                                                    <span class="badge badge-absent">غائب</span>
+                                                </label>
+                                            </div>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" id="filterLate" checked>
+                                                <label class="form-check-label" for="filterLate">
+                                                    <span class="badge badge-late">متأخر</span>
+                                                </label>
                                             </div>
                                             <div class="mb-3">
                                                 <label class="form-label small">القسم</label>
                                                 <select class="form-select form-select-sm" id="departmentFilter">
-                                                    <option value="all">جميع الأقسام</option>
+                                                    <option value="all">الكل</option>
+                                                    <option value="تقنية المعلومات">تقنية المعلومات</option>
+                                                    <option value="الموارد البشرية">الموارد البشرية</option>
                                                     <option value="المبيعات">المبيعات</option>
                                                     <option value="التسويق">التسويق</option>
-                                                    <option value="التطوير">التطوير</option>
                                                 </select>
                                             </div>
                                             <button class="btn btn-sm btn-primary w-100" id="applyFiltersBtn">
-                                                <i class="fas fa-check me-1"></i>تطبيق الفلتر
+                                                <i class="fas fa-check me-1"></i>
+                                                تطبيق الفلتر
                                             </button>
                                         </div>
                                     </div>
@@ -959,7 +1040,8 @@
                         <div class="col-lg-8">
                             <div class="card">
                                 <div class="card-header">
-                                    <i class="fas fa-user-friends"></i>قائمة الموظفين وأماكنهم
+                                    <i class="fas fa-user-friends"></i>
+                                    قائمة المواقع
                                 </div>
                                 <div class="card-body p-0">
                                     <div class="table-container">
@@ -970,24 +1052,25 @@
                                                     <th>الموظف</th>
                                                     <th>القسم</th>
                                                     <th>الحالة</th>
-                                                    <th>الموقع الحالي</th>
-                                                    <th>المسافة</th>
                                                     <th>آخر تحديث</th>
+                                                    <th>المسافة</th>
                                                     <th>الإجراءات</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="employeesLocationBody">
-                                                <!-- سيتم ملء البيانات بواسطة JavaScript -->
+                                                <!-- JavaScript will populate this -->
                                             </tbody>
                                         </table>
                                     </div>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="col-lg-4">
                             <div class="card">
                                 <div class="card-header">
-                                    <i class="fas fa-chart-line"></i>إحصائيات التتبع
+                                    <i class="fas fa-chart-line"></i>
+                                    إحصائيات التتبع
                                 </div>
                                 <div class="card-body">
                                     <div class="chart-container">
@@ -995,15 +1078,15 @@
                                     </div>
                                     <div class="mt-3">
                                         <div class="d-flex justify-content-between mb-2">
-                                            <span>المتتبعون الآن:</span>
+                                            <span>يتم تتبعهم الآن</span>
                                             <strong id="trackingNow">0</strong>
                                         </div>
                                         <div class="d-flex justify-content-between mb-2">
-                                            <span>متوسط دقة GPS:</span>
-                                            <strong id="avgGpsAccuracy">0</strong>
+                                            <span>دقة GPS المتوسطة</span>
+                                            <strong id="avgGpsAccuracy">0 متر</strong>
                                         </div>
                                         <div class="d-flex justify-content-between mb-2">
-                                            <span>آخر تحديث:</span>
+                                            <span>آخر تحديث</span>
                                             <strong id="lastUpdateTime">--:--:--</strong>
                                         </div>
                                     </div>
@@ -1013,19 +1096,25 @@
                     </div>
                 </div>
                 
-                <!-- صفحات أخرى -->
+                <!-- Employees Page -->
                 <div id="employeesPage" class="page-content" style="display: none;">
                     <div class="page-header">
-                        <h3><i class="fas fa-users"></i>إدارة الموظفين</h3>
-                        <div class="small text-muted">إضافة وتعديل وحذف بيانات الموظفين</div>
+                        <h3>
+                            <i class="fas fa-users"></i>
+                            إدارة الموظفين
+                        </h3>
+                        <div class="small text-muted">عرض وإدارة بيانات جميع الموظفين</div>
                     </div>
+                    
                     <div class="card">
                         <div class="card-header d-flex justify-content-between align-items-center">
                             <div>
-                                <i class="fas fa-user-plus"></i>قائمة الموظفين
+                                <i class="fas fa-user-plus"></i>
+                                قائمة الموظفين
                             </div>
                             <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
-                                <i class="fas fa-plus me-2"></i>إضافة موظف جديد
+                                <i class="fas fa-plus me-2"></i>
+                                إضافة موظف جديد
                             </button>
                         </div>
                         <div class="card-body p-0">
@@ -1036,16 +1125,16 @@
                                             <th>#</th>
                                             <th>الصورة</th>
                                             <th>الاسم</th>
-                                            <th>رقم الموظف</th>
+                                            <th>الرقم الوظيفي</th>
                                             <th>القسم</th>
-                                            <th>الوظيفة</th>
-                                            <th>تاريخ التوظيف</th>
+                                            <th>المسمى الوظيفي</th>
+                                            <th>تاريخ التعيين</th>
                                             <th>الحالة</th>
                                             <th>الإجراءات</th>
                                         </tr>
                                     </thead>
                                     <tbody id="employeesTableBody">
-                                        <!-- سيتم ملء البيانات بواسطة JavaScript -->
+                                        <!-- JavaScript will populate this -->
                                     </tbody>
                                 </table>
                             </div>
@@ -1053,47 +1142,60 @@
                     </div>
                 </div>
                 
-                <!-- صفحات أخرى سيتم إضافتها لاحقاً -->
+                <!-- Attendance Page -->
                 <div id="attendancePage" class="page-content" style="display: none;">
                     <div class="page-header">
-                        <h3><i class="fas fa-clipboard-check"></i>سجلات الحضور</h3>
-                        <div class="small text-muted">عرض وتصدير جميع سجلات الحضور</div>
+                        <h3>
+                            <i class="fas fa-clipboard-check"></i>
+                            سجلات الحضور
+                        </h3>
+                        <div class="small text-muted">عرض وإدارة سجلات الحضور والانصراف</div>
                     </div>
-                    <p>صفحة سجلات الحضور قيد التطوير...</p>
+                    <p class="text-center text-muted">جاري تطوير هذه الصفحة...</p>
                 </div>
                 
+                <!-- Reports Page -->
                 <div id="reportsPage" class="page-content" style="display: none;">
                     <div class="page-header">
-                        <h3><i class="fas fa-chart-bar"></i>التقارير والإحصائيات</h3>
-                        <div class="small text-muted">تقارير مفصلة وإحصائيات عن الحضور والانصراف</div>
+                        <h3>
+                            <i class="fas fa-chart-bar"></i>
+                            التقارير
+                        </h3>
+                        <div class="small text-muted">عرض التقارير والإحصائيات التفصيلية</div>
                     </div>
-                    <p>صفحة التقارير والإحصائيات قيد التطوير...</p>
+                    <p class="text-center text-muted">جاري تطوير هذه الصفحة...</p>
                 </div>
                 
+                <!-- Settings Page -->
                 <div id="settingsPage" class="page-content" style="display: none;">
                     <div class="page-header">
-                        <h3><i class="fas fa-cog"></i>إعدادات النظام</h3>
-                        <div class="small text-muted">تخصيص إعدادات النظام والميزات</div>
+                        <h3>
+                            <i class="fas fa-cog"></i>
+                            الإعدادات
+                        </h3>
+                        <div class="small text-muted">إعدادات النظام والتخصيصات</div>
                     </div>
-                    <p>صفحة الإعدادات قيد التطوير...</p>
+                    <p class="text-center text-muted">جاري تطوير هذه الصفحة...</p>
                 </div>
             </div>
         </div>
     </div>
-
+    
     <!-- Sidebar Toggle Button -->
-    <button id="sidebarToggle" title="إظهار/إخفاء الشريط الجانبي">
+    <button id="sidebarToggle" title="إظهار/إخفاء القائمة">
         <i class="fas fa-bars"></i>
     </button>
-
+    
     <!-- Modals -->
-    <!-- Modal لتحديد موقع العمل -->
+    
+    <!-- Work Location Modal -->
     <div class="modal fade" id="workLocationModal" tabindex="-1">
         <div class="modal-dialog modal-xl">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="fas fa-map-marker-alt me-2"></i>تحديد موقع العمل
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        تعديل موقع العمل
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
@@ -1116,42 +1218,46 @@
                                         </div>
                                     </div>
                                 </div>
+                                
                                 <div class="mt-3">
-                                    <label class="form-label">نصف قطر منطقة الحضور</label>
+                                    <label class="form-label">نطاق التسجيل (متر)</label>
                                     <input type="range" class="form-range" id="radiusRange" min="10" max="200" value="20" step="5">
                                     <div class="d-flex justify-content-between mt-2">
-                                        <span>10 م</span>
+                                        <span>10</span>
                                         <strong id="radiusValue">20 متر</strong>
-                                        <span>200 م</span>
+                                        <span>200</span>
                                     </div>
                                 </div>
+                                
                                 <div class="mt-3">
-                                    <label class="form-label">وقت التسجيل التلقائي</label>
+                                    <label class="form-label">تحديث تلقائي كل</label>
                                     <select class="form-select" id="autoCheckTime">
-                                        <option value="5">5 ثوانٍ</option>
-                                        <option value="10" selected>10 ثوانٍ</option>
+                                        <option value="5">5 ثواني</option>
+                                        <option value="10" selected>10 ثواني</option>
                                         <option value="30">30 ثانية</option>
                                         <option value="60">1 دقيقة</option>
                                     </select>
                                 </div>
+                                
                                 <div class="mt-3">
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" id="enableNotifications" checked>
                                         <label class="form-check-label" for="enableNotifications">
-                                            تمكين الإشعارات
+                                            تفعيل الإشعارات
                                         </label>
                                     </div>
                                     <div class="form-check mt-2">
                                         <input class="form-check-input" type="checkbox" id="enableAutoCheck" checked>
                                         <label class="form-check-label" for="enableAutoCheck">
-                                            التسجيل التلقائي
+                                            التحقق التلقائي من المواقع
                                         </label>
                                     </div>
                                 </div>
                             </div>
+                            
                             <div class="alert alert-info">
                                 <i class="fas fa-info-circle me-2"></i>
-                                <small>سيتم تطبيق الإعدادات على جميع الموظفين فور حفظها.</small>
+                                <small>سيتم حفظ التغييرات تلقائياً. الموظفون خارج النطاق المحدد لن يتمكنوا من تسجيل الحضور.</small>
                             </div>
                         </div>
                     </div>
@@ -1159,20 +1265,22 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
                     <button type="button" class="btn btn-primary" id="saveLocationBtn">
-                        <i class="fas fa-save me-2"></i>حفظ الإعدادات
+                        <i class="fas fa-save me-2"></i>
+                        حفظ التغييرات
                     </button>
                 </div>
             </div>
         </div>
     </div>
-
-    <!-- Modal إضافة موظف -->
+    
+    <!-- Add Employee Modal -->
     <div class="modal fade" id="addEmployeeModal" tabindex="-1">
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">
-                        <i class="fas fa-user-plus me-2"></i>إضافة موظف جديد
+                        <i class="fas fa-user-plus me-2"></i>
+                        إضافة موظف جديد
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
@@ -1187,51 +1295,56 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">رقم الموظف</label>
+                                    <label class="form-label">الرقم الوظيفي</label>
                                     <input type="text" class="form-control" name="employeeId" required>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
                                     <label class="form-label">القسم</label>
                                     <select class="form-select" name="department" required>
                                         <option value="">اختر القسم</option>
+                                        <option value="تقنية المعلومات">تقنية المعلومات</option>
+                                        <option value="الموارد البشرية">الموارد البشرية</option>
                                         <option value="المبيعات">المبيعات</option>
                                         <option value="التسويق">التسويق</option>
-                                        <option value="التطوير">التطوير</option>
                                         <option value="المالية">المالية</option>
-                                        <option value="الموارد البشرية">الموارد البشرية</option>
+                                        <option value="أخرى">أخرى</option>
                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">الوظيفة</label>
+                                    <label class="form-label">المسمى الوظيفي</label>
                                     <input type="text" class="form-control" name="position" required>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">تاريخ التوظيف</label>
+                                    <label class="form-label">تاريخ التعيين</label>
                                     <input type="date" class="form-control" name="hireDate" required>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label class="form-label">كلمة المرور الأولية</label>
+                                    <label class="form-label">كلمة المرور</label>
                                     <input type="password" class="form-control" name="password" required>
-                                    <div class="form-text">سيتم تشفير كلمة المرور قبل التخزين</div>
+                                    <div class="form-text">يجب أن تكون 6 أحرف على الأقل</div>
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="mb-3">
                             <label class="form-label">البريد الإلكتروني</label>
                             <input type="email" class="form-control" name="email">
                         </div>
+                        
                         <div class="mb-3">
                             <label class="form-label">رقم الهاتف</label>
                             <input type="tel" class="form-control" name="phone">
@@ -1241,40 +1354,47 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
                     <button type="button" class="btn btn-primary" id="saveEmployeeBtn">
-                        <i class="fas fa-save me-2"></i>حفظ الموظف
+                        <i class="fas fa-save me-2"></i>
+                        حفظ الموظف
                     </button>
                 </div>
             </div>
         </div>
     </div>
-
+    
+    <!-- jQuery (required for DataTables) -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
     <!-- DataTables -->
     <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
     <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
-    <!-- Google Maps API - مع Fallback -->
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Google Maps API with Fallback -->
     <script>
-        // حل مشكلة خرائط جوجل مع Fallback متعدد
         let googleMapsLoaded = false;
         
         function loadGoogleMaps() {
-            // قائمة بمفاتيح API بديلة للطوارئ
             const apiKeys = [
-                'AIzaSyC4J8ncbuejvzfWvzCTAXRzjFg_vrchXpE', // المفتاح الأساسي
-                'AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg', // مفتاح احتياطي 1
-                'AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8'  // مفتاح احتياطي 2
+                'AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE',
+                'AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg',
+                'AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8'
             ];
-            
             let currentKeyIndex = 0;
             
             function tryLoadMap(keyIndex) {
                 if (keyIndex >= apiKeys.length) {
-                    console.error('فشل تحميل خرائط جوجل بعد عدة محاولات');
+                    console.error('جميع مفاتيح Google Maps فشلت');
                     showMapFallback();
                     return;
                 }
@@ -1286,7 +1406,7 @@
                 script.defer = true;
                 
                 script.onload = function() {
-                    console.log('تم تحميل خرائط جوجل بنجاح');
+                    console.log('تم تحميل Google Maps بنجاح');
                     googleMapsLoaded = true;
                     if (typeof initMap === 'function') {
                         initMap();
@@ -1294,44 +1414,42 @@
                 };
                 
                 script.onerror = function() {
-                    console.warn(`فشل تحميل خرائط جوجل بالمفتاح ${keyIndex + 1}`);
+                    console.warn(`فشل تحميل Google Maps بالمفتاح ${keyIndex + 1}`);
                     tryLoadMap(keyIndex + 1);
                 };
                 
                 document.head.appendChild(script);
             }
             
-            // بدء المحاولة بالمفتاح الأول
             tryLoadMap(currentKeyIndex);
         }
         
-        // واجهة بديلة عند فشل تحميل خرائط جوجل
         function showMapFallback() {
             const mapContainers = document.querySelectorAll('#map, #liveMap, #modalMap');
             mapContainers.forEach(container => {
                 container.innerHTML = `
                     <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#f8f9fa; color:#6c757d;">
                         <i class="fas fa-map-marked-alt" style="font-size:48px; margin-bottom:20px;"></i>
-                        <h5>لا يمكن تحميل الخريطة حاليًا</h5>
+                        <h5>خدمة الخرائط غير متاحة</h5>
                         <p class="text-center" style="max-width:300px;">
-                            يرجى التحقق من اتصال الإنترنت أو تجربة الموقع لاحقًا.
+                            عذراً، خدمة الخرائط غير متاحة في الوقت الحالي. سيتم تحديث البيانات تلقائياً.
                         </p>
                         <button class="btn btn-primary mt-3" onclick="loadGoogleMaps()">
-                            <i class="fas fa-sync-alt me-2"></i>إعادة المحاولة
+                            <i class="fas fa-sync-alt me-2"></i>
+                            إعادة المحاولة
                         </button>
                     </div>
                 `;
             });
         }
         
-        // بدء تحميل خرائط جوجل عند تحميل الصفحة
         document.addEventListener('DOMContentLoaded', loadGoogleMaps);
     </script>
     
     <script>
-        // تهيئة Firebase
+        // Firebase Configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFg_vrchXpE",
+            apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE",
             authDomain: "hedor-bea3c.firebaseapp.com",
             databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
             projectId: "hedor-bea3c",
@@ -1341,11 +1459,12 @@
             measurementId: "G-R2MG1YKQEP"
         };
         
+        // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         const auth = firebase.auth();
         
-        // متغيرات عامة
+        // Global Variables
         let currentUser = null;
         let map, liveMap, modalMap;
         let workLocation = { lat: 24.7136, lng: 46.6753 };
@@ -1354,80 +1473,80 @@
         let attendanceChart, trackingChart;
         let dataTables = {};
         
-        // التحقق من جلسة المدير
+        // Check Admin Session
         function checkAdminSession() {
             const userData = localStorage.getItem('currentUser');
+            
             if (!userData) {
                 window.location.href = 'index.html';
                 return;
             }
             
             currentUser = JSON.parse(userData);
+            
             if (currentUser.role !== 'admin') {
                 window.location.href = 'index.html';
                 return;
             }
             
-            // عرض اسم المدير
             document.getElementById('adminName').textContent = currentUser.name;
             document.getElementById('sidebarAdminName').textContent = currentUser.name;
             document.getElementById('dropdownAdminName').textContent = currentUser.name;
             
-            // إخفاء شاشة التحميل بعد تأكيد الجلسة
             setTimeout(() => {
                 document.getElementById('loadingOverlay').style.display = 'none';
             }, 1000);
         }
         
-        // تحديث الوقت والتاريخ
+        // Update Date and Time
         function updateDateTime() {
             const now = new Date();
             const timeString = now.toLocaleTimeString('ar-SA');
-            const dateString = now.toLocaleDateString('ar-SA', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
+            const dateString = now.toLocaleDateString('ar-SA', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
             });
             
             document.getElementById('currentTime').textContent = timeString;
             document.getElementById('currentDate').textContent = dateString;
-            document.getElementById('lastUpdateTime').textContent = timeString;
+            
+            const lastUpdate = document.getElementById('lastUpdateTime');
+            if (lastUpdate) {
+                lastUpdate.textContent = timeString;
+            }
         }
         
-        // إدارة الشريط الجانبي
+        // Setup Sidebar
         function setupSidebar() {
             const sidebarToggle = document.getElementById('sidebarToggle');
             const mobileSidebarToggle = document.getElementById('mobileSidebarToggle');
             const sidebar = document.getElementById('sidebar');
             
-            // تبديل للشاشات الكبيرة
             sidebarToggle.addEventListener('click', function() {
                 document.body.classList.toggle('sidebar-collapsed');
                 localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed'));
             });
             
-            // تبديل للشاشات الصغيرة
             mobileSidebarToggle.addEventListener('click', function() {
                 sidebar.classList.toggle('active');
             });
             
-            // استعادة حالة الشريط الجانبي
             if (localStorage.getItem('sidebarCollapsed') === 'true') {
                 document.body.classList.add('sidebar-collapsed');
             }
             
-            // إغلاق الشريط الجانبي عند النقر خارجها على الشاشات الصغيرة
             document.addEventListener('click', function(event) {
-                if (window.innerWidth < 992 && 
-                    !sidebar.contains(event.target) && 
-                    !mobileSidebarToggle.contains(event.target)) {
-                    sidebar.classList.remove('active');
+                if (window.innerWidth < 992) {
+                    if (!sidebar.contains(event.target) && !mobileSidebarToggle.contains(event.target)) {
+                        sidebar.classList.remove('active');
+                    }
                 }
             });
         }
         
-        // تبديل الصفحات
+        // Setup Page Navigation
         function setupPageNavigation() {
             const navLinks = document.querySelectorAll('.nav-link[data-page]');
             
@@ -1435,26 +1554,20 @@
                 link.addEventListener('click', function(e) {
                     e.preventDefault();
                     
-                    // إزالة النشاط من جميع الروابط
                     navLinks.forEach(l => l.classList.remove('active'));
-                    
-                    // إضافة النشاط للرابط الحالي
                     this.classList.add('active');
                     
-                    // إخفاء جميع الصفحات
                     const pages = document.querySelectorAll('.page-content');
                     pages.forEach(page => {
                         page.style.display = 'none';
                         page.classList.remove('fade-in');
                     });
                     
-                    // عرض الصفحة المحددة
                     const pageId = this.getAttribute('data-page') + 'Page';
                     const pageElement = document.getElementById(pageId);
                     pageElement.style.display = 'block';
                     setTimeout(() => pageElement.classList.add('fade-in'), 10);
                     
-                    // تهيئة الصفحة إذا لزم الأمر
                     switch(this.getAttribute('data-page')) {
                         case 'map':
                             initLiveMap();
@@ -1467,7 +1580,6 @@
                             break;
                     }
                     
-                    // إغلاق الشريط الجانبي على الشاشات الصغيرة
                     if (window.innerWidth < 992) {
                         document.getElementById('sidebar').classList.remove('active');
                     }
@@ -1475,126 +1587,125 @@
             });
         }
         
-        // تهيئة الخريطة الرئيسية
+        // Initialize Map
         function initMap() {
             if (!googleMapsLoaded) {
-                console.warn('خرائط جوجل غير محملة بعد');
+                console.warn('Google Maps لم يتم تحميلها بعد');
                 setTimeout(initMap, 1000);
                 return;
             }
             
-            const mapOptions = {
-                center: workLocation,
-                zoom: 17,
-                mapTypeId: google.maps.MapTypeId.ROADMAP,
-                disableDefaultUI: false,
-                zoomControl: true,
-                mapTypeControl: true,
-                scaleControl: true,
-                streetViewControl: true,
-                rotateControl: true,
-                fullscreenControl: true,
-                styles: [
-                    {
-                        "featureType": "administrative",
-                        "elementType": "labels.text.fill",
-                        "stylers": [{"color": "#444444"}]
+            try {
+                const mapOptions = {
+                    center: workLocation,
+                    zoom: 17,
+                    mapTypeId: google.maps.MapTypeId.ROADMAP,
+                    disableDefaultUI: false,
+                    zoomControl: true,
+                    mapTypeControl: true,
+                    scaleControl: true,
+                    streetViewControl: true,
+                    rotateControl: true,
+                    fullscreenControl: true,
+                    styles: [
+                        {
+                            featureType: "administrative",
+                            elementType: "labels.text.fill",
+                            stylers: [{ color: "#444444" }]
+                        },
+                        {
+                            featureType: "landscape",
+                            elementType: "all",
+                            stylers: [{ color: "#f2f2f2" }]
+                        },
+                        {
+                            featureType: "poi",
+                            elementType: "all",
+                            stylers: [{ visibility: "off" }]
+                        },
+                        {
+                            featureType: "road",
+                            elementType: "all",
+                            stylers: [{ saturation: -100 }, { lightness: 45 }]
+                        },
+                        {
+                            featureType: "road.highway",
+                            elementType: "all",
+                            stylers: [{ visibility: "simplified" }]
+                        },
+                        {
+                            featureType: "road.arterial",
+                            elementType: "labels.icon",
+                            stylers: [{ visibility: "off" }]
+                        },
+                        {
+                            featureType: "transit",
+                            elementType: "all",
+                            stylers: [{ visibility: "off" }]
+                        },
+                        {
+                            featureType: "water",
+                            elementType: "all",
+                            stylers: [{ color: "#3498db" }, { visibility: "on" }]
+                        }
+                    ]
+                };
+                
+                map = new google.maps.Map(document.getElementById('map'), mapOptions);
+                
+                const workMarker = new google.maps.Marker({
+                    position: workLocation,
+                    map: map,
+                    title: 'موقع العمل',
+                    icon: {
+                        url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                        scaledSize: new google.maps.Size(40, 40)
                     },
-                    {
-                        "featureType": "landscape",
-                        "elementType": "all",
-                        "stylers": [{"color": "#f2f2f2"}]
-                    },
-                    {
-                        "featureType": "poi",
-                        "elementType": "all",
-                        "stylers": [{"visibility": "off"}]
-                    },
-                    {
-                        "featureType": "road",
-                        "elementType": "all",
-                        "stylers": [{"saturation": -100}, {"lightness": 45}]
-                    },
-                    {
-                        "featureType": "road.highway",
-                        "elementType": "all",
-                        "stylers": [{"visibility": "simplified"}]
-                    },
-                    {
-                        "featureType": "road.arterial",
-                        "elementType": "labels.icon",
-                        "stylers": [{"visibility": "off"}]
-                    },
-                    {
-                        "featureType": "transit",
-                        "elementType": "all",
-                        "stylers": [{"visibility": "off"}]
-                    },
-                    {
-                        "featureType": "water",
-                        "elementType": "all",
-                        "stylers": [{"color": "#3498db"}, {"visibility": "on"}]
-                    }
-                ]
-            };
-            
-            map = new google.maps.Map(document.getElementById('map'), mapOptions);
-            
-            // علامة موقع العمل
-            const workMarker = new google.maps.Marker({
-                position: workLocation,
-                map: map,
-                title: 'موقع العمل',
-                icon: {
-                    url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-                    scaledSize: new google.maps.Size(40, 40)
-                },
-                animation: google.maps.Animation.DROP
-            });
-            
-            // دائرة منطقة الحضور
-            const geofenceCircle = new google.maps.Circle({
-                strokeColor: '#FF0000',
-                strokeOpacity: 0.8,
-                strokeWeight: 2,
-                fillColor: '#FF0000',
-                fillOpacity: 0.1,
-                map: map,
-                center: workLocation,
-                radius: geofenceRadius
-            });
-            
-            // معلومات موقع العمل
-            const infoWindow = new google.maps.InfoWindow({
-                content: `
-                    <div style="padding: 10px; min-width: 200px;">
-                        <h6 style="margin: 0 0 10px; color: #2c3e50; font-weight: bold;">
-                            <i class="fas fa-building"></i> موقع العمل الرئيسي
-                        </h6>
-                        <p style="margin: 5px 0;"><strong>الإحداثيات:</strong><br>
-                            ${workLocation.lat.toFixed(6)}, ${workLocation.lng.toFixed(6)}
-                        </p>
-                        <p style="margin: 5px 0;"><strong>نصف القطر:</strong> ${geofenceRadius} متر</p>
-                        <button onclick="document.getElementById('workLocationModal').click()" 
-                                style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-top: 5px;">
-                            <i class="fas fa-edit"></i> تعديل الموقع
-                        </button>
-                    </div>
-                `
-            });
-            
-            workMarker.addListener('click', () => {
-                infoWindow.open(map, workMarker);
-            });
-            
-            // تحميل مواقع الموظفين
-            loadEmployeeLocationsForMap(map);
+                    animation: google.maps.Animation.DROP
+                });
+                
+                const geofenceCircle = new google.maps.Circle({
+                    strokeColor: '#FF0000',
+                    strokeOpacity: 0.8,
+                    strokeWeight: 2,
+                    fillColor: '#FF0000',
+                    fillOpacity: 0.1,
+                    map: map,
+                    center: workLocation,
+                    radius: geofenceRadius
+                });
+                
+                const infoWindow = new google.maps.InfoWindow({
+                    content: `
+                        <div style="padding: 10px; min-width: 200px;">
+                            <h6 style="margin: 0 0 10px; color: #2c3e50; font-weight: bold;">
+                                <i class="fas fa-building"></i> موقع العمل
+                            </h6>
+                            <p style="margin: 5px 0;"><strong>الإحداثيات:</strong><br>${workLocation.lat.toFixed(6)}, ${workLocation.lng.toFixed(6)}</p>
+                            <p style="margin: 5px 0;"><strong>نطاق التسجيل:</strong> ${geofenceRadius} متر</p>
+                            <button onclick="document.querySelector('[data-bs-target=\\'#workLocationModal\\']').click()" style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-top: 5px;">
+                                <i class="fas fa-edit"></i> تعديل
+                            </button>
+                        </div>
+                    `
+                });
+                
+                workMarker.addListener('click', () => {
+                    infoWindow.open(map, workMarker);
+                });
+                
+                loadEmployeeLocationsForMap(map);
+                
+            } catch (error) {
+                console.error('خطأ في تهيئة الخريطة:', error);
+                showMapFallback();
+            }
         }
         
-        // تهيئة الخريطة الحية
+        // Initialize Live Map
         function initLiveMap() {
             if (!googleMapsLoaded) {
-                console.warn('خرائط جوجل غير محملة بعد');
+                console.warn('Google Maps لم يتم تحميلها بعد');
                 setTimeout(initLiveMap, 1000);
                 return;
             }
@@ -1610,7 +1721,6 @@
             
             liveMap = new google.maps.Map(document.getElementById('liveMap'), mapOptions);
             
-            // دائرة منطقة الحضور
             new google.maps.Circle({
                 strokeColor: '#FF0000',
                 strokeOpacity: 0.8,
@@ -1622,27 +1732,26 @@
                 radius: geofenceRadius
             });
             
-            // تحميل مواقع الموظفين
             loadEmployeeLocationsForLiveMap();
-            
-            // أحداث أزرار التحكم
-            document.getElementById('centerMapBtn').addEventListener('click', () => {
-                liveMap.setCenter(workLocation);
-                liveMap.setZoom(16);
-            });
-            
-            document.getElementById('reloadMapBtn').addEventListener('click', loadEmployeeLocationsForLiveMap);
-            
-            document.getElementById('mapTypeRoad').addEventListener('click', () => {
-                liveMap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
-            });
-            
-            document.getElementById('mapTypeSatellite').addEventListener('click', () => {
-                liveMap.setMapTypeId(google.maps.MapTypeId.SATELLITE);
-            });
         }
         
-        // تحميل مواقع الموظفين للخريطة الرئيسية
+        // Calculate Distance
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+            
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            
+            return R * c;
+        }
+        
+        // Load Employee Locations for Map
         function loadEmployeeLocationsForMap(mapInstance) {
             database.ref('attendance').limitToLast(20).once('value')
                 .then(snapshot => {
@@ -1652,6 +1761,7 @@
                     snapshot.forEach(employeeSnap => {
                         const employeeId = employeeSnap.key;
                         const records = employeeSnap.val();
+                        
                         const latestTimestamp = Object.keys(records).sort().reverse()[0];
                         const latestRecord = records[latestTimestamp];
                         
@@ -1677,13 +1787,59 @@
                     document.getElementById('employeesOutRange').textContent = outRange;
                     document.getElementById('presentCount').textContent = inRange;
                     document.getElementById('absentCount').textContent = outRange;
+                })
+                .catch(error => {
+                    console.error('خطأ في تحميل مواقع الموظفين:', error);
                 });
         }
         
-        // تحميل مواقع الموظفين للخريطة الحية
+        // Create Employee Map Marker
+        function createEmployeeMapMarker(mapInstance, employeeId, record, distance, isInRange) {
+            database.ref('employees/' + employeeId).once('value')
+                .then(snapshot => {
+                    if (snapshot.exists()) {
+                        const employee = snapshot.val();
+                        const iconColor = isInRange ? 'green' : 'red';
+                        
+                        const marker = new google.maps.Marker({
+                            position: record.location,
+                            map: mapInstance,
+                            title: employee.name + ' - ' + (isInRange ? 'داخل النطاق' : 'خارج النطاق'),
+                            icon: {
+                                url: `https://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`,
+                                scaledSize: new google.maps.Size(32, 32)
+                            }
+                        });
+                        
+                        const infoContent = `
+                            <div style="padding: 10px; min-width: 250px;">
+                                <h6 style="margin: 0 0 10px; color: #2c3e50; font-weight: bold;">
+                                    <i class="fas fa-user"></i> ${employee.name}
+                                </h6>
+                                <p style="margin: 5px 0;"><strong>القسم:</strong> ${employee.department || '--'}</p>
+                                <p style="margin: 5px 0;"><strong>الحالة:</strong> <span style="color: ${isInRange ? '#27ae60' : '#e74c3c'}; font-weight: bold;">${isInRange ? 'داخل النطاق' : 'خارج النطاق'}</span></p>
+                                <p style="margin: 5px 0;"><strong>المسافة:</strong> ${Math.round(distance)} متر</p>
+                                <p style="margin: 5px 0;"><strong>آخر تحديث:</strong> ${new Date(record.timestamp).toLocaleTimeString('ar-SA')}</p>
+                            </div>
+                        `;
+                        
+                        const infoWindow = new google.maps.InfoWindow({
+                            content: infoContent
+                        });
+                        
+                        marker.addListener('click', () => {
+                            infoWindow.open(mapInstance, marker);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('خطأ في تحميل بيانات الموظف:', error);
+                });
+        }
+        
+        // Load Employee Locations for Live Map
         function loadEmployeeLocationsForLiveMap() {
-            database.ref('attendance').on('value', (snapshot) => {
-                // مسح جميع العلامات القديمة
+            database.ref('attendance').on('value', snapshot => {
                 Object.values(employeeMarkers).forEach(marker => marker.setMap(null));
                 employeeMarkers = {};
                 
@@ -1695,8 +1851,8 @@
                 snapshot.forEach(employeeSnap => {
                     const employeeId = employeeSnap.key;
                     const records = employeeSnap.val();
-                    const timestamps = Object.keys(records).sort().reverse();
                     
+                    const timestamps = Object.keys(records).sort().reverse();
                     if (timestamps.length > 0) {
                         totalEmployees++;
                         const latestRecord = records[timestamps[0]];
@@ -1724,62 +1880,12 @@
                 });
                 
                 document.getElementById('trackingNow').textContent = totalEmployees;
-                document.getElementById('avgGpsAccuracy').textContent = accuracyCount > 0 
-                    ? Math.round(accuracySum / accuracyCount) + ' م'
-                    : 'غير متوفر';
-                
+                document.getElementById('avgGpsAccuracy').textContent = accuracyCount > 0 ? Math.round(accuracySum / accuracyCount) + ' متر' : '-- متر';
                 updateDateTime();
             });
         }
         
-        // إنشاء علامة موظف على الخريطة الرئيسية
-        function createEmployeeMapMarker(mapInstance, employeeId, record, distance, isInRange) {
-            database.ref('employees/' + employeeId).once('value')
-                .then(snapshot => {
-                    if (snapshot.exists()) {
-                        const employee = snapshot.val();
-                        const iconColor = isInRange ? 'green' : 'red';
-                        
-                        const marker = new google.maps.Marker({
-                            position: record.location,
-                            map: mapInstance,
-                            title: `${employee.name} - ${isInRange ? 'داخل العمل' : 'خارج العمل'}`,
-                            icon: {
-                                url: `https://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`,
-                                scaledSize: new google.maps.Size(32, 32)
-                            }
-                        });
-                        
-                        const infoContent = `
-                            <div style="padding: 10px; min-width: 250px;">
-                                <h6 style="margin: 0 0 10px; color: #2c3e50; font-weight: bold;">
-                                    <i class="fas fa-user"></i> ${employee.name}
-                                </h6>
-                                <p style="margin: 5px 0;"><strong>القسم:</strong> ${employee.department || 'غير محدد'}</p>
-                                <p style="margin: 5px 0;"><strong>الحالة:</strong> 
-                                    <span style="color: ${isInRange ? '#27ae60' : '#e74c3c'}; font-weight: bold;">
-                                        ${isInRange ? 'داخل العمل' : 'خارج العمل'}
-                                    </span>
-                                </p>
-                                <p style="margin: 5px 0;"><strong>المسافة:</strong> ${Math.round(distance)} متر</p>
-                                <p style="margin: 5px 0;"><strong>آخر تحديث:</strong> 
-                                    ${new Date(record.timestamp).toLocaleTimeString('ar-SA')}
-                                </p>
-                            </div>
-                        `;
-                        
-                        const infoWindow = new google.maps.InfoWindow({
-                            content: infoContent
-                        });
-                        
-                        marker.addListener('click', () => {
-                            infoWindow.open(mapInstance, marker);
-                        });
-                    }
-                });
-        }
-        
-        // إنشاء علامة موظف على الخريطة الحية
+        // Create Live Employee Marker
         function createLiveEmployeeMarker(employeeId, record, distance) {
             database.ref('employees/' + employeeId).once('value')
                 .then(snapshot => {
@@ -1787,12 +1893,12 @@
                         const employee = snapshot.val();
                         const isInRange = distance <= geofenceRadius;
                         const iconColor = isInRange ? 'green' : 'red';
-                        const status = isInRange ? 'حاضر' : 'غائب';
+                        const status = isInRange ? 'داخل النطاق' : 'خارج النطاق';
                         
                         const marker = new google.maps.Marker({
                             position: record.location,
                             map: liveMap,
-                            title: `${employee.name} - ${status}`,
+                            title: employee.name + ' - ' + status,
                             icon: {
                                 url: `https://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`,
                                 scaledSize: new google.maps.Size(40, 40)
@@ -1808,22 +1914,14 @@
                                     </div>
                                     <div>
                                         <h6 style="margin: 0; color: #2c3e50; font-weight: bold;">${employee.name}</h6>
-                                        <p style="margin: 5px 0 0; color: #666; font-size: 14px;">${employee.department || 'غير محدد'}</p>
+                                        <p style="margin: 5px 0 0; color: #666; font-size: 14px;">${employee.department || '--'}</p>
                                     </div>
                                 </div>
                                 <div style="border-top: 1px solid #eee; padding-top: 10px;">
-                                    <p style="margin: 5px 0;"><strong>الحالة:</strong> 
-                                        <span style="color: ${isInRange ? '#27ae60' : '#e74c3c'}; font-weight: bold;">
-                                            ${status}
-                                        </span>
-                                    </p>
-                                    <p style="margin: 5px 0;"><strong>المسافة:</strong> ${Math.round(distance)} متر</p>
-                                    <p style="margin: 5px 0;"><strong>الدقة:</strong> ${record.accuracy ? Math.round(record.accuracy) + ' م' : 'غير معروفة'}</p>
-                                    <p style="margin: 5px 0;"><strong>الوقت:</strong> ${new Date(record.timestamp).toLocaleTimeString('ar-SA')}</p>
-                                    <button onclick="centerOnEmployee('${employeeId}')" 
-                                            style="background: #3498db; color: white; border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; margin-top: 10px; width: 100%;">
-                                        <i class="fas fa-crosshairs"></i> التوسيط على الموظف
-                                    </button>
+                                    <p style="margin: 5px 0;"><strong>المسمى الوظيفي:</strong> ${employee.position || '--'}</p>
+                                    <p style="margin: 5px 0;"><strong>الحالة:</strong> <span style="color: ${isInRange ? '#27ae60' : '#e74c3c'}; font-weight: bold;">${status}</span></p>
+                                    <p style="margin: 5px 0;"><strong>المسافة من الموقع:</strong> ${Math.round(distance)} متر</p>
+                                    <p style="margin: 5px 0;"><strong>آخر تحديث:</strong> ${new Date(record.timestamp).toLocaleTimeString('ar-SA')}</p>
                                 </div>
                             </div>
                         `;
@@ -1841,35 +1939,187 @@
                 });
         }
         
-        // توسيط الخريطة على موظف
-        window.centerOnEmployee = function(employeeId) {
+        // Center on Employee
+        function centerOnEmployee(employeeId) {
             if (employeeMarkers[employeeId] && liveMap) {
                 liveMap.setCenter(employeeMarkers[employeeId].getPosition());
                 liveMap.setZoom(18);
             }
-        };
+        }
         
-        // تحديث الرسوم البيانية
+        // Load Employee Stats
+        function loadEmployeeStats() {
+            database.ref('employees').once('value')
+                .then(snapshot => {
+                    const total = snapshot.numChildren();
+                    const today = new Date().toISOString().split('T')[0];
+                    
+                    database.ref('attendance').once('value')
+                        .then(attendanceSnapshot => {
+                            let presentCount = 0;
+                            let absentCount = 0;
+                            let lateCount = 0;
+                            
+                            const employeeIds = [];
+                            snapshot.forEach(emp => {
+                                employeeIds.push(emp.key);
+                            });
+                            
+                            employeeIds.forEach(empId => {
+                                let hasCheckedIn = false;
+                                let checkInTime = null;
+                                
+                                if (attendanceSnapshot.hasChild(empId)) {
+                                    const empAttendance = attendanceSnapshot.child(empId).val();
+                                    
+                                    Object.keys(empAttendance).forEach(timestamp => {
+                                        const record = empAttendance[timestamp];
+                                        if (record.date === today && record.type === 'checkin') {
+                                            hasCheckedIn = true;
+                                            checkInTime = new Date(record.timestamp);
+                                        }
+                                    });
+                                }
+                                
+                                if (hasCheckedIn) {
+                                    presentCount++;
+                                    
+                                    if (checkInTime) {
+                                        const hour = checkInTime.getHours();
+                                        const minute = checkInTime.getMinutes();
+                                        
+                                        if (hour > 8 || (hour === 8 && minute > 30)) {
+                                            lateCount++;
+                                        }
+                                    }
+                                } else {
+                                    absentCount++;
+                                }
+                            });
+                            
+                            document.getElementById('presentCount').textContent = presentCount;
+                            document.getElementById('absentCount').textContent = absentCount;
+                            document.getElementById('lateCount').textContent = lateCount;
+                            document.getElementById('avgHours').textContent = '8.2';
+                            
+                            if (attendanceChart) {
+                                attendanceChart.data.datasets[0].data = [presentCount, absentCount, lateCount, 0];
+                                attendanceChart.update();
+                            }
+                        })
+                        .catch(error => {
+                            console.error('خطأ في تحميل بيانات الحضور:', error);
+                        });
+                })
+                .catch(error => {
+                    console.error('خطأ في تحميل بيانات الموظفين:', error);
+                });
+        }
+        
+        // Load Recent Attendance
+        function loadRecentAttendance() {
+            database.ref('attendance').limitToLast(20).once('value')
+                .then(snapshot => {
+                    const tbody = document.getElementById('recentAttendanceBody');
+                    tbody.innerHTML = '';
+                    
+                    if (!snapshot.exists()) {
+                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">لا توجد سجلات حضور</td></tr>';
+                        return;
+                    }
+                    
+                    const promises = [];
+                    let counter = 1;
+                    
+                    snapshot.forEach(employeeSnap => {
+                        const employeeId = employeeSnap.key;
+                        const records = employeeSnap.val();
+                        
+                        const latestTimestamp = Object.keys(records).sort().reverse()[0];
+                        const latestRecord = records[latestTimestamp];
+                        
+                        if (latestRecord && latestRecord.location) {
+                            const promise = database.ref('employees/' + employeeId).once('value')
+                                .then(employeeData => {
+                                    if (employeeData.exists()) {
+                                        const employee = employeeData.val();
+                                        const time = new Date(latestRecord.timestamp).toLocaleTimeString('ar-SA');
+                                        const distance = calculateDistance(
+                                            latestRecord.location.lat,
+                                            latestRecord.location.lng,
+                                            workLocation.lat,
+                                            workLocation.lng
+                                        );
+                                        
+                                        const isInRange = distance <= geofenceRadius;
+                                        const statusClass = isInRange ? 'badge-present' : 'badge-absent';
+                                        const statusText = isInRange ? 'داخل النطاق' : 'خارج النطاق';
+                                        const iconClass = isInRange ? 'check' : 'times';
+                                        
+                                        const row = `
+                                            <tr>
+                                                <td>${counter}</td>
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <div style="width:35px; height:35px; background:linear-gradient(135deg,#667eea,#764ba2); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; margin-left:10px;">
+                                                            ${employee.name.charAt(0)}
+                                                        </div>
+                                                        <span>${employee.name}</span>
+                                                    </div>
+                                                </td>
+                                                <td>${employee.department || '--'}</td>
+                                                <td>
+                                                    <span class="badge ${statusClass}">
+                                                        <i class="fas fa-${iconClass} me-1"></i>
+                                                        ${statusText}
+                                                    </span>
+                                                </td>
+                                                <td>${time}</td>
+                                                <td>${Math.round(distance)} متر</td>
+                                                <td>
+                                                    <button class="btn btn-sm btn-outline-primary" onclick="centerOnEmployee('${employeeId}')">
+                                                        <i class="fas fa-map-marker-alt"></i>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        `;
+                                        
+                                        tbody.innerHTML += row;
+                                        counter++;
+                                    }
+                                });
+                            
+                            promises.push(promise);
+                        }
+                    });
+                    
+                    return Promise.all(promises);
+                })
+                .catch(error => {
+                    console.error('خطأ في تحميل سجلات الحضور:', error);
+                    const tbody = document.getElementById('recentAttendanceBody');
+                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">حدث خطأ في تحميل السجلات</td></tr>';
+                });
+        }
+        
+        // Update Dashboard Charts
         function updateDashboardCharts() {
-            // رسم بياني دائري للحضور
-            const attendanceCtx = document.getElementById('attendanceChart').getContext('2d');
+            const attendanceCtx = document.getElementById('attendanceChart');
+            if (!attendanceCtx) return;
+            
+            const ctx = attendanceCtx.getContext('2d');
             
             if (attendanceChart) {
                 attendanceChart.destroy();
             }
             
-            attendanceChart = new Chart(attendanceCtx, {
+            attendanceChart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['حاضرون', 'غائبون', 'متأخرون', 'إجازة'],
+                    labels: ['حاضر', 'غائب', 'متأخر', 'إجازة'],
                     datasets: [{
-                        data: [65, 15, 10, 10],
-                        backgroundColor: [
-                            '#2ecc71',
-                            '#e74c3c',
-                            '#f39c12',
-                            '#3498db'
-                        ],
+                        data: [0, 0, 0, 0],
+                        backgroundColor: ['#2ecc71', '#e74c3c', '#f39c12', '#3498db'],
                         borderWidth: 2,
                         borderColor: '#fff'
                     }]
@@ -1901,63 +2151,60 @@
                 }
             });
             
-            // رسم بياني لإحصائيات التتبع
-            const trackingCtx = document.getElementById('trackingStatsChart').getContext('2d');
-            
-            if (trackingChart) {
-                trackingChart.destroy();
-            }
-            
-            trackingChart = new Chart(trackingCtx, {
-                type: 'line',
-                data: {
-                    labels: ['8 ص', '10 ص', '12 ظ', '2 م', '4 م', '6 م'],
-                    datasets: [{
-                        label: 'عدد الموظفين',
-                        data: [12, 28, 30, 32, 28, 15],
-                        borderColor: '#3498db',
-                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                        borderWidth: 3,
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            display: false
-                        },
-                        tooltip: {
-                            rtl: true,
-                            bodyFont: {
-                                family: 'Cairo'
-                            }
-                        }
+            const trackingCtx = document.getElementById('trackingStatsChart');
+            if (trackingCtx) {
+                const ctx2 = trackingCtx.getContext('2d');
+                
+                if (trackingChart) {
+                    trackingChart.destroy();
+                }
+                
+                trackingChart = new Chart(ctx2, {
+                    type: 'line',
+                    data: {
+                        labels: ['8 ص', '10 ص', '12 م', '2 م', '4 م', '6 م'],
+                        datasets: [{
+                            label: 'عدد الموظفين المتصلين',
+                            data: [12, 28, 30, 32, 28, 15],
+                            borderColor: '#3498db',
+                            backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                            tension: 0.4,
+                            fill: true
+                        }]
                     },
-                    scales: {
-                        y: {
-                            beginAtZero: true,
-                            ticks: {
-                                font: {
-                                    family: 'Cairo'
-                                }
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                display: false
                             }
                         },
-                        x: {
-                            ticks: {
-                                font: {
-                                    family: 'Cairo'
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    font: {
+                                        family: 'Cairo'
+                                    }
+                                }
+                            },
+                            x: {
+                                ticks: {
+                                    font: {
+                                        family: 'Cairo'
+                                    }
                                 }
                             }
                         }
                     }
-                }
-            });
+                });
+            }
+            
+            loadEmployeeStats();
         }
         
-        // تهيئة جدول الموظفين
+        // Initialize Employees Table
         function initEmployeesTable() {
             if (dataTables.employeesTable) {
                 dataTables.employeesTable.destroy();
@@ -2001,16 +2248,16 @@
                     { 
                         data: 'hireDate',
                         render: function(data) {
-                            return data ? new Date(data).toLocaleDateString('ar-SA') : 'غير محدد';
+                            return data ? new Date(data).toLocaleDateString('ar-SA') : '--';
                         }
                     },
-                    {
+                    { 
                         data: null,
                         render: function(data) {
-                            return `<span class="badge badge-success">نشط</span>`;
+                            return '<span class="badge badge-present">نشط</span>';
                         }
                     },
-                    {
+                    { 
                         data: null,
                         render: function(data) {
                             return `
@@ -2029,107 +2276,7 @@
             });
         }
         
-        // تحميل سجلات الحضور الحديثة
-        function loadRecentAttendance() {
-            database.ref('attendance').limitToLast(10).once('value')
-                .then(snapshot => {
-                    const tbody = document.getElementById('recentAttendanceBody');
-                    tbody.innerHTML = '';
-                    
-                    let counter = 1;
-                    const promises = [];
-                    
-                    snapshot.forEach(employeeSnap => {
-                        const employeeId = employeeSnap.key;
-                        const records = employeeSnap.val();
-                        const latestTimestamp = Object.keys(records).sort().reverse()[0];
-                        const latestRecord = records[latestTimestamp];
-                        
-                        if (latestRecord && latestRecord.location) {
-                            const promise = database.ref('employees/' + employeeId).once('value')
-                                .then(employeeData => {
-                                    if (employeeData.exists()) {
-                                        const employee = employeeData.val();
-                                        const time = new Date(latestRecord.timestamp).toLocaleTimeString('ar-SA');
-                                        const distance = calculateDistance(
-                                            latestRecord.location.lat,
-                                            latestRecord.location.lng,
-                                            workLocation.lat,
-                                            workLocation.lng
-                                        );
-                                        
-                                        const isInRange = distance <= geofenceRadius;
-                                        const statusClass = isInRange ? 'present' : 'absent';
-                                        const statusText = isInRange ? 'داخل العمل' : 'خارج العمل';
-                                        
-                                        const row = `
-                                            <tr>
-                                                <td>${counter}</td>
-                                                <td>
-                                                    <div class="d-flex align-items-center">
-                                                        <div style="width:35px; height:35px; background:linear-gradient(135deg,#667eea,#764ba2); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; margin-left:10px;">
-                                                            ${employee.name.charAt(0)}
-                                                        </div>
-                                                        <span>${employee.name}</span>
-                                                    </div>
-                                                </td>
-                                                <td>${employee.department || 'غير محدد'}</td>
-                                                <td>
-                                                    <span class="badge badge-${statusClass}">
-                                                        <i class="fas fa-${isInRange ? 'check' : 'times'} me-1"></i>
-                                                        ${statusText}
-                                                    </span>
-                                                </td>
-                                                <td>${time}</td>
-                                                <td>${Math.round(distance)} م</td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary" onclick="centerOnEmployee('${employeeId}')">
-                                                        <i class="fas fa-map-marker-alt"></i>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        `;
-                                        
-                                        tbody.innerHTML += row;
-                                        counter++;
-                                    }
-                                });
-                            
-                            promises.push(promise);
-                        }
-                    });
-                    
-                    return Promise.all(promises);
-                });
-        }
-        
-        // تحميل إحصائيات الموظفين
-        function loadEmployeeStats() {
-            database.ref('employees').once('value')
-                .then(snapshot => {
-                    const total = snapshot.numChildren();
-                    document.getElementById('totalEmployees').textContent = total;
-                    
-                    // تقدير الإحصائيات (في النظام الحقيقي سيتم حسابها من سجلات الحضور)
-                    const present = Math.floor(total * 0.7);
-                    const absent = Math.floor(total * 0.15);
-                    const late = Math.floor(total * 0.1);
-                    const vacation = Math.floor(total * 0.05);
-                    
-                    document.getElementById('presentCount').textContent = present;
-                    document.getElementById('absentCount').textContent = absent;
-                    document.getElementById('lateCount').textContent = late;
-                    document.getElementById('avgHours').textContent = '8.2';
-                    
-                    // تحديث الرسم البياني إذا كان موجوداً
-                    if (attendanceChart) {
-                        attendanceChart.data.datasets[0].data = [present, absent, late, vacation];
-                        attendanceChart.update();
-                    }
-                });
-        }
-        
-        // تحميل الإعدادات
+        // Load Settings
         function loadSettings() {
             database.ref('settings/workLocation').once('value')
                 .then(snapshot => {
@@ -2139,128 +2286,26 @@
                         geofenceRadius = settings.radius || 20;
                         
                         document.getElementById('currentRadius').textContent = geofenceRadius;
-                        document.getElementById('radiusValue').textContent = `${geofenceRadius} متر`;
+                        document.getElementById('radiusValue').textContent = geofenceRadius + ' متر';
                         document.getElementById('radiusRange').value = geofenceRadius;
                         document.getElementById('locationLat').value = workLocation.lat;
                         document.getElementById('locationLng').value = workLocation.lng;
+                        
+                        if (map) {
+                            map.setCenter(workLocation);
+                        }
                     }
-                });
-        }
-        
-        // دالة حساب المسافة
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3;
-            const φ1 = lat1 * Math.PI / 180;
-            const φ2 = lat2 * Math.PI / 180;
-            const Δφ = (lat2 - lat1) * Math.PI / 180;
-            const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                      Math.cos(φ1) * Math.cos(φ2) *
-                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-            return R * c;
-        }
-        
-        // تسجيل الخروج
-        document.getElementById('logoutBtn').addEventListener('click', function() {
-            localStorage.removeItem('currentUser');
-            window.location.href = 'index.html';
-        });
-        
-        // تحديث المواقع
-        document.getElementById('refreshLocations').addEventListener('click', function() {
-            loadEmployeeLocationsForMap(map);
-        });
-        
-        document.getElementById('refreshAttendanceBtn').addEventListener('click', loadRecentAttendance);
-        
-        // حفظ موقع العمل
-        document.getElementById('saveLocationBtn').addEventListener('click', function() {
-            const lat = parseFloat(document.getElementById('locationLat').value);
-            const lng = parseFloat(document.getElementById('locationLng').value);
-            const radius = parseInt(document.getElementById('radiusRange').value);
-            
-            if (isNaN(lat) || isNaN(lng)) {
-                alert('يرجى إدخال إحداثيات صحيحة');
-                return;
-            }
-            
-            workLocation = { lat, lng };
-            geofenceRadius = radius;
-            
-            database.ref('settings/workLocation').set({
-                lat: lat,
-                lng: lng,
-                radius: radius,
-                updatedAt: firebase.database.ServerValue.TIMESTAMP
-            }).then(() => {
-                // تحديث الخريطة
-                if (map) {
-                    map.setCenter(workLocation);
-                    // إعادة تحميل العلامات
-                    setTimeout(() => loadEmployeeLocationsForMap(map), 500);
-                }
-                
-                // تحديث القيم
-                document.getElementById('currentRadius').textContent = radius;
-                
-                // إغلاق المودال
-                bootstrap.Modal.getInstance(document.getElementById('workLocationModal')).hide();
-                
-                // رسالة نجاح
-                showNotification('تم تحديث موقع العمل بنجاح', 'success');
-            });
-        });
-        
-        // إضافة موظف جديد
-        document.getElementById('saveEmployeeBtn').addEventListener('click', function() {
-            const form = document.getElementById('addEmployeeForm');
-            const formData = new FormData(form);
-            const employeeData = Object.fromEntries(formData.entries());
-            
-            // توليد رقم موظف فريد إذا لم يتم إدخاله
-            if (!employeeData.employeeId) {
-                employeeData.employeeId = 'emp_' + Date.now();
-            }
-            
-            // إضافة بيانات إضافية
-            employeeData.createdAt = firebase.database.ServerValue.TIMESTAMP;
-            employeeData.status = 'active';
-            
-            database.ref('employees/' + employeeData.employeeId).set(employeeData)
-                .then(() => {
-                    // إغلاق المودال
-                    bootstrap.Modal.getInstance(document.getElementById('addEmployeeModal')).hide();
-                    
-                    // إعادة تعيين النموذج
-                    form.reset();
-                    
-                    // تحديث الجدول
-                    if (dataTables.employeesTable) {
-                        dataTables.employeesTable.ajax.reload();
-                    }
-                    
-                    // رسالة نجاح
-                    showNotification('تم إضافة الموظف بنجاح', 'success');
                 })
                 .catch(error => {
-                    showNotification('حدث خطأ أثناء إضافة الموظف: ' + error.message, 'danger');
+                    console.error('خطأ في تحميل الإعدادات:', error);
                 });
-        });
+        }
         
-        // عرض الإشعارات
+        // Show Notification
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
             notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-            notification.style.cssText = `
-                top: 20px;
-                left: 20px;
-                z-index: 9999;
-                min-width: 300px;
-                box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            `;
+            notification.style.cssText = 'top: 20px; left: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);';
             notification.innerHTML = `
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -2275,12 +2320,116 @@
             }, 5000);
         }
         
-        // تحديث نطاق نصف القطر
-        document.getElementById('radiusRange').addEventListener('input', function() {
-            document.getElementById('radiusValue').textContent = `${this.value} متر`;
+        // Event Listeners
+        
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            localStorage.removeItem('currentUser');
+            window.location.href = 'index.html';
         });
         
-        // عند تحميل الصفحة
+        // Refresh Locations
+        document.getElementById('refreshLocations').addEventListener('click', function() {
+            loadEmployeeLocationsForMap(map);
+        });
+        
+        // Refresh Attendance
+        document.getElementById('refreshAttendanceBtn').addEventListener('click', loadRecentAttendance);
+        
+        // Save Location
+        document.getElementById('saveLocationBtn').addEventListener('click', function() {
+            const lat = parseFloat(document.getElementById('locationLat').value);
+            const lng = parseFloat(document.getElementById('locationLng').value);
+            const radius = parseInt(document.getElementById('radiusRange').value);
+            
+            if (isNaN(lat) || isNaN(lng)) {
+                alert('الرجاء إدخال إحداثيات صحيحة');
+                return;
+            }
+            
+            workLocation = { lat, lng };
+            geofenceRadius = radius;
+            
+            database.ref('settings/workLocation').set({
+                lat: lat,
+                lng: lng,
+                radius: radius,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            })
+            .then(() => {
+                if (map) {
+                    map.setCenter(workLocation);
+                    setTimeout(() => loadEmployeeLocationsForMap(map), 500);
+                }
+                
+                document.getElementById('currentRadius').textContent = radius;
+                bootstrap.Modal.getInstance(document.getElementById('workLocationModal')).hide();
+                showNotification('تم حفظ إعدادات الموقع بنجاح', 'success');
+            })
+            .catch(error => {
+                showNotification('حدث خطأ في حفظ الإعدادات', 'danger');
+                console.error('خطأ:', error);
+            });
+        });
+        
+        // Radius Range Input
+        document.getElementById('radiusRange').addEventListener('input', function() {
+            document.getElementById('radiusValue').textContent = this.value + ' متر';
+        });
+        
+        // Save Employee
+        document.getElementById('saveEmployeeBtn').addEventListener('click', function() {
+            const form = document.getElementById('addEmployeeForm');
+            const formData = new FormData(form);
+            const employeeData = Object.fromEntries(formData.entries());
+            
+            if (!employeeData.employeeId) {
+                employeeData.employeeId = 'emp' + Date.now();
+            }
+            
+            employeeData.createdAt = firebase.database.ServerValue.TIMESTAMP;
+            employeeData.status = 'active';
+            
+            database.ref('employees/' + employeeData.employeeId).set(employeeData)
+                .then(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('addEmployeeModal')).hide();
+                    form.reset();
+                    
+                    if (dataTables.employeesTable) {
+                        dataTables.employeesTable.ajax.reload();
+                    }
+                    
+                    showNotification('تم إضافة الموظف بنجاح', 'success');
+                })
+                .catch(error => {
+                    showNotification('حدث خطأ: ' + error.message, 'danger');
+                });
+        });
+        
+        // Map Controls
+        document.getElementById('centerMapBtn').addEventListener('click', () => {
+            if (liveMap) {
+                liveMap.setCenter(workLocation);
+                liveMap.setZoom(16);
+            }
+        });
+        
+        document.getElementById('reloadMapBtn').addEventListener('click', loadEmployeeLocationsForLiveMap);
+        
+        document.getElementById('mapTypeRoad').addEventListener('click', () => {
+            if (liveMap) {
+                liveMap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
+            }
+        });
+        
+        document.getElementById('mapTypeSatellite').addEventListener('click', () => {
+            if (liveMap) {
+                liveMap.setMapTypeId(google.maps.MapTypeId.SATELLITE);
+            }
+        });
+        
+        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             checkAdminSession();
             updateDateTime();
@@ -2288,29 +2437,30 @@
             
             setupSidebar();
             setupPageNavigation();
+            
             loadSettings();
             loadEmployeeStats();
             loadRecentAttendance();
             updateDashboardCharts();
             
-            // تحديث بيانات الحضور كل 30 ثانية
+            // Refresh data every 30 seconds
             setInterval(() => {
                 loadRecentAttendance();
                 loadEmployeeStats();
             }, 30000);
             
-            // تحديث اتصال قاعدة البيانات
-            const connectedRef = database.ref(".info/connected");
-            connectedRef.on("value", (snap) => {
+            // Database connection status
+            const connectedRef = database.ref('.info/connected');
+            connectedRef.on('value', snap => {
                 const dbStatus = document.getElementById('dbStatus');
                 const dbStatusIndicator = document.getElementById('dbStatusIndicator');
                 
                 if (snap.val() === true) {
-                    dbStatus.textContent = "قاعدة البيانات متصلة";
-                    dbStatusIndicator.className = "spinner-grow spinner-grow-sm text-success";
+                    dbStatus.textContent = 'متصل';
+                    dbStatusIndicator.className = 'spinner-grow spinner-grow-sm text-success';
                 } else {
-                    dbStatus.textContent = "جاري إعادة الاتصال...";
-                    dbStatusIndicator.className = "spinner-grow spinner-grow-sm text-warning";
+                    dbStatus.textContent = 'غير متصل';
+                    dbStatusIndicator.className = 'spinner-grow spinner-grow-sm text-warning';
                 }
             });
         });
