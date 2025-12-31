@@ -1,0 +1,1492 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم الموظف - نظام الحضور والانصراف</title>
+    
+    <!-- Bootstrap 5 Arabic -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap RTL -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-rtl@0.4.0/dist/css/bootstrap-rtl.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --info-color: #1abc9c;
+        }
+        
+        * {
+            font-family: 'Cairo', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 0;
+        }
+        
+        /* Navbar */
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1a2530 100%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            padding: 15px 0;
+        }
+        
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.6rem;
+            background: linear-gradient(45deg, #fff, #3498db);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Main Container */
+        .main-container {
+            max-width: 1200px;
+            margin: 30px auto;
+            padding: 0 15px;
+        }
+        
+        /* Cards */
+        .card {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+            overflow: hidden;
+            background: white;
+            transition: all 0.3s;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .card-header {
+            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
+            border-bottom: 2px solid #e9ecef;
+            padding: 20px;
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 1.2rem;
+        }
+        
+        .card-header i {
+            margin-left: 10px;
+            color: var(--secondary-color);
+        }
+        
+        /* Status Badge */
+        .status-badge {
+            font-size: 1.2rem;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .status-badge.present {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+        }
+        
+        .status-badge.absent {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        /* Check In/Out Buttons */
+        .action-btn {
+            width: 100%;
+            padding: 20px;
+            font-size: 1.3rem;
+            border-radius: 15px;
+            border: none;
+            font-weight: 700;
+            transition: all 0.3s;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn-check-in {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+            color: white;
+        }
+        
+        .btn-check-out {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+        }
+        
+        /* Info Box */
+        .info-box {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+            border-right: 5px solid var(--secondary-color);
+        }
+        
+        .info-box h5 {
+            color: var(--primary-color);
+            font-weight: 700;
+            margin-bottom: 15px;
+        }
+        
+        .info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .info-item:last-child {
+            border-bottom: none;
+        }
+        
+        .info-label {
+            color: #6c757d;
+            font-weight: 600;
+        }
+        
+        .info-value {
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+        
+        /* GPS Status */
+        .gps-status {
+            padding: 15px;
+            border-radius: 12px;
+            margin: 20px 0;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .gps-status.active {
+            background: rgba(46, 204, 113, 0.1);
+            border: 2px solid #2ecc71;
+            color: #27ae60;
+        }
+        
+        .gps-status.inactive {
+            background: rgba(231, 76, 60, 0.1);
+            border: 2px solid #e74c3c;
+            color: #c0392b;
+        }
+        
+        /* History Table */
+        .table {
+            margin: 0;
+        }
+        
+        .table thead th {
+            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
+            color: var(--primary-color);
+            font-weight: 700;
+            border-bottom: 2px solid #dee2e6;
+            padding: 15px;
+        }
+        
+        .table tbody td {
+            padding: 15px;
+            vertical-align: middle;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .table tbody tr:hover {
+            background-color: rgba(52, 152, 219, 0.05);
+        }
+        
+        /* Badge */
+        .badge-custom {
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+        
+        .badge-in {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-out {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        /* Map Container */
+        .map-container {
+            height: 400px;
+            border-radius: 15px;
+            overflow: hidden;
+            border: 2px solid #dee2e6;
+        }
+        
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        /* Animations */
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 0 10px;
+            }
+            
+            .action-btn {
+                font-size: 1.1rem;
+                padding: 15px;
+            }
+            
+            .map-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
+            <span class="visually-hidden">جاري التحميل...</span>
+        </div>
+        <h5 class="mt-4 text-primary">جاري تحميل البيانات...</h5>
+    </div>
+    
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-fingerprint me-2"></i>
+                نظام الحضور والانصراف
+            </a>
+            
+            <div class="d-flex align-items-center">
+                <!-- Current Time -->
+                <div class="text-white me-4 d-none d-md-block">
+                    <i class="fas fa-clock me-2"></i>
+                    <span id="currentTime">--:--:--</span>
+                    <div id="currentDate" class="small opacity-75"></div>
+                </div>
+                
+                <!-- User Menu -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown">
+                        <div class="me-2">
+                            <span id="employeeName"></span>
+                        </div>
+                        <i class="fas fa-user-circle fa-lg"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li class="dropdown-header">
+                            <span id="dropdownEmployeeName"></span>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileModal">
+                                <i class="fas fa-user me-2"></i>
+                                الملف الشخصي
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                                <i class="fas fa-key me-2"></i>
+                                تغيير كلمة المرور
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="#" id="logoutBtn">
+                                <i class="fas fa-sign-out-alt me-2"></i>
+                                تسجيل الخروج
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- Main Container -->
+    <div class="main-container">
+        <div class="row">
+            <!-- Left Column -->
+            <div class="col-lg-8">
+                <!-- Current Status Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-info-circle"></i>
+                        حالة الحضور الحالية
+                    </div>
+                    <div class="card-body text-center p-4">
+                        <div id="statusBadge" class="status-badge present mb-4">
+                            <i class="fas fa-check-circle fa-2x"></i>
+                            <span id="statusText">حاضر</span>
+                        </div>
+                        
+                        <div class="info-box">
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-clock me-2"></i>
+                                    وقت الدخول
+                                </span>
+                                <span class="info-value" id="checkInTime">--:--:--</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-clock me-2"></i>
+                                    وقت الخروج
+                                </span>
+                                <span class="info-value" id="checkOutTime">--:--:--</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-hourglass-half me-2"></i>
+                                    ساعات العمل
+                                </span>
+                                <span class="info-value" id="workHours">0 ساعة 0 دقيقة</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-map-marker-alt me-2"></i>
+                                    المسافة من الموقع
+                                </span>
+                                <span class="info-value" id="distanceFromWork">-- متر</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Check In/Out Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-hand-pointer"></i>
+                        تسجيل الحضور والانصراف
+                    </div>
+                    <div class="card-body p-4">
+                        <!-- GPS Status -->
+                        <div id="gpsStatus" class="gps-status inactive">
+                            <i class="fas fa-satellite-dish fa-2x mb-2"></i>
+                            <div id="gpsText">جاري تحديد الموقع...</div>
+                        </div>
+                        
+                        <!-- Action Buttons -->
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <button id="checkInBtn" class="action-btn btn-check-in" disabled>
+                                    <i class="fas fa-sign-in-alt me-2"></i>
+                                    تسجيل الدخول
+                                </button>
+                            </div>
+                            <div class="col-md-6">
+                                <button id="checkOutBtn" class="action-btn btn-check-out" disabled>
+                                    <i class="fas fa-sign-out-alt me-2"></i>
+                                    تسجيل الخروج
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info mt-4" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>ملاحظة:</strong> يجب أن تكون داخل نطاق الموقع المحدد لتتمكن من تسجيل الحضور أو الانصراف.
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Attendance History -->
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-history"></i>
+                            سجل الحضور
+                        </div>
+                        <button class="btn btn-sm btn-primary" id="refreshHistoryBtn">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>التاريخ</th>
+                                        <th>وقت الدخول</th>
+                                        <th>وقت الخروج</th>
+                                        <th>ساعات العمل</th>
+                                        <th>الحالة</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="historyTableBody">
+                                    <!-- JavaScript will populate this -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Right Column -->
+            <div class="col-lg-4">
+                <!-- Profile Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-user"></i>
+                        البيانات الشخصية
+                    </div>
+                    <div class="card-body">
+                        <div class="text-center mb-4">
+                            <div class="user-avatar" style="width: 100px; height: 100px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto; border: 4px solid #fff; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
+                                <span style="color: white; font-size: 48px; font-weight: bold;" id="userInitial">A</span>
+                            </div>
+                            <h5 class="mt-3 mb-1" id="profileName">اسم الموظف</h5>
+                            <p class="text-muted mb-0" id="profileId">ID: EMP001</p>
+                        </div>
+                        
+                        <div class="info-box">
+                            <div class="info-item">
+                                <span class="info-label">القسم</span>
+                                <span class="info-value" id="profileDepartment">--</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">المسمى الوظيفي</span>
+                                <span class="info-value" id="profilePosition">--</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">تاريخ التعيين</span>
+                                <span class="info-value" id="profileHireDate">--</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">البريد الإلكتروني</span>
+                                <span class="info-value" id="profileEmail">--</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">الهاتف</span>
+                                <span class="info-value" id="profilePhone">--</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Map Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-map-marked-alt"></i>
+                        موقعك الحالي
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="map-container">
+                            <div id="map"></div>
+                        </div>
+                        <div class="p-3">
+                            <small class="text-muted">
+                                <i class="fas fa-info-circle me-1"></i>
+                                يتم تحديث موقعك تلقائياً كل 30 ثانية
+                            </small>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Statistics Card -->
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fas fa-chart-bar"></i>
+                        إحصائيات هذا الشهر
+                    </div>
+                    <div class="card-body">
+                        <div class="info-box">
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-check-circle text-success me-2"></i>
+                                    أيام الحضور
+                                </span>
+                                <span class="info-value text-success" id="statPresentDays">0</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-times-circle text-danger me-2"></i>
+                                    أيام الغياب
+                                </span>
+                                <span class="info-value text-danger" id="statAbsentDays">0</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-clock text-warning me-2"></i>
+                                    التأخيرات
+                                </span>
+                                <span class="info-value text-warning" id="statLateDays">0</span>
+                            </div>
+                            <div class="info-item">
+                                <span class="info-label">
+                                    <i class="fas fa-hourglass-half text-info me-2"></i>
+                                    إجمالي الساعات
+                                </span>
+                                <span class="info-value text-info" id="statTotalHours">0 ساعة</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modals -->
+    
+    <!-- Profile Modal -->
+    <div class="modal fade" id="profileModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-user-edit me-2"></i>
+                        تعديل البيانات الشخصية
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="profileForm">
+                        <div class="mb-3">
+                            <label class="form-label">البريد الإلكتروني</label>
+                            <input type="email" class="form-control" id="editEmail">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">رقم الهاتف</label>
+                            <input type="tel" class="form-control" id="editPhone">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" id="saveProfileBtn">
+                        <i class="fas fa-save me-2"></i>
+                        حفظ التغييرات
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Change Password Modal -->
+    <div class="modal fade" id="changePasswordModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-key me-2"></i>
+                        تغيير كلمة المرور
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="changePasswordForm">
+                        <div class="mb-3">
+                            <label class="form-label">كلمة المرور الحالية</label>
+                            <input type="password" class="form-control" id="currentPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">كلمة المرور الجديدة</label>
+                            <input type="password" class="form-control" id="newPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">تأكيد كلمة المرور الجديدة</label>
+                            <input type="password" class="form-control" id="confirmPassword" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" id="savePasswordBtn">
+                        <i class="fas fa-save me-2"></i>
+                        حفظ كلمة المرور
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Google Maps API -->
+    <script>
+        // Google Maps API with fallback
+        let googleMapsLoaded = false;
+        
+        function loadGoogleMaps() {
+            const apiKeys = [
+                'AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE',
+                'AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg',
+                'AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8'
+            ];
+            let currentKeyIndex = 0;
+            
+            function tryLoadMap(keyIndex) {
+                if (keyIndex >= apiKeys.length) {
+                    console.error('جميع مفاتيح Google Maps فشلت');
+                    showMapFallback();
+                    return;
+                }
+                
+                const apiKey = apiKeys[keyIndex];
+                const script = document.createElement('script');
+                script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=geometry,places&language=ar&region=SA`;
+                script.async = true;
+                script.defer = true;
+                
+                script.onload = function() {
+                    console.log('تم تحميل Google Maps بنجاح');
+                    googleMapsLoaded = true;
+                    if (typeof initMap === 'function') {
+                        initMap();
+                    }
+                };
+                
+                script.onerror = function() {
+                    console.warn(`فشل تحميل Google Maps بالمفتاح ${keyIndex + 1}`);
+                    tryLoadMap(keyIndex + 1);
+                };
+                
+                document.head.appendChild(script);
+            }
+            
+            tryLoadMap(currentKeyIndex);
+        }
+        
+        function showMapFallback() {
+            const mapContainer = document.getElementById('map');
+            mapContainer.innerHTML = `
+                <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#f8f9fa; color:#6c757d;">
+                    <i class="fas fa-map-marked-alt" style="font-size:48px; margin-bottom:20px;"></i>
+                    <h5>غير متاح حالياً</h5>
+                    <p class="text-center" style="max-width:300px;">
+                        عذراً، خدمة الخرائط غير متاحة في الوقت الحالي. سيتم تحديث موقعك تلقائياً.
+                    </p>
+                    <button class="btn btn-primary mt-3" onclick="loadGoogleMaps()">
+                        <i class="fas fa-sync-alt me-2"></i>
+                        إعادة المحاولة
+                    </button>
+                </div>
+            `;
+        }
+        
+        document.addEventListener('DOMContentLoaded', loadGoogleMaps);
+    </script>
+    
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE",
+            authDomain: "hedor-bea3c.firebaseapp.com",
+            databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
+            projectId: "hedor-bea3c",
+            storageBucket: "hedor-bea3c.firebasestorage.app",
+            messagingSenderId: "369239455736",
+            appId: "1:369239455736:web:116295854269abecf6480d",
+            measurementId: "G-R2MG1YKQEP"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
+        // Global Variables
+        let currentUser = null;
+        let map = null;
+        let userMarker = null;
+        let workMarker = null;
+        let geofenceCircle = null;
+        let workLocation = { lat: 24.7136, lng: 46.6753 };
+        let geofenceRadius = 20;
+        let currentPosition = null;
+        let watchId = null;
+        let todayCheckIn = null;
+        let todayCheckOut = null;
+        
+        // Check Session
+        function checkEmployeeSession() {
+            const userData = localStorage.getItem('currentUser');
+            
+            if (!userData) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            currentUser = JSON.parse(userData);
+            
+            if (currentUser.role !== 'employee') {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            // Load employee data
+            loadEmployeeData();
+        }
+        
+        // Load Employee Data
+        function loadEmployeeData() {
+            database.ref(`employees/${currentUser.id}`).once('value')
+                .then(snapshot => {
+                    if (snapshot.exists()) {
+                        const employee = snapshot.val();
+                        
+                        // Update UI
+                        document.getElementById('employeeName').textContent = employee.name;
+                        document.getElementById('dropdownEmployeeName').textContent = employee.name;
+                        document.getElementById('profileName').textContent = employee.name;
+                        document.getElementById('profileId').textContent = `ID: ${employee.employeeId || currentUser.id}`;
+                        document.getElementById('profileDepartment').textContent = employee.department || '--';
+                        document.getElementById('profilePosition').textContent = employee.position || '--';
+                        document.getElementById('profileEmail').textContent = employee.email || '--';
+                        document.getElementById('profilePhone').textContent = employee.phone || '--';
+                        
+                        if (employee.hireDate) {
+                            document.getElementById('profileHireDate').textContent = new Date(employee.hireDate).toLocaleDateString('ar-SA');
+                        }
+                        
+                        // User Initial
+                        document.getElementById('userInitial').textContent = employee.name.charAt(0);
+                        
+                        // Hide loading
+                        setTimeout(() => {
+                            document.getElementById('loadingOverlay').style.display = 'none';
+                        }, 1000);
+                    }
+                })
+                .catch(error => {
+                    console.error('خطأ في تحميل بيانات الموظف:', error);
+                    showNotification('حدث خطأ في تحميل البيانات', 'danger');
+                });
+        }
+        
+        // Update Date and Time
+        function updateDateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ar-SA');
+            const dateString = now.toLocaleDateString('ar-SA', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            document.getElementById('currentTime').textContent = timeString;
+            document.getElementById('currentDate').textContent = dateString;
+        }
+        
+        // Initialize Map
+        function initMap() {
+            if (!googleMapsLoaded) {
+                console.warn('Google Maps لم يتم تحميلها بعد');
+                setTimeout(initMap, 1000);
+                return;
+            }
+            
+            const mapOptions = {
+                center: workLocation,
+                zoom: 17,
+                mapTypeId: google.maps.MapTypeId.ROADMAP,
+                disableDefaultUI: false,
+                zoomControl: true,
+                styles: [
+                    {
+                        featureType: "administrative",
+                        elementType: "labels.text.fill",
+                        stylers: [{ color: "#444444" }]
+                    },
+                    {
+                        featureType: "landscape",
+                        elementType: "all",
+                        stylers: [{ color: "#f2f2f2" }]
+                    },
+                    {
+                        featureType: "poi",
+                        elementType: "all",
+                        stylers: [{ visibility: "off" }]
+                    },
+                    {
+                        featureType: "road",
+                        elementType: "all",
+                        stylers: [{ saturation: -100 }, { lightness: 45 }]
+                    },
+                    {
+                        featureType: "water",
+                        elementType: "all",
+                        stylers: [{ color: "#3498db" }, { visibility: "on" }]
+                    }
+                ]
+            };
+            
+            map = new google.maps.Map(document.getElementById('map'), mapOptions);
+            
+            // Work Location Marker
+            workMarker = new google.maps.Marker({
+                position: workLocation,
+                map: map,
+                title: 'موقع العمل',
+                icon: {
+                    url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
+                    scaledSize: new google.maps.Size(40, 40)
+                }
+            });
+            
+            // Geofence Circle
+            geofenceCircle = new google.maps.Circle({
+                strokeColor: '#FF0000',
+                strokeOpacity: 0.8,
+                strokeWeight: 2,
+                fillColor: '#FF0000',
+                fillOpacity: 0.1,
+                map: map,
+                center: workLocation,
+                radius: geofenceRadius
+            });
+            
+            // Start tracking location
+            startLocationTracking();
+        }
+        
+        // Start Location Tracking
+        function startLocationTracking() {
+            if (!navigator.geolocation) {
+                showNotification('المتصفح لا يدعم خاصية تحديد الموقع', 'danger');
+                return;
+            }
+            
+            const gpsStatus = document.getElementById('gpsStatus');
+            const gpsText = document.getElementById('gpsText');
+            
+            gpsStatus.className = 'gps-status inactive';
+            gpsText.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري تحديد الموقع...';
+            
+            watchId = navigator.geolocation.watchPosition(
+                function(position) {
+                    currentPosition = {
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                        accuracy: position.coords.accuracy
+                    };
+                    
+                    // Update GPS Status
+                    gpsStatus.className = 'gps-status active';
+                    gpsText.innerHTML = `
+                        <i class="fas fa-check-circle me-2"></i>
+                        تم تحديد موقعك بنجاح
+                        <small class="d-block mt-1">دقة: ${Math.round(position.coords.accuracy)} متر</small>
+                    `;
+                    
+                    // Update map
+                    if (map) {
+                        if (userMarker) {
+                            userMarker.setPosition(currentPosition);
+                        } else {
+                            userMarker = new google.maps.Marker({
+                                position: currentPosition,
+                                map: map,
+                                title: 'موقعك الحالي',
+                                icon: {
+                                    url: 'https://maps.google.com/mapfiles/ms/icons/blue-dot.png',
+                                    scaledSize: new google.maps.Size(40, 40)
+                                },
+                                animation: google.maps.Animation.DROP
+                            });
+                        }
+                    }
+                    
+                    // Calculate distance
+                    const distance = calculateDistance(
+                        currentPosition.lat,
+                        currentPosition.lng,
+                        workLocation.lat,
+                        workLocation.lng
+                    );
+                    
+                    document.getElementById('distanceFromWork').textContent = `${Math.round(distance)} متر`;
+                    
+                    // Enable/disable buttons based on location
+                    const isInRange = distance <= geofenceRadius;
+                    updateButtonStates(isInRange);
+                    
+                    // Save location to Firebase
+                    saveLocationToFirebase();
+                },
+                function(error) {
+                    gpsStatus.className = 'gps-status inactive';
+                    gpsText.innerHTML = `
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        فشل تحديد الموقع: ${error.message}
+                    `;
+                    console.error('خطأ في تحديد الموقع:', error);
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 5000,
+                    maximumAge: 0
+                }
+            );
+        }
+        
+        // Calculate Distance
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371e3; // metres
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lon2 - lon1) * Math.PI / 180;
+            
+            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            
+            return R * c;
+        }
+        
+        // Update Button States
+        function updateButtonStates(isInRange) {
+            const checkInBtn = document.getElementById('checkInBtn');
+            const checkOutBtn = document.getElementById('checkOutBtn');
+            
+            if (isInRange) {
+                if (!todayCheckIn) {
+                    checkInBtn.disabled = false;
+                    checkOutBtn.disabled = true;
+                } else if (!todayCheckOut) {
+                    checkInBtn.disabled = true;
+                    checkOutBtn.disabled = false;
+                } else {
+                    checkInBtn.disabled = true;
+                    checkOutBtn.disabled = true;
+                }
+            } else {
+                checkInBtn.disabled = true;
+                checkOutBtn.disabled = true;
+            }
+        }
+        
+        // Save Location to Firebase
+        function saveLocationToFirebase() {
+            if (!currentPosition || !currentUser) return;
+            
+            database.ref(`employees/${currentUser.id}/lastLocation`).set({
+                lat: currentPosition.lat,
+                lng: currentPosition.lng,
+                accuracy: currentPosition.accuracy,
+                timestamp: firebase.database.ServerValue.TIMESTAMP
+            });
+        }
+        
+        // Check In
+        document.getElementById('checkInBtn').addEventListener('click', function() {
+            if (!currentPosition) {
+                showNotification('لم يتم تحديد موقعك بعد', 'warning');
+                return;
+            }
+            
+            const distance = calculateDistance(
+                currentPosition.lat,
+                currentPosition.lng,
+                workLocation.lat,
+                workLocation.lng
+            );
+            
+            if (distance > geofenceRadius) {
+                showNotification('أنت خارج نطاق موقع العمل المحدد', 'danger');
+                return;
+            }
+            
+            const now = Date.now();
+            const today = new Date().toISOString().split('T')[0];
+            
+            const attendanceData = {
+                employeeId: currentUser.id,
+                type: 'checkin',
+                timestamp: now,
+                date: today,
+                location: {
+                    lat: currentPosition.lat,
+                    lng: currentPosition.lng
+                },
+                accuracy: currentPosition.accuracy,
+                distance: Math.round(distance)
+            };
+            
+            database.ref(`attendance/${currentUser.id}/${now}`).set(attendanceData)
+                .then(() => {
+                    todayCheckIn = now;
+                    document.getElementById('checkInTime').textContent = new Date(now).toLocaleTimeString('ar-SA');
+                    updateButtonStates(true);
+                    updateStatusDisplay();
+                    showNotification('تم تسجيل الدخول بنجاح', 'success');
+                    loadAttendanceHistory();
+                })
+                .catch(error => {
+                    showNotification('حدث خطأ في تسجيل الدخول', 'danger');
+                    console.error('خطأ:', error);
+                });
+        });
+        
+        // Check Out
+        document.getElementById('checkOutBtn').addEventListener('click', function() {
+            if (!currentPosition) {
+                showNotification('لم يتم تحديد موقعك بعد', 'warning');
+                return;
+            }
+            
+            const distance = calculateDistance(
+                currentPosition.lat,
+                currentPosition.lng,
+                workLocation.lat,
+                workLocation.lng
+            );
+            
+            if (distance > geofenceRadius) {
+                showNotification('أنت خارج نطاق موقع العمل المحدد', 'danger');
+                return;
+            }
+            
+            const now = Date.now();
+            const today = new Date().toISOString().split('T')[0];
+            
+            const attendanceData = {
+                employeeId: currentUser.id,
+                type: 'checkout',
+                timestamp: now,
+                date: today,
+                location: {
+                    lat: currentPosition.lat,
+                    lng: currentPosition.lng
+                },
+                accuracy: currentPosition.accuracy,
+                distance: Math.round(distance)
+            };
+            
+            database.ref(`attendance/${currentUser.id}/${now}`).set(attendanceData)
+                .then(() => {
+                    todayCheckOut = now;
+                    document.getElementById('checkOutTime').textContent = new Date(now).toLocaleTimeString('ar-SA');
+                    updateWorkHours();
+                    updateButtonStates(true);
+                    updateStatusDisplay();
+                    showNotification('تم تسجيل الخروج بنجاح', 'success');
+                    loadAttendanceHistory();
+                })
+                .catch(error => {
+                    showNotification('حدث خطأ في تسجيل الخروج', 'danger');
+                    console.error('خطأ:', error);
+                });
+        });
+        
+        // Update Work Hours
+        function updateWorkHours() {
+            if (!todayCheckIn || !todayCheckOut) return;
+            
+            const diffMs = todayCheckOut - todayCheckIn;
+            const diffHrs = Math.floor(diffMs / 3600000);
+            const diffMins = Math.floor((diffMs % 3600000) / 60000);
+            
+            document.getElementById('workHours').textContent = `${diffHrs} ساعة ${diffMins} دقيقة`;
+        }
+        
+        // Update Status Display
+        function updateStatusDisplay() {
+            const statusBadge = document.getElementById('statusBadge');
+            const statusText = document.getElementById('statusText');
+            
+            if (todayCheckIn && !todayCheckOut) {
+                statusBadge.className = 'status-badge present pulse';
+                statusText.textContent = 'حاضر الآن';
+            } else if (todayCheckIn && todayCheckOut) {
+                statusBadge.className = 'status-badge absent';
+                statusText.textContent = 'تم الانصراف';
+            } else {
+                statusBadge.className = 'status-badge absent';
+                statusText.textContent = 'لم يتم التسجيل';
+            }
+        }
+        
+        // Load Today's Status
+        function loadTodayStatus() {
+            const today = new Date().toISOString().split('T')[0];
+            
+            database.ref(`attendance/${currentUser.id}`).orderByChild('date').equalTo(today).once('value')
+                .then(snapshot => {
+                    if (snapshot.exists()) {
+                        const records = snapshot.val();
+                        const timestamps = Object.keys(records).map(k => parseInt(k)).sort();
+                        
+                        timestamps.forEach(timestamp => {
+                            const record = records[timestamp];
+                            if (record.type === 'checkin') {
+                                todayCheckIn = timestamp;
+                                document.getElementById('checkInTime').textContent = new Date(timestamp).toLocaleTimeString('ar-SA');
+                            } else if (record.type === 'checkout') {
+                                todayCheckOut = timestamp;
+                                document.getElementById('checkOutTime').textContent = new Date(timestamp).toLocaleTimeString('ar-SA');
+                            }
+                        });
+                        
+                        updateWorkHours();
+                        updateStatusDisplay();
+                    }
+                });
+        }
+        
+        // Load Attendance History
+        function loadAttendanceHistory() {
+            const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</td></tr>';
+            
+            database.ref(`attendance/${currentUser.id}`).limitToLast(30).once('value')
+                .then(snapshot => {
+                    tbody.innerHTML = '';
+                    
+                    if (!snapshot.exists()) {
+                        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">لا توجد سجلات</td></tr>';
+                        return;
+                    }
+                    
+                    const records = snapshot.val();
+                    const groupedByDate = {};
+                    
+                    // Group by date
+                    Object.keys(records).forEach(timestamp => {
+                        const record = records[timestamp];
+                        const date = record.date;
+                        
+                        if (!groupedByDate[date]) {
+                            groupedByDate[date] = { checkin: null, checkout: null };
+                        }
+                        
+                        if (record.type === 'checkin') {
+                            groupedByDate[date].checkin = parseInt(timestamp);
+                        } else if (record.type === 'checkout') {
+                            groupedByDate[date].checkout = parseInt(timestamp);
+                        }
+                    });
+                    
+                    // Display records
+                    const dates = Object.keys(groupedByDate).sort().reverse();
+                    let counter = 1;
+                    
+                    dates.forEach(date => {
+                        const record = groupedByDate[date];
+                        const checkInTime = record.checkin ? new Date(record.checkin).toLocaleTimeString('ar-SA') : '--';
+                        const checkOutTime = record.checkout ? new Date(record.checkout).toLocaleTimeString('ar-SA') : '--';
+                        
+                        let workHours = '--';
+                        let statusBadge = '<span class="badge-custom badge-out">غائب</span>';
+                        
+                        if (record.checkin && record.checkout) {
+                            const diffMs = record.checkout - record.checkin;
+                            const diffHrs = Math.floor(diffMs / 3600000);
+                            const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                            workHours = `${diffHrs}:${diffMins.toString().padStart(2, '0')}`;
+                            statusBadge = '<span class="badge-custom badge-in">حاضر</span>';
+                        } else if (record.checkin) {
+                            statusBadge = '<span class="badge-custom badge-in">لم ينصرف</span>';
+                        }
+                        
+                        const formattedDate = new Date(date).toLocaleDateString('ar-SA', {
+                            weekday: 'short',
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                        
+                        const row = `
+                            <tr>
+                                <td>${counter}</td>
+                                <td>${formattedDate}</td>
+                                <td>${checkInTime}</td>
+                                <td>${checkOutTime}</td>
+                                <td>${workHours}</td>
+                                <td>${statusBadge}</td>
+                            </tr>
+                        `;
+                        
+                        tbody.innerHTML += row;
+                        counter++;
+                    });
+                })
+                .catch(error => {
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">حدث خطأ في تحميل السجلات</td></tr>';
+                    console.error('خطأ:', error);
+                });
+        }
+        
+        // Load Monthly Statistics
+        function loadMonthlyStatistics() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = (now.getMonth() + 1).toString().padStart(2, '0');
+            
+            database.ref(`attendance/${currentUser.id}`).once('value')
+                .then(snapshot => {
+                    if (!snapshot.exists()) return;
+                    
+                    const records = snapshot.val();
+                    const groupedByDate = {};
+                    let totalHours = 0;
+                    
+                    // Group by date
+                    Object.keys(records).forEach(timestamp => {
+                        const record = records[timestamp];
+                        const recordDate = new Date(record.date);
+                        
+                        if (recordDate.getFullYear() === year && 
+                            (recordDate.getMonth() + 1) === parseInt(month)) {
+                            
+                            const date = record.date;
+                            
+                            if (!groupedByDate[date]) {
+                                groupedByDate[date] = { checkin: null, checkout: null };
+                            }
+                            
+                            if (record.type === 'checkin') {
+                                groupedByDate[date].checkin = parseInt(timestamp);
+                            } else if (record.type === 'checkout') {
+                                groupedByDate[date].checkout = parseInt(timestamp);
+                            }
+                        }
+                    });
+                    
+                    // Calculate statistics
+                    let presentDays = 0;
+                    let absentDays = 0;
+                    let lateDays = 0;
+                    
+                    Object.keys(groupedByDate).forEach(date => {
+                        const record = groupedByDate[date];
+                        
+                        if (record.checkin) {
+                            presentDays++;
+                            
+                            // Check if late (after 8:30 AM)
+                            const checkInDate = new Date(record.checkin);
+                            const checkInHour = checkInDate.getHours();
+                            const checkInMinute = checkInDate.getMinutes();
+                            
+                            if (checkInHour > 8 || (checkInHour === 8 && checkInMinute > 30)) {
+                                lateDays++;
+                            }
+                            
+                            if (record.checkout) {
+                                const diffMs = record.checkout - record.checkin;
+                                totalHours += diffMs / 3600000;
+                            }
+                        }
+                    });
+                    
+                    // Update UI
+                    document.getElementById('statPresentDays').textContent = presentDays;
+                    document.getElementById('statAbsentDays').textContent = absentDays;
+                    document.getElementById('statLateDays').textContent = lateDays;
+                    document.getElementById('statTotalHours').textContent = `${Math.round(totalHours)} ساعة`;
+                })
+                .catch(error => {
+                    console.error('خطأ في تحميل الإحصائيات:', error);
+                });
+        }
+        
+        // Load Settings
+        function loadSettings() {
+            database.ref('settings/workLocation').once('value')
+                .then(snapshot => {
+                    if (snapshot.exists()) {
+                        const settings = snapshot.val();
+                        workLocation = { lat: settings.lat, lng: settings.lng };
+                        geofenceRadius = settings.radius || 20;
+                        
+                        if (map) {
+                            map.setCenter(workLocation);
+                            workMarker.setPosition(workLocation);
+                            geofenceCircle.setCenter(workLocation);
+                            geofenceCircle.setRadius(geofenceRadius);
+                        }
+                    }
+                });
+        }
+        
+        // Show Notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; left: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+        
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            if (watchId) {
+                navigator.geolocation.clearWatch(watchId);
+            }
+            
+            localStorage.removeItem('currentUser');
+            window.location.href = 'index.html';
+        });
+        
+        // Refresh History
+        document.getElementById('refreshHistoryBtn').addEventListener('click', function() {
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            loadAttendanceHistory();
+            setTimeout(() => {
+                this.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            }, 1000);
+        });
+        
+        // Save Profile
+        document.getElementById('saveProfileBtn').addEventListener('click', function() {
+            const email = document.getElementById('editEmail').value;
+            const phone = document.getElementById('editPhone').value;
+            
+            database.ref(`employees/${currentUser.id}`).update({
+                email: email,
+                phone: phone,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            })
+            .then(() => {
+                document.getElementById('profileEmail').textContent = email;
+                document.getElementById('profilePhone').textContent = phone;
+                bootstrap.Modal.getInstance(document.getElementById('profileModal')).hide();
+                showNotification('تم تحديث البيانات بنجاح', 'success');
+            })
+            .catch(error => {
+                showNotification('حدث خطأ في التحديث', 'danger');
+                console.error('خطأ:', error);
+            });
+        });
+        
+        // Change Password
+        document.getElementById('savePasswordBtn').addEventListener('click', function() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showNotification('الرجاء ملء جميع الحقول', 'warning');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showNotification('كلمة المرور الجديدة غير متطابقة', 'warning');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                showNotification('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'warning');
+                return;
+            }
+            
+            // Verify current password
+            database.ref(`employees/${currentUser.id}/password`).once('value')
+                .then(snapshot => {
+                    if (snapshot.val() === currentPassword) {
+                        // Update password
+                        return database.ref(`employees/${currentUser.id}`).update({
+                            password: newPassword,
+                            updatedAt: firebase.database.ServerValue.TIMESTAMP
+                        });
+                    } else {
+                        throw new Error('كلمة المرور الحالية غير صحيحة');
+                    }
+                })
+                .then(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('changePasswordModal')).hide();
+                    document.getElementById('changePasswordForm').reset();
+                    showNotification('تم تغيير كلمة المرور بنجاح', 'success');
+                })
+                .catch(error => {
+                    showNotification(error.message || 'حدث خطأ', 'danger');
+                    console.error('خطأ:', error);
+                });
+        });
+        
+        // Open Edit Profile Modal
+        document.querySelector('[data-bs-target="#profileModal"]').addEventListener('click', function() {
+            document.getElementById('editEmail').value = document.getElementById('profileEmail').textContent;
+            document.getElementById('editPhone').value = document.getElementById('profilePhone').textContent;
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            checkEmployeeSession();
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            loadSettings();
+            loadTodayStatus();
+            loadAttendanceHistory();
+            loadMonthlyStatistics();
+            
+            // Refresh data every 30 seconds
+            setInterval(() => {
+                if (currentPosition) {
+                    saveLocationToFirebase();
+                }
+            }, 30000);
+        });
+    </script>
+</body>
+</html>
