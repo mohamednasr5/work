@@ -3,7 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>نظام الحضور الذكي - تسجيل الدخول</title>
+    <title>تسجيل الدخول - نظام الحضور والانصراف</title>
+    
     <!-- Bootstrap 5 Arabic -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <!-- Bootstrap RTL -->
@@ -12,6 +13,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -88,12 +90,6 @@
             box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
         }
         
-        .input-group-text {
-            background-color: #f8f9fa;
-            border: 2px solid #e1e5eb;
-            border-right: none;
-        }
-        
         .btn-primary {
             background: linear-gradient(to right, var(--secondary-color), #2980b9);
             border: none;
@@ -130,13 +126,13 @@
             display: none;
         }
         
-        .success {
+        .status-message.success {
             background-color: #d4edda;
             color: #155724;
             border: 1px solid #c3e6cb;
         }
         
-        .error {
+        .status-message.error {
             background-color: #f8d7da;
             color: #721c24;
             border: 1px solid #f5c6cb;
@@ -175,11 +171,16 @@
         }
         
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         
-        /* Responsive */
         @media (max-width: 576px) {
             .login-container {
                 padding: 0 15px;
@@ -199,85 +200,89 @@
                     <div class="logo">
                         <i class="fas fa-fingerprint"></i>
                     </div>
-                    <h2>نظام الحضور الذكي</h2>
+                    <h2>نظام الحضور والانصراف</h2>
                     <p>التسجيل التلقائي عبر تحديد الموقع الجغرافي</p>
                 </div>
                 
                 <div class="login-body">
-                    <!-- رسائل الحالة -->
+                    <!-- Status Message -->
                     <div id="statusMessage" class="status-message"></div>
                     
-                    <!-- نموذج تسجيل دخول الموظف -->
+                    <!-- Employee Login Form -->
                     <form id="employeeForm">
                         <div class="mb-3">
                             <label for="employeeId" class="form-label">
-                                <i class="fas fa-id-card me-2"></i>رقم الموظف
+                                <i class="fas fa-id-card me-2"></i>
+                                رقم الموظف
                             </label>
-                            <input type="text" class="form-control" id="employeeId" 
-                                   placeholder="أدخل رقم الموظف الخاص بك" required>
+                            <input type="text" class="form-control" id="employeeId" placeholder="أدخل رقم الموظف" required>
                         </div>
                         
                         <div class="mb-3">
                             <label for="employeePassword" class="form-label">
-                                <i class="fas fa-lock me-2"></i>كلمة المرور
+                                <i class="fas fa-lock me-2"></i>
+                                كلمة المرور
                             </label>
-                            <input type="password" class="form-control" id="employeePassword" 
-                                   placeholder="أدخل كلمة المرور" required>
+                            <input type="password" class="form-control" id="employeePassword" placeholder="أدخل كلمة المرور" required>
                         </div>
                         
                         <div class="gps-status">
                             <i class="fas fa-satellite"></i>
-                            <span id="gpsText">جاري التحقق من خدمة الموقع...</span>
+                            <span id="gpsText">جاري التحقق من GPS...</span>
                         </div>
                         
                         <button type="submit" class="btn btn-primary mt-4" id="loginBtn">
-                            <i class="fas fa-sign-in-alt me-2"></i>تسجيل الدخول
+                            <i class="fas fa-sign-in-alt me-2"></i>
+                            تسجيل الدخول
                         </button>
                     </form>
                     
-                    <!-- نموذج تسجيل دخول المدير (مخفي افتراضيًا) -->
+                    <!-- Admin Login Form -->
                     <form id="adminForm" style="display: none;">
                         <div class="mb-3">
                             <label for="adminPassword" class="form-label">
-                                <i class="fas fa-user-shield me-2"></i>كلمة مرور المدير
+                                <i class="fas fa-user-shield me-2"></i>
+                                كلمة مرور المدير
                             </label>
-                            <input type="password" class="form-control" id="adminPassword" 
-                                   placeholder="أدخل كلمة مرور المدير" required>
-                            <div class="form-text text-muted small">
-                                الكلمة الافتراضية: 742018 (يجب تغييرها بعد أول دخول)
+                            <input type="password" class="form-control" id="adminPassword" placeholder="أدخل كلمة مرور المدير" required>
+                            <div class="form-text text-muted">
+                                <small>كلمة المرور الافتراضية: 742018</small>
                             </div>
                         </div>
                         
                         <button type="submit" class="btn btn-primary mt-3" id="adminLoginBtn">
-                            <i class="fas fa-key me-2"></i>الدخول كمدير
+                            <i class="fas fa-key me-2"></i>
+                            دخول المدير
                         </button>
                     </form>
                     
-                    <!-- زر التبديل بين النموذجين -->
+                    <!-- Toggle Admin -->
                     <div class="admin-toggle">
                         <a id="toggleAdminLink">
                             <i class="fas fa-exchange-alt me-2"></i>
-                            <span id="toggleText">الدخول كمدير النظام</span>
+                            <span id="toggleText">تسجيل دخول المدير</span>
                         </a>
                     </div>
                 </div>
             </div>
             
-            <div class="text-center mt-4 text-muted small">
-                <p>يستخدم هذا النظام تقنية Geofencing للتسجيل التلقائي عند دخول نطاق العمل</p>
+            <div class="text-center mt-4 text-muted">
+                <small>
+                    <p>نظام الحضور والانصراف المتقدم باستخدام Geofencing</p>
+                </small>
             </div>
         </div>
     </div>
-
+    
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     
     <script>
-        // تهيئة Firebase
+        // Firebase Configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFg_vrchXpE",
+            apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE",
             authDomain: "hedor-bea3c.firebaseapp.com",
             databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
             projectId: "hedor-bea3c",
@@ -291,78 +296,77 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         
-        // عناصر DOM
+        // DOM Elements
         const employeeForm = document.getElementById('employeeForm');
         const adminForm = document.getElementById('adminForm');
         const toggleAdminLink = document.getElementById('toggleAdminLink');
         const toggleText = document.getElementById('toggleText');
         const statusMessage = document.getElementById('statusMessage');
         const gpsText = document.getElementById('gpsText');
+        
         let isAdminForm = false;
         
-        // التحقق من خدمة الموقع الجغرافي
+        // Check GPS
         function checkGPS() {
             if (!navigator.geolocation) {
-                gpsText.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-2"></i>متصفحك لا يدعم خدمة الموقع';
+                gpsText.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-2"></i>المتصفح لا يدعم GPS';
                 gpsText.style.color = '#e74c3c';
                 return false;
             }
             
             navigator.geolocation.getCurrentPosition(
                 function(position) {
-                    gpsText.innerHTML = '<i class="fas fa-check-circle text-success me-2"></i>خدمة الموقع نشطة وجاهزة';
+                    gpsText.innerHTML = '<i class="fas fa-check-circle text-success me-2"></i>GPS متاح ويعمل بشكل صحيح';
                     gpsText.style.color = '#27ae60';
                 },
                 function(error) {
-                    gpsText.innerHTML = '<i class="fas fa-exclamation-circle text-warning me-2"></i>تفعيل خدمة الموقع لضمان عمل النظام';
+                    gpsText.innerHTML = '<i class="fas fa-exclamation-circle text-warning me-2"></i>الرجاء تفعيل GPS';
                     gpsText.style.color = '#f39c12';
                 }
             );
+            
             return true;
         }
         
-        // تبديل بين نموذج الموظف ونموذج المدير
+        // Toggle Between Employee and Admin Forms
         toggleAdminLink.addEventListener('click', function() {
             isAdminForm = !isAdminForm;
             
             if (isAdminForm) {
                 employeeForm.style.display = 'none';
                 adminForm.style.display = 'block';
-                toggleText.textContent = 'الدخول كموظف';
+                toggleText.textContent = 'تسجيل دخول الموظف';
             } else {
                 employeeForm.style.display = 'block';
                 adminForm.style.display = 'none';
-                toggleText.textContent = 'الدخول كمدير النظام';
+                toggleText.textContent = 'تسجيل دخول المدير';
             }
             
-            // إخفاء رسائل الخطأ عند التبديل
             statusMessage.style.display = 'none';
         });
         
-        // معالجة تسجيل دخول الموظف
+        // Employee Login
         employeeForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
             const employeeId = document.getElementById('employeeId').value.trim();
             const password = document.getElementById('employeePassword').value;
             
-            // زر التحميل
             const loginBtn = document.getElementById('loginBtn');
             const originalText = loginBtn.innerHTML;
             loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري التحقق...';
             loginBtn.disabled = true;
             
-            // التحقق من بيانات الموظف في Firebase
+            // Check Firebase for employee
             database.ref('employees/' + employeeId).once('value')
                 .then(snapshot => {
                     if (snapshot.exists()) {
                         const employeeData = snapshot.val();
                         
-                        // تحقق بسيط من كلمة المرور (في نظام حقيقي استخدم التشفير)
                         if (employeeData.password === password) {
-                            showMessage('تم تسجيل الدخول بنجاح! جاري توجيهك...', 'success');
+                            showMessage('تم تسجيل الدخول بنجاح! جاري التحويل...', 'success');
                             
-                            // حفظ بيانات الجلسة
+                            // Save user session
                             localStorage.setItem('currentUser', JSON.stringify({
                                 id: employeeId,
                                 name: employeeData.name,
@@ -370,7 +374,7 @@
                                 department: employeeData.department
                             }));
                             
-                            // توجيه الموظف لواجهته (سننشئها لاحقًا)
+                            // Redirect to employee dashboard
                             setTimeout(() => {
                                 window.location.href = 'employee-dashboard.html';
                             }, 1500);
@@ -380,43 +384,41 @@
                             loginBtn.disabled = false;
                         }
                     } else {
-                        showMessage('رقم الموظف غير مسجل في النظام!', 'error');
+                        showMessage('رقم الموظف غير موجود!', 'error');
                         loginBtn.innerHTML = originalText;
                         loginBtn.disabled = false;
                     }
                 })
                 .catch(error => {
-                    showMessage('خطأ في الاتصال بقاعدة البيانات: ' + error.message, 'error');
+                    showMessage('حدث خطأ: ' + error.message, 'error');
                     loginBtn.innerHTML = originalText;
                     loginBtn.disabled = false;
                 });
         });
         
-        // معالجة تسجيل دخول المدير
+        // Admin Login
         adminForm.addEventListener('submit', function(e) {
             e.preventDefault();
             
             const adminPassword = document.getElementById('adminPassword').value;
-            const MASTER_PASSWORD = "742018"; // كلمة المرور الرئيسية
+            const MASTER_PASSWORD = '742018';
             
-            // زر التحميل
             const adminLoginBtn = document.getElementById('adminLoginBtn');
             const originalText = adminLoginBtn.innerHTML;
             adminLoginBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري التحقق...';
             adminLoginBtn.disabled = true;
             
-            // تحقق بسيط من كلمة المرور
             if (adminPassword === MASTER_PASSWORD) {
-                showMessage('تم الدخول كمدير بنجاح! جاري التوجيه...', 'success');
+                showMessage('مرحباً بك في لوحة التحكم!', 'success');
                 
-                // حفظ بيانات الجلسة
+                // Save admin session
                 localStorage.setItem('currentUser', JSON.stringify({
                     id: 'admin',
-                    name: 'مدير النظام',
+                    name: 'المدير العام',
                     role: 'admin'
                 }));
                 
-                // توجيه المدير للوحة التحكم
+                // Redirect to admin panel
                 setTimeout(() => {
                     window.location.href = 'admin.html';
                 }, 1500);
@@ -427,23 +429,25 @@
             }
         });
         
-        // عرض رسائل الحالة
+        // Show Message
         function showMessage(message, type) {
             statusMessage.textContent = message;
             statusMessage.className = 'status-message ' + type;
             statusMessage.style.display = 'block';
             
-            // إخفاء الرسالة بعد 5 ثوانٍ
+            // Hide after 5 seconds
             setTimeout(() => {
                 statusMessage.style.display = 'none';
             }, 5000);
         }
         
-        // التحقق من وجود جلسة سابقة
+        // Check Existing Session
         function checkExistingSession() {
             const userData = localStorage.getItem('currentUser');
+            
             if (userData) {
                 const user = JSON.parse(userData);
+                
                 if (user.role === 'admin') {
                     window.location.href = 'admin.html';
                 } else if (user.role === 'employee') {
@@ -452,12 +456,12 @@
             }
         }
         
-        // عند تحميل الصفحة
+        // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             checkExistingSession();
             checkGPS();
             
-            // تحديث حالة GPS كل 30 ثانية
+            // Check GPS every 30 seconds
             setInterval(checkGPS, 30000);
         });
     </script>
