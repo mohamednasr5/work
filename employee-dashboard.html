@@ -5,19 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>لوحة تحكم الموظف - نظام الحضور الذكي</title>
     
-    <!-- Bootstrap 5 Arabic -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Bootstrap RTL -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-rtl@0.4.0/dist/css/bootstrap-rtl.min.css">
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    
-    <!-- Leaflet CSS for Maps -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossorigin="" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     
     <style>
         :root {
@@ -40,7 +31,6 @@
             min-height: 100vh;
         }
         
-        /* Loading Overlay */
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -69,7 +59,6 @@
             100% { transform: rotate(360deg); }
         }
         
-        /* Navbar */
         .navbar {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--dark-color) 100%);
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
@@ -84,13 +73,6 @@
             gap: 10px;
         }
         
-        .navbar-brand i {
-            background: linear-gradient(45deg, #fff, var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        /* Time Display */
         .time-display {
             background: rgba(255, 255, 255, 0.1);
             border-radius: 10px;
@@ -99,14 +81,12 @@
             font-weight: 600;
         }
         
-        /* Main Container */
         .main-container {
             max-width: 1400px;
             margin: 30px auto;
             padding: 0 20px;
         }
         
-        /* Cards */
         .card {
             border: none;
             border-radius: 15px;
@@ -114,7 +94,6 @@
             margin-bottom: 30px;
             background: white;
             transition: all 0.3s ease;
-            overflow: hidden;
         }
         
         .card:hover {
@@ -129,15 +108,8 @@
             font-weight: 700;
             color: var(--primary-color);
             font-size: 1.1rem;
-            border-radius: 15px 15px 0 0 !important;
         }
         
-        .card-header i {
-            margin-left: 10px;
-            color: var(--secondary-color);
-        }
-        
-        /* Status Badge */
         .status-badge {
             font-size: 1.2rem;
             padding: 12px 25px;
@@ -159,12 +131,6 @@
             color: white;
         }
         
-        .status-badge.checked-in {
-            background: linear-gradient(135deg, var(--info-color), #16a085);
-            color: white;
-        }
-        
-        /* Buttons */
         .btn-action {
             padding: 15px 30px;
             font-size: 1.1rem;
@@ -177,6 +143,7 @@
             align-items: center;
             justify-content: center;
             gap: 10px;
+            width: 100%;
         }
         
         .btn-check-in {
@@ -189,7 +156,7 @@
             color: white;
         }
         
-        .btn-action:hover {
+        .btn-action:hover:not(:disabled) {
             transform: translateY(-3px);
             box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         }
@@ -197,16 +164,12 @@
         .btn-action:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
         }
         
-        /* Info Box */
         .info-box {
             background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
             padding: 20px;
             border-radius: 12px;
-            border-right: 5px solid var(--secondary-color);
         }
         
         .info-item {
@@ -220,48 +183,18 @@
             border-bottom: none;
         }
         
-        .info-item .label {
-            color: var(--primary-color);
-            font-weight: 600;
-        }
-        
-        .info-item .value {
-            color: var(--dark-color);
-            font-weight: 700;
-        }
-        
-        /* Map Container */
         .map-container {
             height: 300px;
             border-radius: 12px;
             overflow: hidden;
             border: 2px solid #e9ecef;
-            position: relative;
         }
         
-        #map {
+        #employeeMap {
             width: 100%;
             height: 100%;
         }
         
-        /* Table Styles */
-        .table {
-            margin: 0;
-        }
-        
-        .table thead th {
-            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
-            color: var(--primary-color);
-            font-weight: 700;
-            border-bottom: 2px solid #dee2e6;
-            padding: 15px;
-        }
-        
-        .table tbody tr:hover {
-            background-color: rgba(52, 152, 219, 0.05);
-        }
-        
-        /* Profile Avatar */
         .profile-avatar {
             width: 100px;
             height: 100px;
@@ -278,7 +211,6 @@
             font-weight: bold;
         }
         
-        /* Statistics Cards */
         .stat-card {
             text-align: center;
             padding: 20px;
@@ -297,27 +229,14 @@
             justify-content: center;
             margin: 0 auto 15px;
             font-size: 24px;
-            color: white;
             background: rgba(255, 255, 255, 0.2);
         }
         
-        .stat-present {
-            background: linear-gradient(135deg, var(--success-color), #27ae60);
-        }
+        .stat-present { background: linear-gradient(135deg, var(--success-color), #27ae60); }
+        .stat-absent { background: linear-gradient(135deg, var(--danger-color), #c0392b); }
+        .stat-late { background: linear-gradient(135deg, var(--warning-color), #d35400); }
+        .stat-hours { background: linear-gradient(135deg, var(--secondary-color), #2980b9); }
         
-        .stat-absent {
-            background: linear-gradient(135deg, var(--danger-color), #c0392b);
-        }
-        
-        .stat-late {
-            background: linear-gradient(135deg, var(--warning-color), #d35400);
-        }
-        
-        .stat-hours {
-            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
-        }
-        
-        /* GPS Status */
         .gps-alert {
             border-radius: 10px;
             padding: 15px;
@@ -327,73 +246,23 @@
             gap: 10px;
         }
         
-        /* Responsive */
-        @media (max-width: 768px) {
-            .main-container {
-                padding: 0 15px;
-            }
-            
-            .card-header {
-                padding: 15px;
-            }
-            
-            .status-badge {
-                font-size: 1rem;
-                padding: 10px 20px;
-            }
-            
-            .btn-action {
-                padding: 12px 20px;
-                font-size: 1rem;
-            }
-            
-            .profile-avatar {
-                width: 80px;
-                height: 80px;
-                font-size: 2rem;
-            }
-        }
-        
-        /* Animation for check in/out */
         @keyframes pulse {
-            0% { transform: scale(1); }
+            0%, 100% { transform: scale(1); }
             50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
         }
         
         .pulse {
             animation: pulse 2s infinite;
         }
-        
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-        
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb {
-            background: var(--secondary-color);
-            border-radius: 10px;
-        }
-        
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--primary-color);
-        }
     </style>
 </head>
 <body>
-    <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-spinner"></div>
         <h4 class="mt-4">جاري تحميل بياناتك...</h4>
         <p class="mt-2">الرجاء الانتظار</p>
     </div>
     
-    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
             <a class="navbar-brand" href="#">
@@ -402,61 +271,30 @@
             </a>
             
             <div class="d-flex align-items-center">
-                <!-- Current Time -->
                 <div class="time-display me-3 d-none d-md-block">
                     <i class="fas fa-clock me-2"></i>
                     <span id="currentTime">--:--:--</span>
                     <span id="currentDate" class="ms-2"></span>
                 </div>
                 
-                <!-- User Menu -->
                 <div class="dropdown">
-                    <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
                         <i class="fas fa-user-circle fa-lg me-2"></i>
-                        <span class="d-none d-md-inline" id="employeeName">الموظف</span>
+                        <span id="employeeName">الموظف</span>
                     </button>
-                    <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-                        <li class="dropdown-header">
-                            <div class="text-center">
-                                <div class="profile-avatar-sm mb-2">
-                                    <span id="userInitial">م</span>
-                                </div>
-                                <h6 class="mb-0" id="dropdownEmployeeName">اسم الموظف</h6>
-                                <small class="text-muted" id="dropdownEmployeeId">ID: --</small>
-                            </div>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileModal">
-                                <i class="fas fa-user me-2"></i>
-                                الملف الشخصي
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
-                                <i class="fas fa-key me-2"></i>
-                                تغيير كلمة المرور
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li>
-                            <a class="dropdown-item text-danger" href="#" id="logoutBtn">
-                                <i class="fas fa-sign-out-alt me-2"></i>
-                                تسجيل الخروج
-                            </a>
-                        </li>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item text-danger" href="#" id="logoutBtn">
+                            <i class="fas fa-sign-out-alt me-2"></i>تسجيل الخروج
+                        </a></li>
                     </ul>
                 </div>
             </div>
         </div>
     </nav>
     
-    <!-- Main Container -->
     <div class="main-container">
         <div class="row">
-            <!-- Left Column -->
             <div class="col-lg-8">
-                <!-- Current Status Card -->
                 <div class="card">
                     <div class="card-header">
                         <i class="fas fa-info-circle"></i>
@@ -501,20 +339,17 @@
                     </div>
                 </div>
                 
-                <!-- Check In/Out Card -->
                 <div class="card">
                     <div class="card-header">
                         <i class="fas fa-hand-pointer"></i>
                         تسجيل الحضور والانصراف
                     </div>
                     <div class="card-body p-4">
-                        <!-- GPS Status -->
                         <div id="gpsAlert" class="gps-alert alert-warning">
                             <i class="fas fa-satellite-dish"></i>
                             <span id="gpsText">جاري تحديد الموقع...</span>
                         </div>
                         
-                        <!-- Action Buttons -->
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <button id="checkInBtn" class="btn-action btn-check-in" disabled>
@@ -532,10 +367,9 @@
                         
                         <div class="alert alert-info mt-4">
                             <i class="fas fa-info-circle me-2"></i>
-                            يجب أن تكون داخل نطاق موقع العمل (50 متر) لتتمكن من التسجيل
+                            يجب أن تكون داخل نطاق موقع العمل (<span id="workRadius">50</span> متر) لتتمكن من التسجيل
                         </div>
                         
-                        <!-- Location Info -->
                         <div class="row mt-3">
                             <div class="col-md-6">
                                 <div class="info-item">
@@ -553,7 +387,6 @@
                     </div>
                 </div>
                 
-                <!-- Attendance History -->
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <div>
@@ -591,18 +424,14 @@
                 </div>
             </div>
             
-            <!-- Right Column -->
             <div class="col-lg-4">
-                <!-- Profile Card -->
                 <div class="card">
                     <div class="card-header">
                         <i class="fas fa-user"></i>
                         البيانات الشخصية
                     </div>
                     <div class="card-body text-center">
-                        <div class="profile-avatar mb-3" id="profileAvatar">
-                            <span id="userInitial">م</span>
-                        </div>
+                        <div class="profile-avatar mb-3" id="profileAvatar">م</div>
                         <h5 class="mb-2" id="profileName">اسم الموظف</h5>
                         <p class="text-muted mb-3" id="profileId">ID: --</p>
                         
@@ -619,15 +448,10 @@
                                 <span class="label">تاريخ التعيين</span>
                                 <span class="value" id="profileHireDate">--</span>
                             </div>
-                            <div class="info-item">
-                                <span class="label">حالة الحساب</span>
-                                <span class="value badge bg-success">نشط</span>
-                            </div>
                         </div>
                     </div>
                 </div>
                 
-                <!-- Statistics Card -->
                 <div class="card">
                     <div class="card-header">
                         <i class="fas fa-chart-bar"></i>
@@ -637,36 +461,28 @@
                         <div class="row">
                             <div class="col-6 mb-3">
                                 <div class="stat-card stat-present">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-check-circle"></i>
-                                    </div>
+                                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
                                     <h3 id="statPresentDays">0</h3>
                                     <p class="mb-0">أيام حضور</p>
                                 </div>
                             </div>
                             <div class="col-6 mb-3">
                                 <div class="stat-card stat-absent">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-times-circle"></i>
-                                    </div>
+                                    <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
                                     <h3 id="statAbsentDays">0</h3>
                                     <p class="mb-0">أيام غياب</p>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="stat-card stat-late">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-clock"></i>
-                                    </div>
+                                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
                                     <h3 id="statLateDays">0</h3>
                                     <p class="mb-0">تأخيرات</p>
                                 </div>
                             </div>
                             <div class="col-6">
                                 <div class="stat-card stat-hours">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-hourglass-half"></i>
-                                    </div>
+                                    <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
                                     <h3 id="statTotalHours">0</h3>
                                     <p class="mb-0">إجمالي الساعات</p>
                                 </div>
@@ -675,7 +491,6 @@
                     </div>
                 </div>
                 
-                <!-- Location Card -->
                 <div class="card">
                     <div class="card-header">
                         <i class="fas fa-map-marker-alt"></i>
@@ -707,282 +522,107 @@
         </div>
     </div>
     
-    <!-- Modals -->
-    
-    <!-- Profile Modal -->
-    <div class="modal fade" id="profileModal" tabindex="-1">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-user-edit me-2"></i>
-                        الملف الشخصي
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-md-4 text-center">
-                            <div class="profile-avatar mb-3" style="width: 120px; height: 120px;">
-                                <span id="modalUserInitial">م</span>
-                            </div>
-                            <h5 id="modalProfileName">اسم الموظف</h5>
-                            <p class="text-muted" id="modalEmployeeId">ID: --</p>
-                        </div>
-                        <div class="col-md-8">
-                            <div class="info-box">
-                                <div class="info-item">
-                                    <span class="label">الاسم الكامل</span>
-                                    <span class="value" id="modalFullName">--</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="label">القسم</span>
-                                    <span class="value" id="modalDepartment">--</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="label">المسمى الوظيفي</span>
-                                    <span class="value" id="modalPosition">--</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="label">البريد الإلكتروني</span>
-                                    <span class="value" id="modalEmail">--</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="label">رقم الهاتف</span>
-                                    <span class="value" id="modalPhone">--</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="label">تاريخ التعيين</span>
-                                    <span class="value" id="modalHireDate">--</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="label">حالة الحساب</span>
-                                    <span class="value badge bg-success">نشط</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إغلاق</button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Change Password Modal -->
-    <div class="modal fade" id="changePasswordModal" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-key me-2"></i>
-                        تغيير كلمة المرور
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="changePasswordForm">
-                        <div class="mb-3">
-                            <label class="form-label">كلمة المرور الحالية</label>
-                            <div class="input-group">
-                                <input type="password" class="form-control" id="currentPassword" required>
-                                <button class="btn btn-outline-secondary" type="button" id="toggleCurrentPassword">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">كلمة المرور الجديدة</label>
-                            <div class="input-group">
-                                <input type="password" class="form-control" id="newPassword" required minlength="6">
-                                <button class="btn btn-outline-secondary" type="button" id="toggleNewPassword">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                            <div class="form-text">يجب أن تكون 6 أحرف على الأقل</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">تأكيد كلمة المرور الجديدة</label>
-                            <div class="input-group">
-                                <input type="password" class="form-control" id="confirmPassword" required>
-                                <button class="btn btn-outline-secondary" type="button" id="toggleConfirmPassword">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="button" class="btn btn-primary" id="savePasswordBtn">
-                        <i class="fas fa-save me-2"></i>
-                        حفظ
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
-    <!-- Leaflet JS for Maps -->
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-            crossorigin=""></script>
-    
-    <!-- Firebase SDK -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     
-    <!-- Utils Script -->
-    <script src="utils.js"></script>
-    
     <script>
-        // Firebase Configuration
         const firebaseConfig = {
-            apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE",
+            apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE8",
             authDomain: "hedor-bea3c.firebaseapp.com",
             databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
             projectId: "hedor-bea3c",
             storageBucket: "hedor-bea3c.firebasestorage.app",
             messagingSenderId: "369239455736",
-            appId: "1:369239455736:web:116295854269abecf6480d",
-            measurementId: "G-R2MG1YKQEP"
+            appId: "1:369239455736:web:116295854269abecf6480d"
         };
         
-        // Initialize Firebase
-        let app;
-        try {
-            app = firebase.initializeApp(firebaseConfig);
-        } catch (error) {
-            console.log('Firebase already initialized');
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
         }
         
         const database = firebase.database();
         
-        // Global Variables
         let currentUser = null;
         let todayCheckIn = null;
         let todayCheckOut = null;
-        let locationWatchId = null;
         let currentPosition = null;
         let employeeMap = null;
-        let workLocation = null;
-        let locationMarker = null;
-        let workCircle = null;
-        let currentMonthStats = {
-            present: 0,
-            absent: 0,
-            late: 0,
-            totalHours: 0
-        };
+        let workLocation = { lat: 24.7136, lng: 46.6753, radius: 50 };
+        let locationWatchId = null;
         
-        // Check User Session
         function checkUserSession() {
             const userData = localStorage.getItem('currentUser');
-            
             if (!userData) {
                 window.location.href = 'index.html';
                 return null;
             }
-            
             const user = JSON.parse(userData);
-            
             if (user.role !== 'employee') {
                 window.location.href = 'index.html';
                 return null;
             }
-            
             return user;
         }
         
-        // Load Employee Data
+        function calculateDistance(lat1, lng1, lat2, lng2) {
+            const R = 6371e3;
+            const φ1 = lat1 * Math.PI / 180;
+            const φ2 = lat2 * Math.PI / 180;
+            const Δφ = (lat2 - lat1) * Math.PI / 180;
+            const Δλ = (lng2 - lng1) * Math.PI / 180;
+            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
+                      Math.cos(φ1) * Math.cos(φ2) *
+                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+        
+        function showNotification(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} position-fixed top-0 start-50 translate-middle-x mt-3`;
+            alertDiv.style.zIndex = '10000';
+            alertDiv.textContent = message;
+            document.body.appendChild(alertDiv);
+            setTimeout(() => alertDiv.remove(), 3000);
+        }
+        
         async function loadEmployeeData() {
             try {
                 const snapshot = await database.ref(`employees/${currentUser.id}`).once('value');
-                
                 if (snapshot.exists()) {
                     const employee = snapshot.val();
-                    
-                    // Update UI
-                    document.getElementById('employeeName').textContent = employee.name;
-                    document.getElementById('dropdownEmployeeName').textContent = employee.name;
-                    document.getElementById('profileName').textContent = employee.name;
-                    document.getElementById('modalProfileName').textContent = employee.name;
-                    document.getElementById('modalFullName').textContent = employee.name;
-                    
+                    document.getElementById('employeeName').textContent = employee.name || 'الموظف';
+                    document.getElementById('profileName').textContent = employee.name || 'الموظف';
                     document.getElementById('profileId').textContent = `ID: ${currentUser.id}`;
-                    document.getElementById('dropdownEmployeeId').textContent = `ID: ${currentUser.id}`;
-                    document.getElementById('modalEmployeeId').textContent = `ID: ${currentUser.id}`;
+                    document.getElementById('profileDepartment').textContent = employee.department || '--';
+                    document.getElementById('profilePosition').textContent = employee.position || '--';
+                    document.getElementById('profileHireDate').textContent = employee.hireDate ? new Date(employee.hireDate).toLocaleDateString('ar-SA') : '--';
                     
                     const firstLetter = employee.name ? employee.name.charAt(0) : 'م';
-                    document.getElementById('userInitial').textContent = firstLetter;
-                    document.getElementById('profileAvatar').innerHTML = firstLetter;
-                    document.getElementById('modalUserInitial').textContent = firstLetter;
-                    
-                    if (employee.department) {
-                        document.getElementById('profileDepartment').textContent = employee.department;
-                        document.getElementById('modalDepartment').textContent = employee.department;
-                    }
-                    
-                    if (employee.position) {
-                        document.getElementById('profilePosition').textContent = employee.position;
-                        document.getElementById('modalPosition').textContent = employee.position;
-                    }
-                    
-                    if (employee.email) {
-                        document.getElementById('modalEmail').textContent = employee.email;
-                    }
-                    
-                    if (employee.phone) {
-                        document.getElementById('modalPhone').textContent = employee.phone;
-                    }
-                    
-                    if (employee.hireDate) {
-                        const hireDate = new Date(employee.hireDate).toLocaleDateString('ar-SA');
-                        document.getElementById('profileHireDate').textContent = hireDate;
-                        document.getElementById('modalHireDate').textContent = hireDate;
-                    }
+                    document.getElementById('profileAvatar').textContent = firstLetter;
                 }
             } catch (error) {
-                console.error('خطأ في تحميل بيانات الموظف:', error);
-                showNotification('حدث خطأ في تحميل البيانات', 'danger');
+                console.error('Error loading employee data:', error);
             }
         }
         
-        // Update Date and Time
         function updateDateTime() {
             const now = new Date();
-            const timeString = now.toLocaleTimeString('ar-SA');
-            const dateString = now.toLocaleDateString('ar-SA', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-            const todayDate = now.toLocaleDateString('ar-SA');
-            
-            document.getElementById('currentTime').textContent = timeString;
-            document.getElementById('currentDate').textContent = dateString;
-            document.getElementById('todayDate').textContent = todayDate;
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString('ar-SA');
+            document.getElementById('currentDate').textContent = now.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('todayDate').textContent = now.toLocaleDateString('ar-SA');
         }
         
-        // Initialize Map
         function initializeMap() {
             if (!employeeMap) {
-                employeeMap = L.map('employeeMap').setView([24.7136, 46.6753], 15);
-                
+                employeeMap = L.map('employeeMap').setView([workLocation.lat, workLocation.lng], 15);
                 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                     attribution: '© OpenStreetMap contributors',
                     maxZoom: 19
                 }).addTo(employeeMap);
                 
-                // Add work location (default to Riyadh coordinates)
-                workLocation = { lat: 24.7136, lng: 46.6753, radius: 50 };
-                
-                // Try to load work location from database
                 database.ref('settings/workLocation').once('value').then(snapshot => {
                     if (snapshot.exists()) {
                         const locationData = snapshot.val();
@@ -991,61 +631,48 @@
                             lng: locationData.lng || 46.6753,
                             radius: locationData.radius || 50
                         };
-                        
-                        // Update work circle
+                        updateWorkLocationOnMap();
+                    } else {
                         updateWorkLocationOnMap();
                     }
+                }).catch(() => {
+                    updateWorkLocationOnMap();
                 });
-                
-                // Add work location marker and circle
-                updateWorkLocationOnMap();
             }
         }
         
-        // Update Work Location on Map
         function updateWorkLocationOnMap() {
             if (!employeeMap || !workLocation) return;
             
-            // Remove existing layers
-            if (workCircle) {
-                employeeMap.removeLayer(workCircle);
+            if (window.workCircle) {
+                employeeMap.removeLayer(window.workCircle);
             }
-            if (locationMarker) {
-                employeeMap.removeLayer(locationMarker);
+            if (window.locationMarker) {
+                employeeMap.removeLayer(window.locationMarker);
             }
             
-            // Add work location marker
-            locationMarker = L.marker([workLocation.lat, workLocation.lng], {
-                icon: L.icon({
-                    iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-                    iconSize: [25, 41],
-                    iconAnchor: [12, 41]
-                })
-            }).addTo(employeeMap);
+            window.locationMarker = L.marker([workLocation.lat, workLocation.lng]).addTo(employeeMap);
+            window.locationMarker.bindPopup('موقع العمل الرئيسي').openPopup();
             
-            // Add popup to marker
-            locationMarker.bindPopup('موقع العمل الرئيسي').openPopup();
-            
-            // Add radius circle
-            workCircle = L.circle([workLocation.lat, workLocation.lng], {
+            window.workCircle = L.circle([workLocation.lat, workLocation.lng], {
                 color: '#3498db',
                 fillColor: '#3498db',
                 fillOpacity: 0.1,
                 radius: workLocation.radius
             }).addTo(employeeMap);
             
-            // Update radius display
-            document.getElementById('currentRadius').textContent = workLocation.radius + ' متر';
+            const radiusElement = document.getElementById('workRadius');
+            if (radiusElement) {
+                radiusElement.textContent = workLocation.radius;
+            }
         }
         
-        // Start Location Tracking
         function startLocationTracking() {
             if (!navigator.geolocation) {
                 updateGPSStatus('المتصفح لا يدعم تحديد الموقع', 'danger');
                 return;
             }
             
-            // Clear any existing watcher
             if (locationWatchId) {
                 navigator.geolocation.clearWatch(locationWatchId);
             }
@@ -1059,14 +686,9 @@
                         timestamp: Date.now()
                     };
                     
-                    // Update GPS Status
                     updateGPSStatus('تم تحديد موقعك بنجاح', 'success');
+                    document.getElementById('gpsAccuracy').textContent = Math.round(position.coords.accuracy) + ' متر';
                     
-                    // Update UI with accuracy
-                    document.getElementById('gpsAccuracy').textContent = 
-                        Math.round(position.coords.accuracy) + ' متر';
-                    
-                    // Calculate distance from work
                     if (workLocation) {
                         const distance = calculateDistance(
                             currentPosition.lat,
@@ -1075,65 +697,37 @@
                             workLocation.lng
                         );
                         
-                        document.getElementById('distanceFromWork').textContent = 
-                            Math.round(distance) + ' متر';
-                        document.getElementById('mapDistance').textContent = 
-                            Math.round(distance) + ' متر';
-                        
-                        // Enable/disable buttons based on distance
+                        document.getElementById('distanceFromWork').textContent = Math.round(distance) + ' متر';
+                        document.getElementById('mapDistance').textContent = Math.round(distance) + ' متر';
                         checkLocationRange(distance);
                     }
                     
-                    // Update map with current position
                     updateMapWithCurrentLocation();
-                    
-                    // Save location to Firebase
                     saveLocationToFirebase();
-                    
-                    // Update last location update time
-                    document.getElementById('lastLocationUpdate').textContent = 
-                        new Date().toLocaleTimeString('ar-SA');
+                    document.getElementById('lastLocationUpdate').textContent = new Date().toLocaleTimeString('ar-SA');
                 },
                 (error) => {
                     let errorMessage = 'فشل في تحديد الموقع';
-                    switch(error.code) {
-                        case error.PERMISSION_DENIED:
-                            errorMessage = 'تم رفض الإذن للوصول إلى الموقع';
-                            break;
-                        case error.POSITION_UNAVAILABLE:
-                            errorMessage = 'معلومات الموقع غير متاحة';
-                            break;
-                        case error.TIMEOUT:
-                            errorMessage = 'انتهت مهلة طلب الموقع';
-                            break;
-                    }
+                    if (error.code === error.PERMISSION_DENIED) errorMessage = 'تم رفض الإذن للوصول إلى الموقع';
+                    else if (error.code === error.POSITION_UNAVAILABLE) errorMessage = 'معلومات الموقع غير متاحة';
+                    else if (error.code === error.TIMEOUT) errorMessage = 'انتهت مهلة طلب الموقع';
                     updateGPSStatus(errorMessage, 'danger');
                 },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 10000,
-                    maximumAge: 0
-                }
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
             );
         }
         
-        // Update GPS Status
         function updateGPSStatus(message, type) {
             const gpsAlert = document.getElementById('gpsAlert');
             const gpsText = document.getElementById('gpsText');
-            
             gpsAlert.className = `gps-alert alert-${type}`;
             gpsText.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i> ${message}`;
         }
         
-        // Check Location Range
         function checkLocationRange(distance) {
             const checkInBtn = document.getElementById('checkInBtn');
             const checkOutBtn = document.getElementById('checkOutBtn');
             
-            if (!workLocation) return;
-            
-            // If within work radius
             if (distance <= workLocation.radius) {
                 if (!todayCheckIn) {
                     checkInBtn.disabled = false;
@@ -1151,23 +745,13 @@
             }
         }
         
-        // Update Map with Current Location
         function updateMapWithCurrentLocation() {
             if (!employeeMap || !currentPosition) return;
             
-            // Add or update current location marker
             if (window.currentLocationMarker) {
                 window.currentLocationMarker.setLatLng([currentPosition.lat, currentPosition.lng]);
             } else {
-                window.currentLocationMarker = L.marker([currentPosition.lat, currentPosition.lng], {
-                    icon: L.icon({
-                        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-                        iconSize: [25, 41],
-                        iconAnchor: [12, 41]
-                    })
-                }).addTo(employeeMap);
-                
-                // Add accuracy circle
+                window.currentLocationMarker = L.marker([currentPosition.lat, currentPosition.lng]).addTo(employeeMap);
                 window.accuracyCircle = L.circle([currentPosition.lat, currentPosition.lng], {
                     color: '#2ecc71',
                     fillColor: '#2ecc71',
@@ -1176,20 +760,16 @@
                 }).addTo(employeeMap);
             }
             
-            // Update accuracy circle
             if (window.accuracyCircle) {
                 window.accuracyCircle.setRadius(currentPosition.accuracy || 20);
                 window.accuracyCircle.setLatLng([currentPosition.lat, currentPosition.lng]);
             }
             
-            // Center map on current location
             employeeMap.setView([currentPosition.lat, currentPosition.lng], 16);
         }
         
-        // Save Location to Firebase
         function saveLocationToFirebase() {
             if (!currentPosition || !currentUser) return;
-            
             database.ref(`locations/${currentUser.id}`).set({
                 lat: currentPosition.lat,
                 lng: currentPosition.lng,
@@ -1198,7 +778,6 @@
             });
         }
         
-        // Check In
         document.getElementById('checkInBtn').addEventListener('click', async function() {
             if (!currentPosition) {
                 showNotification('لم يتم تحديد موقعك بعد', 'warning');
@@ -1208,7 +787,6 @@
             const now = Date.now();
             const today = new Date().toISOString().split('T')[0];
             
-            // Check if already checked in today
             if (todayCheckIn) {
                 showNotification('لقد سجلت دخولك بالفعل اليوم', 'warning');
                 return;
@@ -1219,233 +797,159 @@
                 type: 'checkin',
                 timestamp: now,
                 date: today,
-                location: {
-                    lat: currentPosition.lat,
-                    lng: currentPosition.lng
-                },
+                location: { lat: currentPosition.lat, lng: currentPosition.lng },
                 accuracy: currentPosition.accuracy,
-                distance: calculateDistance(
-                    currentPosition.lat,
-                    currentPosition.lng,
-                    workLocation.lat,
-                    workLocation.lng
-                )
+                distance: calculateDistance(currentPosition.lat, currentPosition.lng, workLocation.lat, workLocation.lng)
             };
             
             try {
                 await database.ref(`attendance/${currentUser.id}/${now}`).set(attendanceData);
-                
                 todayCheckIn = now;
                 document.getElementById('checkInTime').textContent = new Date(now).toLocaleTimeString('ar-SA');
-                
-                // Update status
                 updateStatus();
-                
-                // Update buttons
                 checkLocationRange(attendanceData.distance);
-                
-                // Show success notification
                 showNotification('تم تسجيل الدخول بنجاح', 'success');
-                
-                // Load updated attendance history
                 loadAttendanceHistory();
                 loadMonthlyStatistics();
-                
-                // Add pulse animation to status badge
                 document.getElementById('statusBadge').classList.add('pulse');
-                
             } catch (error) {
-                console.error('خطأ في تسجيل الدخول:', error);
+                console.error('Error checking in:', error);
                 showNotification('حدث خطأ في تسجيل الدخول', 'danger');
             }
         });
         
-        // Check Out
         document.getElementById('checkOutBtn').addEventListener('click', async function() {
             if (!currentPosition) {
                 showNotification('لم يتم تحديد موقعك بعد', 'warning');
                 return;
             }
             
-            const now = Date.now();
-            const today = new Date().toISOString().split('T')[0];
-            
-            // Check if checked in today
             if (!todayCheckIn) {
                 showNotification('يجب تسجيل الدخول أولا', 'warning');
                 return;
             }
             
-            // Check if already checked out
             if (todayCheckOut) {
                 showNotification('لقد سجلت خروجك بالفعل اليوم', 'warning');
                 return;
             }
+            
+            const now = Date.now();
+            const today = new Date().toISOString().split('T')[0];
             
             const attendanceData = {
                 employeeId: currentUser.id,
                 type: 'checkout',
                 timestamp: now,
                 date: today,
-                location: {
-                    lat: currentPosition.lat,
-                    lng: currentPosition.lng
-                },
+                location: { lat: currentPosition.lat, lng: currentPosition.lng },
                 accuracy: currentPosition.accuracy,
-                distance: calculateDistance(
-                    currentPosition.lat,
-                    currentPosition.lng,
-                    workLocation.lat,
-                    workLocation.lng
-                )
+                distance: calculateDistance(currentPosition.lat, currentPosition.lng, workLocation.lat, workLocation.lng)
             };
             
             try {
                 await database.ref(`attendance/${currentUser.id}/${now}`).set(attendanceData);
-                
                 todayCheckOut = now;
                 document.getElementById('checkOutTime').textContent = new Date(now).toLocaleTimeString('ar-SA');
-                
-                // Calculate work hours
                 updateWorkHours();
-                
-                // Update status
                 updateStatus();
-                
-                // Update buttons
                 checkLocationRange(attendanceData.distance);
-                
-                // Show success notification
                 showNotification('تم تسجيل الخروج بنجاح', 'success');
-                
-                // Load updated attendance history
                 loadAttendanceHistory();
                 loadMonthlyStatistics();
-                
             } catch (error) {
-                console.error('خطأ في تسجيل الخروج:', error);
+                console.error('Error checking out:', error);
                 showNotification('حدث خطأ في تسجيل الخروج', 'danger');
             }
         });
         
-        // Update Work Hours
-        function updateWorkHours() {
-            if (!todayCheckIn || !todayCheckOut) return;
-            
-            const diffMs = todayCheckOut - todayCheckIn;
-            const diffHrs = Math.floor(diffMs / 3600000);
-            const diffMins = Math.floor((diffMs % 3600000) / 60000);
-            
-            document.getElementById('workHours').textContent = `${diffHrs} ساعة ${diffMins} دقيقة`;
-        }
-        
-        // Update Status
         function updateStatus() {
             const statusBadge = document.getElementById('statusBadge');
             const statusText = document.getElementById('statusText');
             
-            if (todayCheckIn && !todayCheckOut) {
-                statusBadge.className = 'status-badge checked-in';
-                statusText.textContent = 'حاضر الآن';
-                statusBadge.innerHTML = '<i class="fas fa-user-check"></i> حاضر الآن';
-            } else if (todayCheckIn && todayCheckOut) {
+            if (todayCheckIn && todayCheckOut) {
                 statusBadge.className = 'status-badge present';
-                statusText.textContent = 'تم الانصراف';
-                statusBadge.innerHTML = '<i class="fas fa-sign-out-alt"></i> تم الانصراف';
+                statusText.textContent = 'انتهى العمل';
+            } else if (todayCheckIn) {
+                statusBadge.className = 'status-badge present';
+                statusText.textContent = 'حاضر الآن';
             } else {
                 statusBadge.className = 'status-badge absent';
                 statusText.textContent = 'لم يتم التسجيل';
-                statusBadge.innerHTML = '<i class="fas fa-user-clock"></i> لم يتم التسجيل';
-                statusBadge.classList.remove('pulse');
             }
         }
         
-        // Load Today's Status
-        async function loadTodayStatus() {
+        function updateWorkHours() {
+            if (todayCheckIn && todayCheckOut) {
+                const diffMs = todayCheckOut - todayCheckIn;
+                const diffHrs = Math.floor(diffMs / 3600000);
+                const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                document.getElementById('workHours').textContent = `${diffHrs} ساعة ${diffMins} دقيقة`;
+            }
+        }
+        
+        async function loadTodayAttendance() {
             const today = new Date().toISOString().split('T')[0];
-            
             try {
-                const snapshot = await database.ref(`attendance/${currentUser.id}`)
-                    .orderByChild('date')
-                    .equalTo(today)
-                    .once('value');
-                
+                const snapshot = await database.ref(`attendance/${currentUser.id}`).orderByChild('date').equalTo(today).once('value');
                 if (snapshot.exists()) {
                     const records = snapshot.val();
-                    
                     Object.keys(records).forEach(timestamp => {
                         const record = records[timestamp];
                         if (record.type === 'checkin') {
                             todayCheckIn = parseInt(timestamp);
-                            document.getElementById('checkInTime').textContent = 
-                                new Date(todayCheckIn).toLocaleTimeString('ar-SA');
+                            document.getElementById('checkInTime').textContent = new Date(parseInt(timestamp)).toLocaleTimeString('ar-SA');
                         } else if (record.type === 'checkout') {
                             todayCheckOut = parseInt(timestamp);
-                            document.getElementById('checkOutTime').textContent = 
-                                new Date(todayCheckOut).toLocaleTimeString('ar-SA');
+                            document.getElementById('checkOutTime').textContent = new Date(parseInt(timestamp)).toLocaleTimeString('ar-SA');
                         }
                     });
-                    
-                    updateWorkHours();
                     updateStatus();
+                    updateWorkHours();
                 }
             } catch (error) {
-                console.error('خطأ في تحميل حالة اليوم:', error);
+                console.error('Error loading today attendance:', error);
             }
         }
         
-        // Load Attendance History
         async function loadAttendanceHistory() {
             const tbody = document.getElementById('historyTableBody');
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</td></tr>';
             
             try {
-                const snapshot = await database.ref(`attendance/${currentUser.id}`)
-                    .orderByChild('timestamp')
-                    .limitToLast(10)
-                    .once('value');
-                
-                tbody.innerHTML = '';
+                const snapshot = await database.ref(`attendance/${currentUser.id}`).orderByChild('timestamp').limitToLast(50).once('value');
                 
                 if (!snapshot.exists()) {
-                    tbody.innerHTML = `
-                        <tr>
-                            <td colspan="6" class="text-center text-muted">
-                                لا توجد سجلات حضور
-                            </td>
-                        </tr>
-                    `;
+                    tbody.innerHTML = '<tr><td colspan="6" class="text-center">لا توجد سجلات</td></tr>';
                     return;
                 }
                 
                 const records = snapshot.val();
-                const groupedByDate = {};
+                const dailyRecords = {};
                 
-                // Group by date
                 Object.keys(records).forEach(timestamp => {
                     const record = records[timestamp];
                     const date = record.date;
                     
-                    if (!groupedByDate[date]) {
-                        groupedByDate[date] = { checkin: null, checkout: null, distance: 0 };
+                    if (!dailyRecords[date]) {
+                        dailyRecords[date] = { checkin: null, checkout: null };
                     }
                     
                     if (record.type === 'checkin') {
-                        groupedByDate[date].checkin = parseInt(timestamp);
-                        groupedByDate[date].distance = record.distance || 0;
+                        dailyRecords[date].checkin = parseInt(timestamp);
+                        dailyRecords[date].distance = record.distance;
                     } else if (record.type === 'checkout') {
-                        groupedByDate[date].checkout = parseInt(timestamp);
+                        dailyRecords[date].checkout = parseInt(timestamp);
                     }
                 });
                 
-                // Display records (newest first)
-                const dates = Object.keys(groupedByDate).sort().reverse();
+                tbody.innerHTML = '';
+                const sortedDates = Object.keys(dailyRecords).sort().reverse();
                 
-                dates.forEach(date => {
-                    const record = groupedByDate[date];
-                    const checkInTime = record.checkin ? 
-                        new Date(record.checkin).toLocaleTimeString('ar-SA') : '--';
-                    const checkOutTime = record.checkout ? 
-                        new Date(record.checkout).toLocaleTimeString('ar-SA') : '--';
+                sortedDates.slice(0, 10).forEach(date => {
+                    const record = dailyRecords[date];
+                    const checkInTime = record.checkin ? new Date(record.checkin).toLocaleTimeString('ar-SA') : '--:--:--';
+                    const checkOutTime = record.checkout ? new Date(record.checkout).toLocaleTimeString('ar-SA') : '--:--:--';
                     
                     let workHours = '--';
                     let status = 'غائب';
@@ -1466,7 +970,7 @@
                     const formattedDate = new Date(date).toLocaleDateString('ar-SA');
                     const distance = record.distance ? Math.round(record.distance) + ' متر' : '--';
                     
-                    const row = `
+                    tbody.innerHTML += `
                         <tr>
                             <td>${formattedDate}</td>
                             <td>${checkInTime}</td>
@@ -1476,24 +980,14 @@
                             <td>${distance}</td>
                         </tr>
                     `;
-                    
-                    tbody.innerHTML += row;
                 });
                 
             } catch (error) {
-                console.error('خطأ في تحميل السجلات:', error);
-                tbody.innerHTML = `
-                    <tr>
-                        <td colspan="6" class="text-center text-danger">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            حدث خطأ في تحميل السجلات
-                        </td>
-                    </tr>
-                `;
+                console.error('Error loading history:', error);
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">حدث خطأ في تحميل السجلات</td></tr>';
             }
         }
         
-        // Load Monthly Statistics
         async function loadMonthlyStatistics() {
             const now = new Date();
             const currentMonth = now.getMonth();
@@ -1503,7 +997,10 @@
                 const snapshot = await database.ref(`attendance/${currentUser.id}`).once('value');
                 
                 if (!snapshot.exists()) {
-                    resetMonthlyStats();
+                    document.getElementById('statPresentDays').textContent = '0';
+                    document.getElementById('statAbsentDays').textContent = '0';
+                    document.getElementById('statLateDays').textContent = '0';
+                    document.getElementById('statTotalHours').textContent = '0';
                     return;
                 }
                 
@@ -1513,14 +1010,11 @@
                 let presentDays = 0;
                 let lateDays = 0;
                 
-                // Process records for current month
                 Object.keys(records).forEach(timestamp => {
                     const record = records[timestamp];
                     const recordDate = new Date(record.date);
                     
-                    if (recordDate.getFullYear() === currentYear && 
-                        recordDate.getMonth() === currentMonth) {
-                        
+                    if (recordDate.getFullYear() === currentYear && recordDate.getMonth() === currentMonth) {
                         const date = record.date;
                         
                         if (!monthlyRecords[date]) {
@@ -1530,7 +1024,6 @@
                         if (record.type === 'checkin') {
                             monthlyRecords[date].checkin = parseInt(timestamp);
                             
-                            // Check if late (after 8:30 AM)
                             const checkInTime = new Date(record.timestamp);
                             const checkInHour = checkInTime.getHours();
                             const checkInMinute = checkInTime.getMinutes();
@@ -1544,199 +1037,60 @@
                     }
                 });
                 
-                // Calculate statistics
                 Object.keys(monthlyRecords).forEach(date => {
                     const record = monthlyRecords[date];
-                    
                     if (record.checkin) {
                         presentDays++;
-                        
                         if (record.checkout) {
                             const diffMs = record.checkout - record.checkin;
-                            totalHours += diffMs / 3600000; // Convert to hours
+                            totalHours += diffMs / 3600000;
                         }
                     }
                 });
                 
-                // Assuming 22 work days in month
                 const workDays = 22;
                 const absentDays = workDays - presentDays;
                 
-                // Update UI
                 document.getElementById('statPresentDays').textContent = presentDays;
                 document.getElementById('statAbsentDays').textContent = absentDays;
                 document.getElementById('statLateDays').textContent = lateDays;
                 document.getElementById('statTotalHours').textContent = Math.round(totalHours);
                 
-                // Store for later use
-                currentMonthStats = {
-                    present: presentDays,
-                    absent: absentDays,
-                    late: lateDays,
-                    totalHours: totalHours
-                };
-                
             } catch (error) {
-                console.error('خطأ في تحميل الإحصائيات:', error);
-                resetMonthlyStats();
+                console.error('Error loading monthly stats:', error);
             }
         }
         
-        // Reset Monthly Stats
-        function resetMonthlyStats() {
-            document.getElementById('statPresentDays').textContent = '0';
-            document.getElementById('statAbsentDays').textContent = '0';
-            document.getElementById('statLateDays').textContent = '0';
-            document.getElementById('statTotalHours').textContent = '0';
-            currentMonthStats = { present: 0, absent: 0, late: 0, totalHours: 0 };
-        }
+        document.getElementById('refreshHistoryBtn').addEventListener('click', loadAttendanceHistory);
         
-        // Setup Password Toggle for Change Password Modal
-        function setupPasswordToggle() {
-            const toggleCurrent = document.getElementById('toggleCurrentPassword');
-            const toggleNew = document.getElementById('toggleNewPassword');
-            const toggleConfirm = document.getElementById('toggleConfirmPassword');
-            
-            toggleCurrent.addEventListener('click', function() {
-                const input = document.getElementById('currentPassword');
-                const icon = this.querySelector('i');
-                togglePasswordVisibility(input, icon);
-            });
-            
-            toggleNew.addEventListener('click', function() {
-                const input = document.getElementById('newPassword');
-                const icon = this.querySelector('i');
-                togglePasswordVisibility(input, icon);
-            });
-            
-            toggleConfirm.addEventListener('click', function() {
-                const input = document.getElementById('confirmPassword');
-                const icon = this.querySelector('i');
-                togglePasswordVisibility(input, icon);
-            });
-        }
+        document.getElementById('logoutBtn').addEventListener('click', function() {
+            if (confirm('هل تريد تسجيل الخروج؟')) {
+                localStorage.removeItem('currentUser');
+                window.location.href = 'index.html';
+            }
+        });
         
-        function togglePasswordVisibility(input, icon) {
-            if (input.type === 'password') {
-                input.type = 'text';
-                icon.className = 'fas fa-eye-slash';
-            } else {
-                input.type = 'password';
-                icon.className = 'fas fa-eye';
-            }
-        }
-        
-        // Change Password
-        document.getElementById('savePasswordBtn').addEventListener('click', async function() {
-            const currentPassword = document.getElementById('currentPassword').value;
-            const newPassword = document.getElementById('newPassword').value;
-            const confirmPassword = document.getElementById('confirmPassword').value;
-            
-            // Validation
-            if (!currentPassword || !newPassword || !confirmPassword) {
-                showNotification('الرجاء ملء جميع الحقول', 'warning');
-                return;
-            }
-            
-            if (newPassword !== confirmPassword) {
-                showNotification('كلمة المرور الجديدة غير متطابقة', 'warning');
-                return;
-            }
-            
-            if (newPassword.length < 6) {
-                showNotification('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'warning');
-                return;
-            }
-            
+        window.addEventListener('load', async function() {
             try {
-                // Verify current password
-                const snapshot = await database.ref(`employees/${currentUser.id}/password`).once('value');
+                currentUser = checkUserSession();
+                if (!currentUser) return;
                 
-                if (snapshot.val() === currentPassword) {
-                    // Update password
-                    await database.ref(`employees/${currentUser.id}`).update({
-                        password: newPassword,
-                        updatedAt: firebase.database.ServerValue.TIMESTAMP
-                    });
-                    
-                    // Reset form
-                    document.getElementById('changePasswordForm').reset();
-                    
-                    // Close modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('changePasswordModal'));
-                    modal.hide();
-                    
-                    // Show success message
-                    showNotification('تم تغيير كلمة المرور بنجاح', 'success');
-                } else {
-                    showNotification('كلمة المرور الحالية غير صحيحة', 'error');
-                }
-            } catch (error) {
-                console.error('خطأ في تغيير كلمة المرور:', error);
-                showNotification('حدث خطأ في تغيير كلمة المرور', 'danger');
-            }
-        });
-        
-        // Refresh History
-        document.getElementById('refreshHistoryBtn').addEventListener('click', function() {
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-            loadAttendanceHistory();
-            setTimeout(() => {
-                this.innerHTML = '<i class="fas fa-sync-alt"></i>';
-            }, 1000);
-        });
-        
-        // Logout
-        document.getElementById('logoutBtn').addEventListener('click', function(e) {
-            e.preventDefault();
-            
-            // Stop location tracking
-            if (locationWatchId) {
-                navigator.geolocation.clearWatch(locationWatchId);
-            }
-            
-            // Clear session
-            localStorage.removeItem('currentUser');
-            localStorage.removeItem('lastLogin');
-            
-            // Redirect to login page
-            window.location.href = 'index.html';
-        });
-        
-        // Initialize Application
-        document.addEventListener('DOMContentLoaded', async function() {
-            // Check user session
-            currentUser = checkUserSession();
-            if (!currentUser) return;
-            
-            try {
-                // Load initial data
                 await loadEmployeeData();
-                await loadTodayStatus();
-                await loadAttendanceHistory();
-                await loadMonthlyStatistics();
-                
-                // Initialize map
-                initializeMap();
-                
-                // Start location tracking
-                startLocationTracking();
-                
-                // Setup password toggle
-                setupPasswordToggle();
-                
-                // Update time every second
                 updateDateTime();
                 setInterval(updateDateTime, 1000);
                 
-                // Hide loading overlay
-                setTimeout(() => {
-                    document.getElementById('loadingOverlay').style.display = 'none';
-                }, 1000);
+                initializeMap();
+                startLocationTracking();
                 
+                await loadTodayAttendance();
+                await loadAttendanceHistory();
+                await loadMonthlyStatistics();
+                
+                document.getElementById('loadingOverlay').style.display = 'none';
             } catch (error) {
                 console.error('خطأ في تهيئة التطبيق:', error);
                 showNotification('حدث خطأ في تحميل البيانات', 'danger');
+                document.getElementById('loadingOverlay').style.display = 'none';
             }
         });
     </script>
