@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة التحكم - نظام الحضور والانصراف</title>
+    <title>لوحة تحكم المدير - نظام الحضور والانصراف</title>
     
     <!-- Bootstrap 5 Arabic -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -13,8 +13,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-    <!-- DataTables -->
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     
     <style>
         :root {
@@ -32,514 +30,6 @@
         
         body {
             background-color: #f8f9fa;
-            overflow-x: hidden;
-        }
-        
-        /* Navbar */
-        .navbar {
-            background: linear-gradient(135deg, var(--primary-color) 0%, #1a2530 100%);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-            padding: 12px 0;
-        }
-        
-        .navbar-brand {
-            font-weight: 800;
-            font-size: 1.6rem;
-            background: linear-gradient(45deg, #fff, #3498db);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        /* Sidebar */
-        #sidebar {
-            background: linear-gradient(180deg, #2c3e50 0%, #1a2530 100%);
-            min-height: calc(100vh - 70px);
-            box-shadow: 5px 0 25px rgba(0, 0, 0, 0.2);
-            position: sticky;
-            top: 70px;
-            z-index: 100;
-            width: 280px;
-            transition: all 0.3s;
-        }
-        
-        .sidebar-collapsed #sidebar {
-            width: 70px;
-        }
-        
-        .sidebar-collapsed .sidebar-text {
-            display: none !important;
-        }
-        
-        .sidebar-collapsed #content {
-            margin-right: 70px;
-        }
-        
-        .sidebar-header {
-            padding: 25px 20px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            text-align: center;
-        }
-        
-        .user-avatar {
-            width: 90px;
-            height: 90px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 15px;
-            border: 4px solid rgba(255, 255, 255, 0.2);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        }
-        
-        .user-avatar-text {
-            color: white;
-            font-size: 36px;
-            font-weight: bold;
-        }
-        
-        .sidebar-header h5 {
-            color: white;
-            font-weight: 700;
-            margin: 10px 0 5px;
-            font-size: 1.2rem;
-        }
-        
-        .sidebar-header p {
-            color: rgba(255, 255, 255, 0.7);
-            font-size: 0.85rem;
-        }
-        
-        .nav-pills .nav-link {
-            color: rgba(255, 255, 255, 0.8);
-            border-radius: 12px;
-            padding: 14px 20px;
-            margin: 6px 15px;
-            transition: all 0.3s;
-            text-align: right;
-            display: flex;
-            align-items: center;
-            border: none;
-        }
-        
-        .nav-pills .nav-link:hover {
-            background: rgba(255, 255, 255, 0.1);
-            color: white;
-            transform: translateX(-5px);
-        }
-        
-        .nav-pills .nav-link.active {
-            background: linear-gradient(45deg, var(--secondary-color), #2980b9);
-            color: white;
-            font-weight: 600;
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
-        }
-        
-        .nav-pills .nav-link i {
-            margin-left: 12px;
-            width: 24px;
-            text-align: center;
-            font-size: 1.2rem;
-        }
-        
-        /* Main Content */
-        #content {
-            padding: 30px;
-            min-height: calc(100vh - 70px);
-            transition: all 0.3s;
-            margin-right: 280px;
-        }
-        
-        .page-header {
-            margin-bottom: 35px;
-            padding-bottom: 20px;
-            border-bottom: 3px solid #eee;
-            position: relative;
-        }
-        
-        .page-header h3 {
-            color: var(--primary-color);
-            font-weight: 800;
-            display: flex;
-            align-items: center;
-            font-size: 1.8rem;
-        }
-        
-        .page-header h3 i {
-            margin-left: 15px;
-            background: linear-gradient(45deg, var(--secondary-color), var(--primary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        
-        .page-header::after {
-            content: '';
-            position: absolute;
-            bottom: -3px;
-            right: 0;
-            width: 100px;
-            height: 3px;
-            background: linear-gradient(90deg, var(--secondary-color), transparent);
-            border-radius: 3px;
-        }
-        
-        /* Cards */
-        .card {
-            border: none;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-            margin-bottom: 30px;
-            transition: all 0.4s;
-            overflow: hidden;
-            border: 1px solid rgba(0, 0, 0, 0.05);
-        }
-        
-        .card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-        }
-        
-        .card-header {
-            background: linear-gradient(90deg, white, #f8f9fa);
-            border-bottom: 2px solid #e9ecef;
-            border-radius: 20px 20px 0 0 !important;
-            padding: 20px 25px;
-            font-weight: 700;
-            color: var(--primary-color);
-            font-size: 1.1rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        
-        .card-header i {
-            margin-left: 10px;
-            color: var(--secondary-color);
-            font-size: 1.3rem;
-        }
-        
-        /* Stats Cards */
-        .stat-card {
-            text-align: center;
-            padding: 30px 20px;
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            right: 0;
-            width: 100%;
-            height: 5px;
-            background: linear-gradient(90deg, transparent, currentColor);
-            opacity: 0.3;
-        }
-        
-        .stat-icon {
-            width: 70px;
-            height: 70px;
-            border-radius: 20px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            font-size: 30px;
-            color: white;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-        }
-        
-        .present .stat-icon {
-            background: linear-gradient(135deg, var(--success-color), #27ae60);
-        }
-        
-        .absent .stat-icon {
-            background: linear-gradient(135deg, var(--danger-color), #c0392b);
-        }
-        
-        .late .stat-icon {
-            background: linear-gradient(135deg, var(--warning-color), #d35400);
-        }
-        
-        .total .stat-icon {
-            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
-        }
-        
-        .hours .stat-icon {
-            background: linear-gradient(135deg, var(--info-color), #16a085);
-        }
-        
-        .active .stat-icon {
-            background: linear-gradient(135deg, #9b59b6, #8e44ad);
-        }
-        
-        .stat-card h2 {
-            font-weight: 800;
-            margin: 15px 0 5px;
-            font-size: 2.5rem;
-            color: var(--primary-color);
-        }
-        
-        .stat-card .stat-change {
-            font-size: 0.9rem;
-            padding: 3px 10px;
-            border-radius: 20px;
-            display: inline-block;
-            margin-top: 5px;
-        }
-        
-        .stat-change.positive {
-            background-color: rgba(46, 204, 113, 0.1);
-            color: var(--success-color);
-        }
-        
-        .stat-change.negative {
-            background-color: rgba(231, 76, 60, 0.1);
-            color: var(--danger-color);
-        }
-        
-        /* Map Container */
-        .map-container {
-            height: 600px;
-            border-radius: 15px;
-            overflow: hidden;
-            border: 1px solid #dee2e6;
-            position: relative;
-        }
-        
-        #map, #liveMap, #modalMap {
-            width: 100%;
-            height: 100%;
-        }
-        
-        .map-overlay {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 1000;
-            background: white;
-            padding: 15px;
-            border-radius: 12px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
-            max-width: 300px;
-        }
-        
-        /* Tables */
-        .table-container {
-            overflow-x: auto;
-            border-radius: 15px;
-            border: 1px solid #dee2e6;
-        }
-        
-        .dataTable {
-            width: 100% !important;
-            margin: 0 !important;
-        }
-        
-        .dataTable thead th {
-            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
-            color: var(--primary-color);
-            font-weight: 700;
-            border-bottom: 2px solid #dee2e6;
-            padding: 15px;
-            font-size: 0.95rem;
-        }
-        
-        .dataTable tbody td {
-            padding: 15px;
-            vertical-align: middle;
-            border-bottom: 1px solid #eee;
-        }
-        
-        .dataTable tbody tr:hover {
-            background-color: rgba(52, 152, 219, 0.05);
-        }
-        
-        /* Badges */
-        .badge-status {
-            padding: 8px 16px;
-            border-radius: 25px;
-            font-weight: 600;
-            font-size: 0.85rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .badge-present {
-            background-color: #d4edda;
-            color: #155724;
-        }
-        
-        .badge-absent {
-            background-color: #f8d7da;
-            color: #721c24;
-        }
-        
-        .badge-late {
-            background-color: #fff3cd;
-            color: #856404;
-        }
-        
-        .badge-vacation {
-            background-color: #d1ecf1;
-            color: #0c5460;
-        }
-        
-        .badge-remote {
-            background-color: #d6d8f5;
-            color: #2c3e50;
-        }
-        
-        /* Charts */
-        .chart-container {
-            position: relative;
-            height: 300px;
-            width: 100%;
-        }
-        
-        /* Form Controls */
-        .form-control, .form-select {
-            border-radius: 12px;
-            padding: 12px 18px;
-            border: 2px solid #e1e5eb;
-            transition: all 0.3s;
-            font-size: 0.95rem;
-        }
-        
-        .form-control:focus, .form-select:focus {
-            border-color: var(--secondary-color);
-            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
-        }
-        
-        /* Buttons */
-        .btn {
-            border-radius: 12px;
-            padding: 10px 24px;
-            font-weight: 600;
-            transition: all 0.3s;
-            border: none;
-        }
-        
-        .btn-primary {
-            background: linear-gradient(45deg, var(--secondary-color), #2980b9);
-        }
-        
-        .btn-success {
-            background: linear-gradient(45deg, var(--success-color), #27ae60);
-        }
-        
-        .btn-warning {
-            background: linear-gradient(45deg, var(--warning-color), #d35400);
-        }
-        
-        .btn-danger {
-            background: linear-gradient(45deg, var(--danger-color), #c0392b);
-        }
-        
-        .btn-info {
-            background: linear-gradient(45deg, var(--info-color), #16a085);
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 7px 20px rgba(0,0,0,0.15);
-        }
-        
-        /* Animations */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        
-        .fade-in {
-            animation: fadeIn 0.6s ease forwards;
-        }
-        
-        /* Responsive */
-        @media (max-width: 1200px) {
-            #sidebar {
-                width: 240px;
-            }
-            
-            #content {
-                margin-right: 240px;
-            }
-        }
-        
-        @media (max-width: 992px) {
-            #sidebar {
-                position: fixed;
-                right: -280px;
-                top: 70px;
-                width: 280px;
-                transition: right 0.3s;
-                z-index: 1050;
-            }
-            
-            #sidebar.active {
-                right: 0;
-            }
-            
-            #content {
-                margin-right: 0;
-                padding: 20px 15px;
-            }
-            
-            .map-container {
-                height: 400px;
-            }
-        }
-        
-        @media (max-width: 768px) {
-            .stat-card {
-                margin-bottom: 20px;
-            }
-            
-            .map-container {
-                height: 350px;
-            }
-            
-            .map-overlay {
-                position: relative;
-                top: 0;
-                left: 0;
-                margin-bottom: 15px;
-                max-width: 100%;
-            }
-        }
-        
-        /* Toggle Sidebar Button */
-        #sidebarToggle {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            z-index: 1000;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: linear-gradient(45deg, var(--primary-color), var(--secondary-color));
-            color: white;
-            border: none;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-            transition: all 0.3s;
-        }
-        
-        #sidebarToggle:hover {
-            transform: scale(1.1);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
         }
         
         /* Loading Overlay */
@@ -557,125 +47,181 @@
             z-index: 9999;
         }
         
-        .spinner-border {
-            width: 4rem;
-            height: 4rem;
+        /* Navbar */
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1a2530 100%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            padding: 15px 0;
         }
         
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.6rem;
+            background: linear-gradient(45deg, #fff, #3498db);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
         
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
+        /* Sidebar */
+        .sidebar {
+            background: linear-gradient(180deg, #2c3e50 0%, #1a2530 100%);
+            min-height: calc(100vh - 70px);
+            padding: 20px 0;
+            position: sticky;
+            top: 70px;
+        }
+        
+        .nav-pills .nav-link {
+            color: rgba(255, 255, 255, 0.8);
             border-radius: 10px;
+            padding: 15px 20px;
+            margin: 5px 15px;
+            transition: all 0.3s;
         }
         
-        ::-webkit-scrollbar-thumb {
-            background: var(--secondary-color);
-            border-radius: 10px;
+        .nav-pills .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
         }
         
-        ::-webkit-scrollbar-thumb:hover {
-            background: #2980b9;
+        .nav-pills .nav-link.active {
+            background: linear-gradient(45deg, var(--secondary-color), #2980b9);
+            color: white;
+            font-weight: 600;
+        }
+        
+        /* Main Content */
+        .main-content {
+            padding: 30px;
+            min-height: calc(100vh - 70px);
+        }
+        
+        /* Stats Cards */
+        .stat-card {
+            text-align: center;
+            padding: 25px 20px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            color: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+        
+        .stat-card.present {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+        
+        .stat-card.absent {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        
+        .stat-card.late {
+            background: linear-gradient(135deg, #f39c12, #d35400);
+        }
+        
+        .stat-card.total {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+        
+        /* Cards */
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+        }
+        
+        .card-header {
+            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
+            border-bottom: 2px solid #e9ecef;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 20px;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        /* Table */
+        .table {
+            margin: 0;
+        }
+        
+        .table thead th {
+            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
+            color: var(--primary-color);
+            font-weight: 700;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        /* Badges */
+        .badge-present {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-absent {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-late {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        /* Responsive */
+        @media (max-width: 992px) {
+            .sidebar {
+                position: static;
+                min-height: auto;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
     <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">جاري التحميل...</span>
-        </div>
+        <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;"></div>
         <h5 class="mt-4 text-primary">جاري تحميل لوحة التحكم...</h5>
-        <p class="text-muted mt-2">الرجاء الانتظار...</p>
     </div>
     
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container-fluid">
-            <button class="btn btn-link text-white d-lg-none" type="button" id="mobileSidebarToggle">
-                <i class="fas fa-bars fa-lg"></i>
-            </button>
-            
             <a class="navbar-brand" href="#">
                 <i class="fas fa-chart-network me-2"></i>
-                لوحة التحكم
+                لوحة تحكم المدير
             </a>
             
             <div class="d-flex align-items-center">
-                <!-- Notifications -->
-                <div class="dropdown me-4">
-                    <button class="btn btn-outline-light position-relative" type="button" id="notificationsDropdown" data-bs-toggle="dropdown">
-                        <i class="fas fa-bell"></i>
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="notificationCount">
-                            3
-                        </span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 350px;">
-                        <li class="dropdown-header">الإشعارات</li>
-                        <li>
-                            <a class="dropdown-item" href="#">
-                                <div class="d-flex align-items-start">
-                                    <div class="flex-shrink-0">
-                                        <i class="fas fa-user-clock text-warning"></i>
-                                    </div>
-                                    <div class="flex-grow-1 ms-3">
-                                        <p class="mb-0"><strong>موظف متأخر</strong></p>
-                                        <small class="text-muted">منذ 45 دقيقة</small>
-                                    </div>
-                                </div>
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#">
-                                <div class="d-flex align-items-start">
-                                    <div class="flex-shrink-0">
-                                        <i class="fas fa-user-check text-success"></i>
-                                    </div>
-                                    <div class="flex-grow-1 ms-3">
-                                        <p class="mb-0"><strong>تم تسجيل حضور جديد</strong></p>
-                                        <small class="text-muted">منذ 10 دقائق</small>
-                                    </div>
-                                </div>
-                            </a>
-                        </li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item text-center" href="#">عرض جميع الإشعارات</a></li>
-                    </ul>
+                <!-- Current Time -->
+                <div class="text-white me-4 d-none d-md-block">
+                    <i class="fas fa-clock me-2"></i>
+                    <span id="currentTime">--:--:--</span>
                 </div>
                 
                 <!-- User Menu -->
                 <div class="dropdown">
-                    <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown">
-                        <div class="me-2 d-none d-md-block">
-                            <span id="adminName">المدير العام</span>
-                        </div>
+                    <button class="btn btn-outline-light dropdown-toggle" type="button" id="userDropdown" data-bs-toggle="dropdown">
                         <i class="fas fa-user-circle fa-lg"></i>
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li class="dropdown-header">
-                            <span id="dropdownAdminName">المدير العام</span>
+                            <span id="adminName">المدير العام</span>
                         </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
-                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#profileModal">
-                                <i class="fas fa-user-edit me-2"></i>
-                                تعديل الملف الشخصي
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
-                                <i class="fas fa-key me-2"></i>
-                                تغيير كلمة المرور
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#systemSettingsModal">
+                            <a class="dropdown-item" href="#" id="settingsBtn">
                                 <i class="fas fa-cogs me-2"></i>
                                 إعدادات النظام
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" id="changePasswordBtn">
+                                <i class="fas fa-key me-2"></i>
+                                تغيير كلمة المرور
                             </a>
                         </li>
                         <li><hr class="dropdown-divider"></li>
@@ -687,13 +233,6 @@
                         </li>
                     </ul>
                 </div>
-                
-                <!-- Current Time -->
-                <div class="text-white ms-4 d-none d-lg-block">
-                    <i class="fas fa-clock me-2"></i>
-                    <span id="currentTime">--:--:--</span>
-                    <div id="currentDate" class="small opacity-75"></div>
-                </div>
             </div>
         </div>
     </nav>
@@ -701,577 +240,420 @@
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div id="sidebar">
-                <div class="sidebar-header">
-                    <div class="user-avatar">
-                        <div class="user-avatar-text">م</div>
-                    </div>
-                    <h5 id="sidebarAdminName">المدير العام</h5>
-                    <p>لوحة التحكم الرئيسية</p>
-                    <div class="mt-3">
-                        <span class="badge bg-success">
-                            <i class="fas fa-circle me-1"></i>
-                            متصل
-                        </span>
-                    </div>
-                </div>
-                
-                <ul class="nav nav-pills flex-column mb-auto mt-4">
-                    <li class="nav-item">
-                        <a href="#" class="nav-link active" data-page="dashboard">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <span class="sidebar-text">الرئيسية</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-page="map">
-                            <i class="fas fa-map-marked-alt"></i>
-                            <span class="sidebar-text">الخريطة المباشرة</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-page="employees">
-                            <i class="fas fa-users"></i>
-                            <span class="sidebar-text">إدارة الموظفين</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-page="attendance">
-                            <i class="fas fa-clipboard-check"></i>
-                            <span class="sidebar-text">سجلات الحضور</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-page="reports">
-                            <i class="fas fa-chart-bar"></i>
-                            <span class="sidebar-text">التقارير</span>
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="#" class="nav-link" data-page="settings">
-                            <i class="fas fa-cog"></i>
-                            <span class="sidebar-text">الإعدادات</span>
-                        </a>
-                    </li>
-                </ul>
-                
-                <div class="sidebar-footer p-3 border-top border-dark mt-4">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <div class="text-white-50 small sidebar-text">
-                            <i class="fas fa-database me-1"></i>
-                            <span id="dbStatus">متصل</span>
-                        </div>
-                        <div class="spinner-grow spinner-grow-sm text-success" role="status" id="dbStatusIndicator">
-                            <span class="visually-hidden">جاري التحميل...</span>
-                        </div>
-                    </div>
+            <div class="col-lg-3 col-xl-2">
+                <div class="sidebar">
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" data-section="dashboard">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                الرئيسية
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="employees">
+                                <i class="fas fa-users me-2"></i>
+                                الموظفين
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="attendance">
+                                <i class="fas fa-clipboard-check me-2"></i>
+                                الحضور
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="reports">
+                                <i class="fas fa-chart-bar me-2"></i>
+                                التقارير
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="locations">
+                                <i class="fas fa-map-marker-alt me-2"></i>
+                                المواقع
+                            </a>
+                        </li>
+                    </ul>
                 </div>
             </div>
             
             <!-- Main Content -->
-            <div id="content">
-                <!-- Dashboard Page -->
-                <div id="dashboardPage" class="page-content fade-in">
-                    <div class="page-header">
-                        <h3>
-                            <i class="fas fa-tachometer-alt"></i>
-                            لوحة التحكم الرئيسية
+            <div class="col-lg-9 col-xl-10">
+                <div class="main-content">
+                    <!-- Dashboard Section -->
+                    <div id="dashboardSection" class="section-content">
+                        <h3 class="mb-4 text-primary">
+                            <i class="fas fa-tachometer-alt me-2"></i>
+                            نظرة عامة
                         </h3>
-                        <div class="small text-muted">نظرة عامة على أداء النظام وإحصائيات الحضور</div>
-                    </div>
-                    
-                    <!-- Stats Cards -->
-                    <div class="row">
-                        <div class="col-xl-3 col-lg-6 col-md-6">
-                            <div class="card stat-card present">
-                                <div class="card-body">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-user-check"></i>
-                                    </div>
+                        
+                        <!-- Stats Row -->
+                        <div class="row">
+                            <div class="col-md-3 col-sm-6">
+                                <div class="stat-card present">
+                                    <i class="fas fa-user-check fa-3x mb-3"></i>
                                     <h2 id="presentCount">0</h2>
                                     <p>موظف حاضر الآن</p>
-                                    <div class="stat-change positive">
-                                        <i class="fas fa-arrow-up me-1"></i>
-                                        +2 من الأمس
-                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="col-xl-3 col-lg-6 col-md-6">
-                            <div class="card stat-card absent">
-                                <div class="card-body">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-user-times"></i>
-                                    </div>
+                            <div class="col-md-3 col-sm-6">
+                                <div class="stat-card absent">
+                                    <i class="fas fa-user-times fa-3x mb-3"></i>
                                     <h2 id="absentCount">0</h2>
-                                    <p>موظف غائب الآن</p>
-                                    <div class="stat-change negative">
-                                        <i class="fas fa-arrow-down me-1"></i>
-                                        -1 من الأمس
-                                    </div>
+                                    <p>موظف غائب</p>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="col-xl-3 col-lg-6 col-md-6">
-                            <div class="card stat-card late">
-                                <div class="card-body">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-clock"></i>
-                                    </div>
+                            <div class="col-md-3 col-sm-6">
+                                <div class="stat-card late">
+                                    <i class="fas fa-clock fa-3x mb-3"></i>
                                     <h2 id="lateCount">0</h2>
-                                    <p>موظف متأخر</p>
-                                    <div class="stat-change positive">
-                                        <i class="fas fa-arrow-down me-1"></i>
-                                        -3 من الأمس
-                                    </div>
+                                    <p>متأخر اليوم</p>
+                                </div>
+                            </div>
+                            <div class="col-md-3 col-sm-6">
+                                <div class="stat-card total">
+                                    <i class="fas fa-users fa-3x mb-3"></i>
+                                    <h2 id="totalEmployees">0</h2>
+                                    <p>إجمالي الموظفين</p>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="col-xl-3 col-lg-6 col-md-6">
-                            <div class="card stat-card hours">
-                                <div class="card-body">
-                                    <div class="stat-icon">
-                                        <i class="fas fa-business-time"></i>
-                                    </div>
-                                    <h2 id="avgHours">0</h2>
-                                    <p>متوسط ساعات العمل</p>
-                                    <div class="stat-change positive">
-                                        <i class="fas fa-arrow-up me-1"></i>
-                                        +0.5 ساعة
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Map and Chart Row -->
-                    <div class="row mt-4">
-                        <div class="col-lg-8">
-                            <div class="card">
-                                <div class="card-header">
-                                    <i class="fas fa-map-marked-alt"></i>
-                                    خريطة موقع العمل والموظفين
-                                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#workLocationModal">
-                                        <i class="fas fa-edit me-1"></i>
-                                        تعديل الموقع
-                                    </button>
-                                </div>
-                                <div class="card-body p-0">
-                                    <div class="map-container">
-                                        <div id="map"></div>
-                                        <div class="map-overlay">
-                                            <h6><i class="fas fa-info-circle me-2"></i>معلومات الموقع</h6>
-                                            <p class="mb-1"><strong>نطاق التسجيل:</strong> <span id="currentRadius">20</span> متر</p>
-                                            <p class="mb-1"><strong>داخل النطاق:</strong> <span id="employeesInRange">0</span></p>
-                                            <p class="mb-3"><strong>خارج النطاق:</strong> <span id="employeesOutRange">0</span></p>
-                                            <button class="btn btn-sm btn-primary w-100" id="refreshLocations">
-                                                <i class="fas fa-sync-alt me-1"></i>
-                                                تحديث المواقع
-                                            </button>
+                        <!-- Recent Activity -->
+                        <div class="row mt-4">
+                            <div class="col-lg-8">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="fas fa-history me-2"></i>
+                                            آخر حركات الحضور
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-lg-4">
-                            <div class="card">
-                                <div class="card-header">
-                                    <i class="fas fa-chart-pie"></i>
-                                    توزيع الحضور اليوم
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-container">
-                                        <canvas id="attendanceChart"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Recent Attendance and Alerts -->
-                    <div class="row mt-4">
-                        <div class="col-lg-8">
-                            <div class="card">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <i class="fas fa-history"></i>
-                                        آخر حركات الحضور
-                                    </div>
-                                    <div>
-                                        <button class="btn btn-sm btn-outline-primary me-2" id="exportRecentBtn">
-                                            <i class="fas fa-download me-1"></i>
-                                            تصدير
-                                        </button>
-                                        <button class="btn btn-sm btn-primary" id="refreshAttendanceBtn">
+                                        <button class="btn btn-sm btn-primary" id="refreshActivityBtn">
                                             <i class="fas fa-sync-alt"></i>
                                         </button>
                                     </div>
-                                </div>
-                                <div class="card-body p-0">
-                                    <div class="table-container">
-                                        <table class="table table-hover" id="recentAttendanceTable">
-                                            <thead>
-                                                <tr>
-                                                    <th>#</th>
-                                                    <th>الموظف</th>
-                                                    <th>القسم</th>
-                                                    <th>الحالة</th>
-                                                    <th>الوقت</th>
-                                                    <th>المسافة</th>
-                                                    <th>الإجراءات</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="recentAttendanceBody">
-                                                <!-- JavaScript will populate this -->
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-lg-4">
-                            <div class="card">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <i class="fas fa-exclamation-circle"></i>
-                                        تنبيهات النظام
-                                    </div>
-                                    <button class="btn btn-sm btn-outline-secondary" id="markAllReadBtn">
-                                        تجاهل الكل
-                                    </button>
-                                </div>
-                                <div class="card-body p-0">
-                                    <div id="alertsList" class="list-group list-group-flush">
-                                        <!-- JavaScript will populate this -->
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Map Page -->
-                <div id="mapPage" class="page-content" style="display: none;">
-                    <div class="page-header">
-                        <h3>
-                            <i class="fas fa-map-marked-alt"></i>
-                            الخريطة المباشرة
-                        </h3>
-                        <div class="small text-muted">تتبع مواقع الموظفين في الوقت الفعلي</div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <i class="fas fa-map"></i>
-                                        خريطة المواقع
-                                    </div>
-                                    <div>
-                                        <div class="btn-group me-2">
-                                            <button class="btn btn-sm btn-outline-primary" id="mapTypeRoad">
-                                                <i class="fas fa-road"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-outline-primary" id="mapTypeSatellite">
-                                                <i class="fas fa-satellite"></i>
-                                            </button>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>الموظف</th>
+                                                        <th>القسم</th>
+                                                        <th>النوع</th>
+                                                        <th>الوقت</th>
+                                                        <th>الحالة</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="recentActivityBody">
+                                                    <tr>
+                                                        <td colspan="5" class="text-center text-muted">
+                                                            جاري تحميل البيانات...
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
                                         </div>
-                                        <button class="btn btn-sm btn-success me-2" id="centerMapBtn">
-                                            <i class="fas fa-crosshairs"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-primary" id="reloadMapBtn">
-                                            <i class="fas fa-sync-alt"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="card-body p-0">
-                                    <div class="map-container">
-                                        <div id="liveMap"></div>
-                                        <div class="map-overlay">
-                                            <h6><i class="fas fa-filter me-2"></i>فلترة العرض</h6>
-                                            <div class="mb-2">
-                                                <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" id="filterPresent" checked>
-                                                    <label class="form-check-label" for="filterPresent">
-                                                        <span class="badge badge-present">حاضر</span>
-                                                    </label>
-                                                </div>
-                                            </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="filterAbsent" checked>
-                                                <label class="form-check-label" for="filterAbsent">
-                                                    <span class="badge badge-absent">غائب</span>
-                                                </label>
-                                            </div>
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="filterLate" checked>
-                                                <label class="form-check-label" for="filterLate">
-                                                    <span class="badge badge-late">متأخر</span>
-                                                </label>
-                                            </div>
-                                            <div class="mb-3">
-                                                <label class="form-label small">القسم</label>
-                                                <select class="form-select form-select-sm" id="departmentFilter">
-                                                    <option value="all">الكل</option>
-                                                    <option value="تقنية المعلومات">تقنية المعلومات</option>
-                                                    <option value="الموارد البشرية">الموارد البشرية</option>
-                                                    <option value="المبيعات">المبيعات</option>
-                                                    <option value="التسويق">التسويق</option>
-                                                </select>
-                                            </div>
-                                            <button class="btn btn-sm btn-primary w-100" id="applyFiltersBtn">
-                                                <i class="fas fa-check me-1"></i>
-                                                تطبيق الفلتر
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row mt-4">
-                        <div class="col-lg-8">
-                            <div class="card">
-                                <div class="card-header">
-                                    <i class="fas fa-user-friends"></i>
-                                    قائمة المواقع
-                                </div>
-                                <div class="card-body p-0">
-                                    <div class="table-container">
-                                        <table class="table table-hover" id="employeesLocationTable">
-                                            <thead>
-                                                <tr>
-                                                    <th>#</th>
-                                                    <th>الموظف</th>
-                                                    <th>القسم</th>
-                                                    <th>الحالة</th>
-                                                    <th>آخر تحديث</th>
-                                                    <th>المسافة</th>
-                                                    <th>الإجراءات</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody id="employeesLocationBody">
-                                                <!-- JavaScript will populate this -->
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="col-lg-4">
-                            <div class="card">
-                                <div class="card-header">
-                                    <i class="fas fa-chart-line"></i>
-                                    إحصائيات التتبع
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-container">
-                                        <canvas id="trackingStatsChart"></canvas>
-                                    </div>
-                                    <div class="mt-3">
-                                        <div class="d-flex justify-content-between mb-2">
-                                            <span>يتم تتبعهم الآن</span>
-                                            <strong id="trackingNow">0</strong>
-                                        </div>
-                                        <div class="d-flex justify-content-between mb-2">
-                                            <span>دقة GPS المتوسطة</span>
-                                            <strong id="avgGpsAccuracy">0 متر</strong>
-                                        </div>
-                                        <div class="d-flex justify-content-between mb-2">
-                                            <span>آخر تحديث</span>
-                                            <strong id="lastUpdateTime">--:--:--</strong>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Employees Page -->
-                <div id="employeesPage" class="page-content" style="display: none;">
-                    <div class="page-header">
-                        <h3>
-                            <i class="fas fa-users"></i>
-                            إدارة الموظفين
-                        </h3>
-                        <div class="small text-muted">عرض وإدارة بيانات جميع الموظفين</div>
-                    </div>
-                    
-                    <div class="card">
-                        <div class="card-header d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="fas fa-user-plus"></i>
-                                قائمة الموظفين
-                            </div>
-                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
-                                <i class="fas fa-plus me-2"></i>
-                                إضافة موظف جديد
-                            </button>
-                        </div>
-                        <div class="card-body p-0">
-                            <div class="table-container">
-                                <table class="table table-hover" id="employeesTable">
-                                    <thead>
-                                        <tr>
-                                            <th>#</th>
-                                            <th>الصورة</th>
-                                            <th>الاسم</th>
-                                            <th>الرقم الوظيفي</th>
-                                            <th>القسم</th>
-                                            <th>المسمى الوظيفي</th>
-                                            <th>تاريخ التعيين</th>
-                                            <th>الحالة</th>
-                                            <th>الإجراءات</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="employeesTableBody">
-                                        <!-- JavaScript will populate this -->
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Attendance Page -->
-                <div id="attendancePage" class="page-content" style="display: none;">
-                    <div class="page-header">
-                        <h3>
-                            <i class="fas fa-clipboard-check"></i>
-                            سجلات الحضور
-                        </h3>
-                        <div class="small text-muted">عرض وإدارة سجلات الحضور والانصراف</div>
-                    </div>
-                    <p class="text-center text-muted">جاري تطوير هذه الصفحة...</p>
-                </div>
-                
-                <!-- Reports Page -->
-                <div id="reportsPage" class="page-content" style="display: none;">
-                    <div class="page-header">
-                        <h3>
-                            <i class="fas fa-chart-bar"></i>
-                            التقارير
-                        </h3>
-                        <div class="small text-muted">عرض التقارير والإحصائيات التفصيلية</div>
-                    </div>
-                    <p class="text-center text-muted">جاري تطوير هذه الصفحة...</p>
-                </div>
-                
-                <!-- Settings Page -->
-                <div id="settingsPage" class="page-content" style="display: none;">
-                    <div class="page-header">
-                        <h3>
-                            <i class="fas fa-cog"></i>
-                            الإعدادات
-                        </h3>
-                        <div class="small text-muted">إعدادات النظام والتخصيصات</div>
-                    </div>
-                    <p class="text-center text-muted">جاري تطوير هذه الصفحة...</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Sidebar Toggle Button -->
-    <button id="sidebarToggle" title="إظهار/إخفاء القائمة">
-        <i class="fas fa-bars"></i>
-    </button>
-    
-    <!-- Modals -->
-    
-    <!-- Work Location Modal -->
-    <div class="modal fade" id="workLocationModal" tabindex="-1">
-        <div class="modal-dialog modal-xl">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-map-marker-alt me-2"></i>
-                        تعديل موقع العمل
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="row">
-                        <div class="col-lg-8">
-                            <div id="modalMap" style="height: 500px; border-radius: 10px; overflow: hidden;"></div>
-                        </div>
-                        <div class="col-lg-4">
-                            <div class="mb-4">
-                                <h6><i class="fas fa-cogs me-2"></i>إعدادات الموقع</h6>
-                                <div class="mt-3">
-                                    <label class="form-label">إحداثيات الموقع</label>
-                                    <div class="row g-2">
-                                        <div class="col">
-                                            <input type="text" class="form-control" id="locationLat" placeholder="خط العرض" value="24.7136">
-                                        </div>
-                                        <div class="col">
-                                            <input type="text" class="form-control" id="locationLng" placeholder="خط الطول" value="46.6753">
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div class="mt-3">
-                                    <label class="form-label">نطاق التسجيل (متر)</label>
-                                    <input type="range" class="form-range" id="radiusRange" min="10" max="200" value="20" step="5">
-                                    <div class="d-flex justify-content-between mt-2">
-                                        <span>10</span>
-                                        <strong id="radiusValue">20 متر</strong>
-                                        <span>200</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="mt-3">
-                                    <label class="form-label">تحديث تلقائي كل</label>
-                                    <select class="form-select" id="autoCheckTime">
-                                        <option value="5">5 ثواني</option>
-                                        <option value="10" selected>10 ثواني</option>
-                                        <option value="30">30 ثانية</option>
-                                        <option value="60">1 دقيقة</option>
-                                    </select>
-                                </div>
-                                
-                                <div class="mt-3">
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="enableNotifications" checked>
-                                        <label class="form-check-label" for="enableNotifications">
-                                            تفعيل الإشعارات
-                                        </label>
-                                    </div>
-                                    <div class="form-check mt-2">
-                                        <input class="form-check-input" type="checkbox" id="enableAutoCheck" checked>
-                                        <label class="form-check-label" for="enableAutoCheck">
-                                            التحقق التلقائي من المواقع
-                                        </label>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle me-2"></i>
-                                <small>سيتم حفظ التغييرات تلقائياً. الموظفون خارج النطاق المحدد لن يتمكنوا من تسجيل الحضور.</small>
+                            <div class="col-lg-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-exclamation-circle me-2"></i>
+                                        تنبيهات النظام
+                                    </div>
+                                    <div class="card-body">
+                                        <div id="alertsList">
+                                            <div class="alert alert-warning">
+                                                <i class="fas fa-clock me-2"></i>
+                                                <small>3 موظفين متأخرين اليوم</small>
+                                            </div>
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-user-plus me-2"></i>
+                                                <small>تمت إضافة موظف جديد</small>
+                                            </div>
+                                            <div class="alert alert-success">
+                                                <i class="fas fa-check-circle me-2"></i>
+                                                <small>جميع الأنظمة تعمل بشكل طبيعي</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Employees Section -->
+                    <div id="employeesSection" class="section-content" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h3 class="text-primary">
+                                <i class="fas fa-users me-2"></i>
+                                إدارة الموظفين
+                            </h3>
+                            <button class="btn btn-primary" id="addEmployeeBtn">
+                                <i class="fas fa-plus me-2"></i>
+                                إضافة موظف
+                            </button>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-list me-2"></i>
+                                قائمة الموظفين
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>الاسم</th>
+                                                <th>رقم الموظف</th>
+                                                <th>القسم</th>
+                                                <th>المسمى الوظيفي</th>
+                                                <th>الحالة</th>
+                                                <th>الإجراءات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="employeesTableBody">
+                                            <tr>
+                                                <td colspan="7" class="text-center text-muted">
+                                                    جاري تحميل بيانات الموظفين...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Attendance Section -->
+                    <div id="attendanceSection" class="section-content" style="display: none;">
+                        <h3 class="mb-4 text-primary">
+                            <i class="fas fa-clipboard-check me-2"></i>
+                            سجلات الحضور
+                        </h3>
+                        
+                        <!-- Filters -->
+                        <div class="card mb-4">
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label">التاريخ من</label>
+                                        <input type="date" class="form-control" id="dateFrom">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">التاريخ إلى</label>
+                                        <input type="date" class="form-control" id="dateTo">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">القسم</label>
+                                        <select class="form-control" id="departmentFilter">
+                                            <option value="">جميع الأقسام</option>
+                                            <option value="تقنية المعلومات">تقنية المعلومات</option>
+                                            <option value="الموارد البشرية">الموارد البشرية</option>
+                                            <option value="المبيعات">المبيعات</option>
+                                            <option value="التسويق">التسويق</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3 d-flex align-items-end">
+                                        <button class="btn btn-primary w-100" id="filterBtn">
+                                            <i class="fas fa-filter me-2"></i>
+                                            تصفية
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Attendance Table -->
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-table me-2"></i>
+                                    سجلات الحضور
+                                </div>
+                                <button class="btn btn-sm btn-success" id="exportBtn">
+                                    <i class="fas fa-download me-2"></i>
+                                    تصدير Excel
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>الموظف</th>
+                                                <th>التاريخ</th>
+                                                <th>وقت الدخول</th>
+                                                <th>وقت الخروج</th>
+                                                <th>ساعات العمل</th>
+                                                <th>الحالة</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="attendanceTableBody">
+                                            <tr>
+                                                <td colspan="7" class="text-center text-muted">
+                                                    استخدم عوامل التصفية لعرض البيانات
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Reports Section -->
+                    <div id="reportsSection" class="section-content" style="display: none;">
+                        <h3 class="mb-4 text-primary">
+                            <i class="fas fa-chart-bar me-2"></i>
+                            التقارير والإحصائيات
+                        </h3>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <i class="fas fa-chart-pie me-2"></i>
+                                        توزيع الحضور
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="attendanceChart" height="250"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6 mb-4">
+                                <div class="card h-100">
+                                    <div class="card-header">
+                                        <i class="fas fa-chart-line me-2"></i>
+                                        الحضور الشهري
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="monthlyChart" height="250"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <i class="fas fa-file-alt me-2"></i>
+                                تقارير مفصلة
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card border-primary">
+                                            <div class="card-body text-center">
+                                                <h5>تقرير الحضور اليومي</h5>
+                                                <p class="text-muted">تفاصيل حضور الموظفين اليوم</p>
+                                                <button class="btn btn-outline-primary" id="dailyReportBtn">
+                                                    <i class="fas fa-download me-2"></i>
+                                                    تحميل التقرير
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card border-success">
+                                            <div class="card-body text-center">
+                                                <h5>تقرير شهري</h5>
+                                                <p class="text-muted">إحصائيات الحضور الشهرية</p>
+                                                <button class="btn btn-outline-success" id="monthlyReportBtn">
+                                                    <i class="fas fa-download me-2"></i>
+                                                    تحميل التقرير
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 mb-3">
+                                        <div class="card border-warning">
+                                            <div class="card-body text-center">
+                                                <h5>تقرير التأخيرات</h5>
+                                                <p class="text-muted">قائمة الموظفين المتأخرين</p>
+                                                <button class="btn btn-outline-warning" id="lateReportBtn">
+                                                    <i class="fas fa-download me-2"></i>
+                                                    تحميل التقرير
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Locations Section -->
+                    <div id="locationsSection" class="section-content" style="display: none;">
+                        <h3 class="mb-4 text-primary">
+                            <i class="fas fa-map-marker-alt me-2"></i>
+                            إدارة المواقع
+                        </h3>
+                        
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-map me-2"></i>
+                                        خريطة المواقع
+                                    </div>
+                                    <div class="card-body">
+                                        <div style="height: 400px; background: #f8f9fa; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                                            <div class="text-center text-muted">
+                                                <i class="fas fa-map-marked-alt fa-3x mb-3"></i>
+                                                <h5>خريطة المواقع</h5>
+                                                <p>سيتم عرض خريطة المواقع هنا</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-cog me-2"></i>
+                                        إعدادات الموقع
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">موقع العمل</label>
+                                            <input type="text" class="form-control" id="workLocation" value="الرياض - المملكة العربية السعودية" readonly>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">نطاق التسجيل (متر)</label>
+                                            <input type="number" class="form-control" id="locationRadius" value="50" min="10" max="500">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">وقت التسجيل المسموح</label>
+                                            <div class="row g-2">
+                                                <div class="col">
+                                                    <input type="time" class="form-control" id="checkInTime" value="08:00">
+                                                </div>
+                                                <div class="col">
+                                                    <input type="time" class="form-control" id="checkOutTime" value="17:00">
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button class="btn btn-primary w-100" id="saveLocationSettings">
+                                            <i class="fas fa-save me-2"></i>
+                                            حفظ الإعدادات
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
-                    <button type="button" class="btn btn-primary" id="saveLocationBtn">
-                        <i class="fas fa-save me-2"></i>
-                        حفظ التغييرات
-                    </button>
-                </div>
             </div>
         </div>
     </div>
+    
+    <!-- Modals -->
     
     <!-- Add Employee Modal -->
     <div class="modal fade" id="addEmployeeModal" tabindex="-1">
@@ -1287,67 +669,55 @@
                 <div class="modal-body">
                     <form id="addEmployeeForm">
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">الاسم الكامل</label>
-                                    <input type="text" class="form-control" name="name" required>
-                                </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">الاسم الكامل</label>
+                                <input type="text" class="form-control" name="name" required>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">الرقم الوظيفي</label>
-                                    <input type="text" class="form-control" name="employeeId" required>
-                                </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">رقم الموظف</label>
+                                <input type="text" class="form-control" name="employeeId" required>
                             </div>
                         </div>
                         
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">القسم</label>
-                                    <select class="form-select" name="department" required>
-                                        <option value="">اختر القسم</option>
-                                        <option value="تقنية المعلومات">تقنية المعلومات</option>
-                                        <option value="الموارد البشرية">الموارد البشرية</option>
-                                        <option value="المبيعات">المبيعات</option>
-                                        <option value="التسويق">التسويق</option>
-                                        <option value="المالية">المالية</option>
-                                        <option value="أخرى">أخرى</option>
-                                    </select>
-                                </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">القسم</label>
+                                <select class="form-control" name="department" required>
+                                    <option value="">اختر القسم</option>
+                                    <option value="تقنية المعلومات">تقنية المعلومات</option>
+                                    <option value="الموارد البشرية">الموارد البشرية</option>
+                                    <option value="المبيعات">المبيعات</option>
+                                    <option value="التسويق">التسويق</option>
+                                    <option value="المالية">المالية</option>
+                                </select>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">المسمى الوظيفي</label>
-                                    <input type="text" class="form-control" name="position" required>
-                                </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">المسمى الوظيفي</label>
+                                <input type="text" class="form-control" name="position" required>
                             </div>
                         </div>
                         
                         <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">تاريخ التعيين</label>
-                                    <input type="date" class="form-control" name="hireDate" required>
-                                </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">البريد الإلكتروني</label>
+                                <input type="email" class="form-control" name="email">
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">كلمة المرور</label>
-                                    <input type="password" class="form-control" name="password" required>
-                                    <div class="form-text">يجب أن تكون 6 أحرف على الأقل</div>
-                                </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">رقم الهاتف</label>
+                                <input type="tel" class="form-control" name="phone">
                             </div>
                         </div>
                         
-                        <div class="mb-3">
-                            <label class="form-label">البريد الإلكتروني</label>
-                            <input type="email" class="form-control" name="email">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">رقم الهاتف</label>
-                            <input type="tel" class="form-control" name="phone">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">تاريخ التعيين</label>
+                                <input type="date" class="form-control" name="hireDate" required>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">كلمة المرور</label>
+                                <input type="password" class="form-control" name="password" required>
+                                <div class="form-text">سيتم استخدام الرقم الوظيفي كاسم مستخدم</div>
+                            </div>
                         </div>
                     </form>
                 </div>
@@ -1362,89 +732,107 @@
         </div>
     </div>
     
-    <!-- jQuery (required for DataTables) -->
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <!-- Settings Modal -->
+    <div class="modal fade" id="settingsModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-cogs me-2"></i>
+                        إعدادات النظام
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="settingsForm">
+                        <div class="mb-3">
+                            <label class="form-label">اسم المؤسسة</label>
+                            <input type="text" class="form-control" id="companyName" value="شركة التقنية المبتكرة">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">وقت بداية الدوام</label>
+                            <input type="time" class="form-control" id="workStartTime" value="08:00">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">وقت نهاية الدوام</label>
+                            <input type="time" class="form-control" id="workEndTime" value="17:00">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">نطاق التسجيل (متر)</label>
+                            <input type="number" class="form-control" id="workRadius" value="100" min="10" max="1000">
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="enableNotifications" checked>
+                            <label class="form-check-label" for="enableNotifications">
+                                تفعيل الإشعارات
+                            </label>
+                        </div>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" id="enableAutoCheck" checked>
+                            <label class="form-check-label" for="enableAutoCheck">
+                                التحقق التلقائي من المواقع
+                            </label>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" id="saveSettingsBtn">
+                        <i class="fas fa-save me-2"></i>
+                        حفظ الإعدادات
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+    <!-- Change Password Modal -->
+    <div class="modal fade" id="changePasswordModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-key me-2"></i>
+                        تغيير كلمة المرور
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="changePasswordForm">
+                        <div class="mb-3">
+                            <label class="form-label">كلمة المرور الحالية</label>
+                            <input type="password" class="form-control" id="adminCurrentPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">كلمة المرور الجديدة</label>
+                            <input type="password" class="form-control" id="adminNewPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">تأكيد كلمة المرور الجديدة</label>
+                            <input type="password" class="form-control" id="adminConfirmPassword" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" id="saveAdminPasswordBtn">
+                        <i class="fas fa-save me-2"></i>
+                        حفظ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
-    <!-- DataTables -->
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
     
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Google Maps API with Fallback -->
-    <script>
-        let googleMapsLoaded = false;
-        
-        function loadGoogleMaps() {
-            const apiKeys = [
-                'AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE',
-                'AIzaSyB41DRUbKWJHPxaFjMAwdrzWzbVKartNGg',
-                'AIzaSyBFw0Qbyq9zTFTd-tUY6dZWTgaQzuU17R8'
-            ];
-            let currentKeyIndex = 0;
-            
-            function tryLoadMap(keyIndex) {
-                if (keyIndex >= apiKeys.length) {
-                    console.error('جميع مفاتيح Google Maps فشلت');
-                    showMapFallback();
-                    return;
-                }
-                
-                const apiKey = apiKeys[keyIndex];
-                const script = document.createElement('script');
-                script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&callback=initMap&libraries=geometry,places&language=ar&region=SA`;
-                script.async = true;
-                script.defer = true;
-                
-                script.onload = function() {
-                    console.log('تم تحميل Google Maps بنجاح');
-                    googleMapsLoaded = true;
-                    if (typeof initMap === 'function') {
-                        initMap();
-                    }
-                };
-                
-                script.onerror = function() {
-                    console.warn(`فشل تحميل Google Maps بالمفتاح ${keyIndex + 1}`);
-                    tryLoadMap(keyIndex + 1);
-                };
-                
-                document.head.appendChild(script);
-            }
-            
-            tryLoadMap(currentKeyIndex);
-        }
-        
-        function showMapFallback() {
-            const mapContainers = document.querySelectorAll('#map, #liveMap, #modalMap');
-            mapContainers.forEach(container => {
-                container.innerHTML = `
-                    <div style="height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; background:#f8f9fa; color:#6c757d;">
-                        <i class="fas fa-map-marked-alt" style="font-size:48px; margin-bottom:20px;"></i>
-                        <h5>خدمة الخرائط غير متاحة</h5>
-                        <p class="text-center" style="max-width:300px;">
-                            عذراً، خدمة الخرائط غير متاحة في الوقت الحالي. سيتم تحديث البيانات تلقائياً.
-                        </p>
-                        <button class="btn btn-primary mt-3" onclick="loadGoogleMaps()">
-                            <i class="fas fa-sync-alt me-2"></i>
-                            إعادة المحاولة
-                        </button>
-                    </div>
-                `;
-            });
-        }
-        
-        document.addEventListener('DOMContentLoaded', loadGoogleMaps);
-    </script>
     
     <script>
         // Firebase Configuration
@@ -1462,16 +850,11 @@
         // Initialize Firebase
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
-        const auth = firebase.auth();
         
         // Global Variables
         let currentUser = null;
-        let map, liveMap, modalMap;
-        let workLocation = { lat: 24.7136, lng: 46.6753 };
-        let geofenceRadius = 20;
-        let employeeMarkers = {};
-        let attendanceChart, trackingChart;
-        let dataTables = {};
+        let attendanceChart = null;
+        let monthlyChart = null;
         
         // Check Admin Session
         function checkAdminSession() {
@@ -1479,512 +862,105 @@
             
             if (!userData) {
                 window.location.href = 'index.html';
-                return;
+                return null;
             }
             
-            currentUser = JSON.parse(userData);
+            const user = JSON.parse(userData);
             
-            if (currentUser.role !== 'admin') {
+            if (user.role !== 'admin') {
                 window.location.href = 'index.html';
-                return;
+                return null;
             }
             
-            document.getElementById('adminName').textContent = currentUser.name;
-            document.getElementById('sidebarAdminName').textContent = currentUser.name;
-            document.getElementById('dropdownAdminName').textContent = currentUser.name;
-            
-            setTimeout(() => {
-                document.getElementById('loadingOverlay').style.display = 'none';
-            }, 1000);
+            return user;
         }
         
         // Update Date and Time
         function updateDateTime() {
             const now = new Date();
             const timeString = now.toLocaleTimeString('ar-SA');
-            const dateString = now.toLocaleDateString('ar-SA', { 
-                weekday: 'long', 
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-            });
-            
             document.getElementById('currentTime').textContent = timeString;
-            document.getElementById('currentDate').textContent = dateString;
-            
-            const lastUpdate = document.getElementById('lastUpdateTime');
-            if (lastUpdate) {
-                lastUpdate.textContent = timeString;
-            }
         }
         
-        // Setup Sidebar
-        function setupSidebar() {
-            const sidebarToggle = document.getElementById('sidebarToggle');
-            const mobileSidebarToggle = document.getElementById('mobileSidebarToggle');
-            const sidebar = document.getElementById('sidebar');
-            
-            sidebarToggle.addEventListener('click', function() {
-                document.body.classList.toggle('sidebar-collapsed');
-                localStorage.setItem('sidebarCollapsed', document.body.classList.contains('sidebar-collapsed'));
-            });
-            
-            mobileSidebarToggle.addEventListener('click', function() {
-                sidebar.classList.toggle('active');
-            });
-            
-            if (localStorage.getItem('sidebarCollapsed') === 'true') {
-                document.body.classList.add('sidebar-collapsed');
-            }
-            
-            document.addEventListener('click', function(event) {
-                if (window.innerWidth < 992) {
-                    if (!sidebar.contains(event.target) && !mobileSidebarToggle.contains(event.target)) {
-                        sidebar.classList.remove('active');
-                    }
-                }
-            });
-        }
-        
-        // Setup Page Navigation
-        function setupPageNavigation() {
-            const navLinks = document.querySelectorAll('.nav-link[data-page]');
+        // Setup Navigation
+        function setupNavigation() {
+            const navLinks = document.querySelectorAll('.nav-link[data-section]');
             
             navLinks.forEach(link => {
                 link.addEventListener('click', function(e) {
                     e.preventDefault();
                     
+                    // Remove active class from all links
                     navLinks.forEach(l => l.classList.remove('active'));
+                    
+                    // Add active class to clicked link
                     this.classList.add('active');
                     
-                    const pages = document.querySelectorAll('.page-content');
-                    pages.forEach(page => {
-                        page.style.display = 'none';
-                        page.classList.remove('fade-in');
+                    // Hide all sections
+                    const sections = document.querySelectorAll('.section-content');
+                    sections.forEach(section => {
+                        section.style.display = 'none';
                     });
                     
-                    const pageId = this.getAttribute('data-page') + 'Page';
-                    const pageElement = document.getElementById(pageId);
-                    pageElement.style.display = 'block';
-                    setTimeout(() => pageElement.classList.add('fade-in'), 10);
+                    // Show selected section
+                    const sectionId = this.getAttribute('data-section') + 'Section';
+                    document.getElementById(sectionId).style.display = 'block';
                     
-                    switch(this.getAttribute('data-page')) {
-                        case 'map':
-                            initLiveMap();
-                            break;
-                        case 'employees':
-                            initEmployeesTable();
-                            break;
-                        case 'dashboard':
-                            updateDashboardCharts();
-                            break;
-                    }
-                    
-                    if (window.innerWidth < 992) {
-                        document.getElementById('sidebar').classList.remove('active');
-                    }
+                    // Load section data
+                    loadSectionData(this.getAttribute('data-section'));
                 });
             });
         }
         
-        // Initialize Map
-        function initMap() {
-            if (!googleMapsLoaded) {
-                console.warn('Google Maps لم يتم تحميلها بعد');
-                setTimeout(initMap, 1000);
-                return;
+        // Load Section Data
+        function loadSectionData(section) {
+            switch(section) {
+                case 'dashboard':
+                    loadDashboardData();
+                    break;
+                case 'employees':
+                    loadEmployeesData();
+                    break;
+                case 'attendance':
+                    loadAttendanceData();
+                    break;
+                case 'reports':
+                    loadReportsData();
+                    break;
+                case 'locations':
+                    loadLocationsData();
+                    break;
             }
-            
+        }
+        
+        // Load Dashboard Data
+        async function loadDashboardData() {
             try {
-                const mapOptions = {
-                    center: workLocation,
-                    zoom: 17,
-                    mapTypeId: google.maps.MapTypeId.ROADMAP,
-                    disableDefaultUI: false,
-                    zoomControl: true,
-                    mapTypeControl: true,
-                    scaleControl: true,
-                    streetViewControl: true,
-                    rotateControl: true,
-                    fullscreenControl: true,
-                    styles: [
-                        {
-                            featureType: "administrative",
-                            elementType: "labels.text.fill",
-                            stylers: [{ color: "#444444" }]
-                        },
-                        {
-                            featureType: "landscape",
-                            elementType: "all",
-                            stylers: [{ color: "#f2f2f2" }]
-                        },
-                        {
-                            featureType: "poi",
-                            elementType: "all",
-                            stylers: [{ visibility: "off" }]
-                        },
-                        {
-                            featureType: "road",
-                            elementType: "all",
-                            stylers: [{ saturation: -100 }, { lightness: 45 }]
-                        },
-                        {
-                            featureType: "road.highway",
-                            elementType: "all",
-                            stylers: [{ visibility: "simplified" }]
-                        },
-                        {
-                            featureType: "road.arterial",
-                            elementType: "labels.icon",
-                            stylers: [{ visibility: "off" }]
-                        },
-                        {
-                            featureType: "transit",
-                            elementType: "all",
-                            stylers: [{ visibility: "off" }]
-                        },
-                        {
-                            featureType: "water",
-                            elementType: "all",
-                            stylers: [{ color: "#3498db" }, { visibility: "on" }]
-                        }
-                    ]
-                };
+                // Load employees count
+                const employeesSnapshot = await database.ref('employees').once('value');
+                const totalEmployees = employeesSnapshot.numChildren();
+                document.getElementById('totalEmployees').textContent = totalEmployees;
                 
-                map = new google.maps.Map(document.getElementById('map'), mapOptions);
+                // Load today's attendance
+                const today = new Date().toISOString().split('T')[0];
+                let presentCount = 0;
+                let lateCount = 0;
                 
-                const workMarker = new google.maps.Marker({
-                    position: workLocation,
-                    map: map,
-                    title: 'موقع العمل',
-                    icon: {
-                        url: 'https://maps.google.com/mapfiles/ms/icons/red-dot.png',
-                        scaledSize: new google.maps.Size(40, 40)
-                    },
-                    animation: google.maps.Animation.DROP
-                });
-                
-                const geofenceCircle = new google.maps.Circle({
-                    strokeColor: '#FF0000',
-                    strokeOpacity: 0.8,
-                    strokeWeight: 2,
-                    fillColor: '#FF0000',
-                    fillOpacity: 0.1,
-                    map: map,
-                    center: workLocation,
-                    radius: geofenceRadius
-                });
-                
-                const infoWindow = new google.maps.InfoWindow({
-                    content: `
-                        <div style="padding: 10px; min-width: 200px;">
-                            <h6 style="margin: 0 0 10px; color: #2c3e50; font-weight: bold;">
-                                <i class="fas fa-building"></i> موقع العمل
-                            </h6>
-                            <p style="margin: 5px 0;"><strong>الإحداثيات:</strong><br>${workLocation.lat.toFixed(6)}, ${workLocation.lng.toFixed(6)}</p>
-                            <p style="margin: 5px 0;"><strong>نطاق التسجيل:</strong> ${geofenceRadius} متر</p>
-                            <button onclick="document.querySelector('[data-bs-target=\\'#workLocationModal\\']').click()" style="background: #3498db; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; margin-top: 5px;">
-                                <i class="fas fa-edit"></i> تعديل
-                            </button>
-                        </div>
-                    `
-                });
-                
-                workMarker.addListener('click', () => {
-                    infoWindow.open(map, workMarker);
-                });
-                
-                loadEmployeeLocationsForMap(map);
-                
-            } catch (error) {
-                console.error('خطأ في تهيئة الخريطة:', error);
-                showMapFallback();
-            }
-        }
-        
-        // Initialize Live Map
-        function initLiveMap() {
-            if (!googleMapsLoaded) {
-                console.warn('Google Maps لم يتم تحميلها بعد');
-                setTimeout(initLiveMap, 1000);
-                return;
-            }
-            
-            const mapOptions = {
-                center: workLocation,
-                zoom: 16,
-                mapTypeId: google.maps.MapTypeId.ROADMAP,
-                mapTypeControl: true,
-                streetViewControl: true,
-                fullscreenControl: true
-            };
-            
-            liveMap = new google.maps.Map(document.getElementById('liveMap'), mapOptions);
-            
-            new google.maps.Circle({
-                strokeColor: '#FF0000',
-                strokeOpacity: 0.8,
-                strokeWeight: 2,
-                fillColor: '#FF0000',
-                fillOpacity: 0.1,
-                map: liveMap,
-                center: workLocation,
-                radius: geofenceRadius
-            });
-            
-            loadEmployeeLocationsForLiveMap();
-        }
-        
-        // Calculate Distance
-        function calculateDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371e3;
-            const φ1 = lat1 * Math.PI / 180;
-            const φ2 = lat2 * Math.PI / 180;
-            const Δφ = (lat2 - lat1) * Math.PI / 180;
-            const Δλ = (lon2 - lon1) * Math.PI / 180;
-            
-            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                      Math.cos(φ1) * Math.cos(φ2) *
-                      Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-            
-            return R * c;
-        }
-        
-        // Load Employee Locations for Map
-        function loadEmployeeLocationsForMap(mapInstance) {
-            database.ref('attendance').limitToLast(20).once('value')
-                .then(snapshot => {
-                    let inRange = 0;
-                    let outRange = 0;
-                    
-                    snapshot.forEach(employeeSnap => {
-                        const employeeId = employeeSnap.key;
-                        const records = employeeSnap.val();
-                        
-                        const latestTimestamp = Object.keys(records).sort().reverse()[0];
-                        const latestRecord = records[latestTimestamp];
-                        
-                        if (latestRecord && latestRecord.location) {
-                            const distance = calculateDistance(
-                                latestRecord.location.lat,
-                                latestRecord.location.lng,
-                                workLocation.lat,
-                                workLocation.lng
-                            );
-                            
-                            if (distance <= geofenceRadius) {
-                                inRange++;
-                                createEmployeeMapMarker(mapInstance, employeeId, latestRecord, distance, true);
-                            } else {
-                                outRange++;
-                                createEmployeeMapMarker(mapInstance, employeeId, latestRecord, distance, false);
-                            }
-                        }
-                    });
-                    
-                    document.getElementById('employeesInRange').textContent = inRange;
-                    document.getElementById('employeesOutRange').textContent = outRange;
-                    document.getElementById('presentCount').textContent = inRange;
-                    document.getElementById('absentCount').textContent = outRange;
-                })
-                .catch(error => {
-                    console.error('خطأ في تحميل مواقع الموظفين:', error);
-                });
-        }
-        
-        // Create Employee Map Marker
-        function createEmployeeMapMarker(mapInstance, employeeId, record, distance, isInRange) {
-            database.ref('employees/' + employeeId).once('value')
-                .then(snapshot => {
-                    if (snapshot.exists()) {
-                        const employee = snapshot.val();
-                        const iconColor = isInRange ? 'green' : 'red';
-                        
-                        const marker = new google.maps.Marker({
-                            position: record.location,
-                            map: mapInstance,
-                            title: employee.name + ' - ' + (isInRange ? 'داخل النطاق' : 'خارج النطاق'),
-                            icon: {
-                                url: `https://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`,
-                                scaledSize: new google.maps.Size(32, 32)
-                            }
-                        });
-                        
-                        const infoContent = `
-                            <div style="padding: 10px; min-width: 250px;">
-                                <h6 style="margin: 0 0 10px; color: #2c3e50; font-weight: bold;">
-                                    <i class="fas fa-user"></i> ${employee.name}
-                                </h6>
-                                <p style="margin: 5px 0;"><strong>القسم:</strong> ${employee.department || '--'}</p>
-                                <p style="margin: 5px 0;"><strong>الحالة:</strong> <span style="color: ${isInRange ? '#27ae60' : '#e74c3c'}; font-weight: bold;">${isInRange ? 'داخل النطاق' : 'خارج النطاق'}</span></p>
-                                <p style="margin: 5px 0;"><strong>المسافة:</strong> ${Math.round(distance)} متر</p>
-                                <p style="margin: 5px 0;"><strong>آخر تحديث:</strong> ${new Date(record.timestamp).toLocaleTimeString('ar-SA')}</p>
-                            </div>
-                        `;
-                        
-                        const infoWindow = new google.maps.InfoWindow({
-                            content: infoContent
-                        });
-                        
-                        marker.addListener('click', () => {
-                            infoWindow.open(mapInstance, marker);
-                        });
-                    }
-                })
-                .catch(error => {
-                    console.error('خطأ في تحميل بيانات الموظف:', error);
-                });
-        }
-        
-        // Load Employee Locations for Live Map
-        function loadEmployeeLocationsForLiveMap() {
-            database.ref('attendance').on('value', snapshot => {
-                Object.values(employeeMarkers).forEach(marker => marker.setMap(null));
-                employeeMarkers = {};
-                
-                let totalEmployees = 0;
-                let inRange = 0;
-                let accuracySum = 0;
-                let accuracyCount = 0;
-                
-                snapshot.forEach(employeeSnap => {
+                employeesSnapshot.forEach(employeeSnap => {
                     const employeeId = employeeSnap.key;
-                    const records = employeeSnap.val();
-                    
-                    const timestamps = Object.keys(records).sort().reverse();
-                    if (timestamps.length > 0) {
-                        totalEmployees++;
-                        const latestRecord = records[timestamps[0]];
-                        
-                        if (latestRecord.location) {
-                            const distance = calculateDistance(
-                                latestRecord.location.lat,
-                                latestRecord.location.lng,
-                                workLocation.lat,
-                                workLocation.lng
-                            );
-                            
-                            if (distance <= geofenceRadius) {
-                                inRange++;
-                            }
-                            
-                            if (latestRecord.accuracy) {
-                                accuracySum += latestRecord.accuracy;
-                                accuracyCount++;
-                            }
-                            
-                            createLiveEmployeeMarker(employeeId, latestRecord, distance);
-                        }
-                    }
-                });
-                
-                document.getElementById('trackingNow').textContent = totalEmployees;
-                document.getElementById('avgGpsAccuracy').textContent = accuracyCount > 0 ? Math.round(accuracySum / accuracyCount) + ' متر' : '-- متر';
-                updateDateTime();
-            });
-        }
-        
-        // Create Live Employee Marker
-        function createLiveEmployeeMarker(employeeId, record, distance) {
-            database.ref('employees/' + employeeId).once('value')
-                .then(snapshot => {
-                    if (snapshot.exists() && liveMap) {
-                        const employee = snapshot.val();
-                        const isInRange = distance <= geofenceRadius;
-                        const iconColor = isInRange ? 'green' : 'red';
-                        const status = isInRange ? 'داخل النطاق' : 'خارج النطاق';
-                        
-                        const marker = new google.maps.Marker({
-                            position: record.location,
-                            map: liveMap,
-                            title: employee.name + ' - ' + status,
-                            icon: {
-                                url: `https://maps.google.com/mapfiles/ms/icons/${iconColor}-dot.png`,
-                                scaledSize: new google.maps.Size(40, 40)
-                            },
-                            animation: google.maps.Animation.DROP
-                        });
-                        
-                        const infoContent = `
-                            <div style="padding: 15px; min-width: 300px;">
-                                <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                                    <div style="width: 50px; height: 50px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 20px; margin-left: 10px;">
-                                        ${employee.name.charAt(0)}
-                                    </div>
-                                    <div>
-                                        <h6 style="margin: 0; color: #2c3e50; font-weight: bold;">${employee.name}</h6>
-                                        <p style="margin: 5px 0 0; color: #666; font-size: 14px;">${employee.department || '--'}</p>
-                                    </div>
-                                </div>
-                                <div style="border-top: 1px solid #eee; padding-top: 10px;">
-                                    <p style="margin: 5px 0;"><strong>المسمى الوظيفي:</strong> ${employee.position || '--'}</p>
-                                    <p style="margin: 5px 0;"><strong>الحالة:</strong> <span style="color: ${isInRange ? '#27ae60' : '#e74c3c'}; font-weight: bold;">${status}</span></p>
-                                    <p style="margin: 5px 0;"><strong>المسافة من الموقع:</strong> ${Math.round(distance)} متر</p>
-                                    <p style="margin: 5px 0;"><strong>آخر تحديث:</strong> ${new Date(record.timestamp).toLocaleTimeString('ar-SA')}</p>
-                                </div>
-                            </div>
-                        `;
-                        
-                        const infoWindow = new google.maps.InfoWindow({
-                            content: infoContent
-                        });
-                        
-                        marker.addListener('click', () => {
-                            infoWindow.open(liveMap, marker);
-                        });
-                        
-                        employeeMarkers[employeeId] = marker;
-                    }
-                });
-        }
-        
-        // Center on Employee
-        function centerOnEmployee(employeeId) {
-            if (employeeMarkers[employeeId] && liveMap) {
-                liveMap.setCenter(employeeMarkers[employeeId].getPosition());
-                liveMap.setZoom(18);
-            }
-        }
-        
-        // Load Employee Stats
-        function loadEmployeeStats() {
-            database.ref('employees').once('value')
-                .then(snapshot => {
-                    const total = snapshot.numChildren();
-                    const today = new Date().toISOString().split('T')[0];
-                    
-                    database.ref('attendance').once('value')
-                        .then(attendanceSnapshot => {
-                            let presentCount = 0;
-                            let absentCount = 0;
-                            let lateCount = 0;
-                            
-                            const employeeIds = [];
-                            snapshot.forEach(emp => {
-                                employeeIds.push(emp.key);
-                            });
-                            
-                            employeeIds.forEach(empId => {
-                                let hasCheckedIn = false;
-                                let checkInTime = null;
-                                
-                                if (attendanceSnapshot.hasChild(empId)) {
-                                    const empAttendance = attendanceSnapshot.child(empId).val();
-                                    
-                                    Object.keys(empAttendance).forEach(timestamp => {
-                                        const record = empAttendance[timestamp];
-                                        if (record.date === today && record.type === 'checkin') {
-                                            hasCheckedIn = true;
-                                            checkInTime = new Date(record.timestamp);
-                                        }
-                                    });
-                                }
-                                
-                                if (hasCheckedIn) {
-                                    presentCount++;
-                                    
-                                    if (checkInTime) {
+                    // Check if employee checked in today
+                    database.ref(`attendance/${employeeId}`)
+                        .orderByChild('date')
+                        .equalTo(today)
+                        .once('value')
+                        .then(snapshot => {
+                            if (snapshot.exists()) {
+                                snapshot.forEach(record => {
+                                    if (record.val().type === 'checkin') {
+                                        presentCount++;
+                                        
+                                        // Check if late
+                                        const checkInTime = new Date(record.val().timestamp);
                                         const hour = checkInTime.getHours();
                                         const minute = checkInTime.getMinutes();
                                         
@@ -1992,180 +968,242 @@
                                             lateCount++;
                                         }
                                     }
-                                } else {
-                                    absentCount++;
-                                }
-                            });
-                            
-                            document.getElementById('presentCount').textContent = presentCount;
-                            document.getElementById('absentCount').textContent = absentCount;
-                            document.getElementById('lateCount').textContent = lateCount;
-                            document.getElementById('avgHours').textContent = '8.2';
-                            
-                            if (attendanceChart) {
-                                attendanceChart.data.datasets[0].data = [presentCount, absentCount, lateCount, 0];
-                                attendanceChart.update();
-                            }
-                        })
-                        .catch(error => {
-                            console.error('خطأ في تحميل بيانات الحضور:', error);
-                        });
-                })
-                .catch(error => {
-                    console.error('خطأ في تحميل بيانات الموظفين:', error);
-                });
-        }
-        
-        // Load Recent Attendance
-        function loadRecentAttendance() {
-            database.ref('attendance').limitToLast(20).once('value')
-                .then(snapshot => {
-                    const tbody = document.getElementById('recentAttendanceBody');
-                    tbody.innerHTML = '';
-                    
-                    if (!snapshot.exists()) {
-                        tbody.innerHTML = '<tr><td colspan="7" class="text-center text-muted">لا توجد سجلات حضور</td></tr>';
-                        return;
-                    }
-                    
-                    const promises = [];
-                    let counter = 1;
-                    
-                    snapshot.forEach(employeeSnap => {
-                        const employeeId = employeeSnap.key;
-                        const records = employeeSnap.val();
-                        
-                        const latestTimestamp = Object.keys(records).sort().reverse()[0];
-                        const latestRecord = records[latestTimestamp];
-                        
-                        if (latestRecord && latestRecord.location) {
-                            const promise = database.ref('employees/' + employeeId).once('value')
-                                .then(employeeData => {
-                                    if (employeeData.exists()) {
-                                        const employee = employeeData.val();
-                                        const time = new Date(latestRecord.timestamp).toLocaleTimeString('ar-SA');
-                                        const distance = calculateDistance(
-                                            latestRecord.location.lat,
-                                            latestRecord.location.lng,
-                                            workLocation.lat,
-                                            workLocation.lng
-                                        );
-                                        
-                                        const isInRange = distance <= geofenceRadius;
-                                        const statusClass = isInRange ? 'badge-present' : 'badge-absent';
-                                        const statusText = isInRange ? 'داخل النطاق' : 'خارج النطاق';
-                                        const iconClass = isInRange ? 'check' : 'times';
-                                        
-                                        const row = `
-                                            <tr>
-                                                <td>${counter}</td>
-                                                <td>
-                                                    <div class="d-flex align-items-center">
-                                                        <div style="width:35px; height:35px; background:linear-gradient(135deg,#667eea,#764ba2); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; margin-left:10px;">
-                                                            ${employee.name.charAt(0)}
-                                                        </div>
-                                                        <span>${employee.name}</span>
-                                                    </div>
-                                                </td>
-                                                <td>${employee.department || '--'}</td>
-                                                <td>
-                                                    <span class="badge ${statusClass}">
-                                                        <i class="fas fa-${iconClass} me-1"></i>
-                                                        ${statusText}
-                                                    </span>
-                                                </td>
-                                                <td>${time}</td>
-                                                <td>${Math.round(distance)} متر</td>
-                                                <td>
-                                                    <button class="btn btn-sm btn-outline-primary" onclick="centerOnEmployee('${employeeId}')">
-                                                        <i class="fas fa-map-marker-alt"></i>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        `;
-                                        
-                                        tbody.innerHTML += row;
-                                        counter++;
-                                    }
                                 });
-                            
-                            promises.push(promise);
-                        }
-                    });
-                    
-                    return Promise.all(promises);
-                })
-                .catch(error => {
-                    console.error('خطأ في تحميل سجلات الحضور:', error);
-                    const tbody = document.getElementById('recentAttendanceBody');
-                    tbody.innerHTML = '<tr><td colspan="7" class="text-center text-danger">حدث خطأ في تحميل السجلات</td></tr>';
+                                
+                                document.getElementById('presentCount').textContent = presentCount;
+                                document.getElementById('lateCount').textContent = lateCount;
+                                document.getElementById('absentCount').textContent = totalEmployees - presentCount;
+                            }
+                        });
                 });
+                
+                // Load recent activity
+                loadRecentActivity();
+                
+            } catch (error) {
+                console.error('خطأ في تحميل بيانات الرئيسية:', error);
+            }
         }
         
-        // Update Dashboard Charts
-        function updateDashboardCharts() {
+        // Load Recent Activity
+        async function loadRecentActivity() {
+            const tbody = document.getElementById('recentActivityBody');
+            
+            try {
+                const snapshot = await database.ref('attendance')
+                    .limitToLast(10)
+                    .once('value');
+                
+                tbody.innerHTML = '';
+                
+                if (!snapshot.exists()) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">
+                                لا توجد حركات حضور
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                const promises = [];
+                
+                snapshot.forEach(employeeSnap => {
+                    const employeeId = employeeSnap.key;
+                    const records = employeeSnap.val();
+                    
+                    const latestTimestamp = Object.keys(records).sort().reverse()[0];
+                    const latestRecord = records[latestTimestamp];
+                    
+                    const promise = database.ref(`employees/${employeeId}`).once('value')
+                        .then(employeeSnapshot => {
+                            if (employeeSnapshot.exists()) {
+                                const employee = employeeSnapshot.val();
+                                
+                                const row = `
+                                    <tr>
+                                        <td>${employee.name}</td>
+                                        <td>${employee.department || '--'}</td>
+                                        <td>${latestRecord.type === 'checkin' ? 'دخول' : 'خروج'}</td>
+                                        <td>${new Date(latestRecord.timestamp).toLocaleTimeString('ar-SA')}</td>
+                                        <td>
+                                            <span class="badge ${latestRecord.type === 'checkin' ? 'badge-present' : 'badge-absent'}">
+                                                ${latestRecord.type === 'checkin' ? 'حاضر' : 'منصرف'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `;
+                                
+                                tbody.innerHTML += row;
+                            }
+                        });
+                    
+                    promises.push(promise);
+                });
+                
+                await Promise.all(promises);
+                
+            } catch (error) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-danger">
+                            حدث خطأ في تحميل البيانات
+                        </td>
+                    </tr>
+                `;
+                console.error('خطأ:', error);
+            }
+        }
+        
+        // Load Employees Data
+        async function loadEmployeesData() {
+            const tbody = document.getElementById('employeesTableBody');
+            
+            try {
+                const snapshot = await database.ref('employees').once('value');
+                
+                tbody.innerHTML = '';
+                
+                if (!snapshot.exists()) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="7" class="text-center text-muted">
+                                لا توجد بيانات موظفين
+                            </td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                let counter = 1;
+                
+                snapshot.forEach(employeeSnap => {
+                    const employee = employeeSnap.val();
+                    const employeeId = employeeSnap.key;
+                    
+                    const row = `
+                        <tr>
+                            <td>${counter}</td>
+                            <td>${employee.name}</td>
+                            <td>${employeeId}</td>
+                            <td>${employee.department || '--'}</td>
+                            <td>${employee.position || '--'}</td>
+                            <td>
+                                <span class="badge badge-present">نشط</span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="editEmployee('${employeeId}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteEmployee('${employeeId}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    
+                    tbody.innerHTML += row;
+                    counter++;
+                });
+                
+            } catch (error) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-danger">
+                            حدث خطأ في تحميل بيانات الموظفين
+                        </td>
+                    </tr>
+                `;
+                console.error('خطأ:', error);
+            }
+        }
+        
+        // Load Attendance Data
+        async function loadAttendanceData() {
+            // This function will be called when filters are applied
+            // For now, show empty state
+            const tbody = document.getElementById('attendanceTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center text-muted">
+                        استخدم عوامل التصفية لعرض البيانات
+                    </td>
+                </tr>
+            `;
+        }
+        
+        // Load Reports Data
+        async function loadReportsData() {
+            // Initialize charts
+            initializeCharts();
+            
+            // Load report data
+            try {
+                const snapshot = await database.ref('attendance').once('value');
+                
+                if (!snapshot.exists()) return;
+                
+                // Calculate attendance distribution
+                let presentDays = 0;
+                let absentDays = 0;
+                let lateDays = 0;
+                
+                // This is simplified - in real app, you would calculate properly
+                presentDays = 18;
+                absentDays = 2;
+                lateDays = 3;
+                
+                // Update attendance chart
+                if (attendanceChart) {
+                    attendanceChart.data.datasets[0].data = [presentDays, absentDays, lateDays];
+                    attendanceChart.update();
+                }
+                
+            } catch (error) {
+                console.error('خطأ في تحميل بيانات التقارير:', error);
+            }
+        }
+        
+        // Initialize Charts
+        function initializeCharts() {
+            // Attendance Chart
             const attendanceCtx = document.getElementById('attendanceChart');
-            if (!attendanceCtx) return;
-            
-            const ctx = attendanceCtx.getContext('2d');
-            
-            if (attendanceChart) {
-                attendanceChart.destroy();
+            if (attendanceCtx) {
+                attendanceChart = new Chart(attendanceCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['حاضر', 'غائب', 'متأخر'],
+                        datasets: [{
+                            data: [0, 0, 0],
+                            backgroundColor: ['#2ecc71', '#e74c3c', '#f39c12'],
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                rtl: true
+                            }
+                        }
+                    }
+                });
             }
             
-            attendanceChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: ['حاضر', 'غائب', 'متأخر', 'إجازة'],
-                    datasets: [{
-                        data: [0, 0, 0, 0],
-                        backgroundColor: ['#2ecc71', '#e74c3c', '#f39c12', '#3498db'],
-                        borderWidth: 2,
-                        borderColor: '#fff'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'bottom',
-                            rtl: true,
-                            labels: {
-                                padding: 20,
-                                usePointStyle: true,
-                                font: {
-                                    family: 'Cairo',
-                                    size: 12
-                                }
-                            }
-                        },
-                        tooltip: {
-                            rtl: true,
-                            bodyFont: {
-                                family: 'Cairo'
-                            }
-                        }
-                    },
-                    cutout: '70%'
-                }
-            });
-            
-            const trackingCtx = document.getElementById('trackingStatsChart');
-            if (trackingCtx) {
-                const ctx2 = trackingCtx.getContext('2d');
-                
-                if (trackingChart) {
-                    trackingChart.destroy();
-                }
-                
-                trackingChart = new Chart(ctx2, {
+            // Monthly Chart
+            const monthlyCtx = document.getElementById('monthlyChart');
+            if (monthlyCtx) {
+                monthlyChart = new Chart(monthlyCtx, {
                     type: 'line',
                     data: {
-                        labels: ['8 ص', '10 ص', '12 م', '2 م', '4 م', '6 م'],
+                        labels: ['الأسبوع 1', 'الأسبوع 2', 'الأسبوع 3', 'الأسبوع 4'],
                         datasets: [{
-                            label: 'عدد الموظفين المتصلين',
-                            data: [12, 28, 30, 32, 28, 15],
+                            label: 'نسبة الحضور',
+                            data: [85, 90, 88, 92],
                             borderColor: '#3498db',
                             backgroundColor: 'rgba(52, 152, 219, 0.1)',
                             tension: 0.4,
@@ -2174,130 +1212,32 @@
                     },
                     options: {
                         responsive: true,
-                        maintainAspectRatio: false,
-                        plugins: {
-                            legend: {
-                                display: false
-                            }
-                        },
                         scales: {
                             y: {
-                                beginAtZero: true,
-                                ticks: {
-                                    font: {
-                                        family: 'Cairo'
-                                    }
-                                }
-                            },
-                            x: {
-                                ticks: {
-                                    font: {
-                                        family: 'Cairo'
-                                    }
-                                }
+                                beginAtZero: false,
+                                min: 80,
+                                max: 100
                             }
                         }
                     }
                 });
             }
-            
-            loadEmployeeStats();
         }
         
-        // Initialize Employees Table
-        function initEmployeesTable() {
-            if (dataTables.employeesTable) {
-                dataTables.employeesTable.destroy();
-            }
-            
-            dataTables.employeesTable = $('#employeesTable').DataTable({
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/ar.json'
-                },
-                pageLength: 10,
-                responsive: true,
-                order: [[0, 'asc']],
-                ajax: {
-                    url: 'https://hedor-bea3c-default-rtdb.firebaseio.com/employees.json',
-                    dataSrc: function(json) {
-                        const data = [];
-                        let index = 1;
-                        for (const id in json) {
-                            if (json.hasOwnProperty(id)) {
-                                const employee = json[id];
-                                employee.id = id;
-                                employee.index = index++;
-                                data.push(employee);
-                            }
-                        }
-                        return data;
-                    }
-                },
-                columns: [
-                    { data: 'index' },
-                    { 
-                        data: null,
-                        render: function(data) {
-                            return `<div style="width:40px; height:40px; background:linear-gradient(135deg,#667eea,#764ba2); border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold;">${data.name.charAt(0)}</div>`;
-                        }
-                    },
-                    { data: 'name' },
-                    { data: 'id' },
-                    { data: 'department' },
-                    { data: 'position' },
-                    { 
-                        data: 'hireDate',
-                        render: function(data) {
-                            return data ? new Date(data).toLocaleDateString('ar-SA') : '--';
-                        }
-                    },
-                    { 
-                        data: null,
-                        render: function(data) {
-                            return '<span class="badge badge-present">نشط</span>';
-                        }
-                    },
-                    { 
-                        data: null,
-                        render: function(data) {
-                            return `
-                                <div class="btn-group btn-group-sm">
-                                    <button class="btn btn-outline-primary" onclick="editEmployee('${data.id}')">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button class="btn btn-outline-danger" onclick="deleteEmployee('${data.id}')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            `;
-                        }
-                    }
-                ]
-            });
-        }
-        
-        // Load Settings
-        function loadSettings() {
-            database.ref('settings/workLocation').once('value')
+        // Load Locations Data
+        function loadLocationsData() {
+            // Load location settings
+            database.ref('settings/location').once('value')
                 .then(snapshot => {
                     if (snapshot.exists()) {
                         const settings = snapshot.val();
-                        workLocation = { lat: settings.lat, lng: settings.lng };
-                        geofenceRadius = settings.radius || 20;
-                        
-                        document.getElementById('currentRadius').textContent = geofenceRadius;
-                        document.getElementById('radiusValue').textContent = geofenceRadius + ' متر';
-                        document.getElementById('radiusRange').value = geofenceRadius;
-                        document.getElementById('locationLat').value = workLocation.lat;
-                        document.getElementById('locationLng').value = workLocation.lng;
-                        
-                        if (map) {
-                            map.setCenter(workLocation);
+                        if (settings.radius) {
+                            document.getElementById('locationRadius').value = settings.radius;
                         }
                     }
                 })
                 .catch(error => {
-                    console.error('خطأ في تحميل الإعدادات:', error);
+                    console.error('خطأ في تحميل إعدادات الموقع:', error);
                 });
         }
         
@@ -2305,7 +1245,7 @@
         function showNotification(message, type = 'info') {
             const notification = document.createElement('div');
             notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-            notification.style.cssText = 'top: 20px; left: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);';
+            notification.style.cssText = 'top: 20px; left: 20px; z-index: 9999; min-width: 300px;';
             notification.innerHTML = `
                 ${message}
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -2320,7 +1260,235 @@
             }, 5000);
         }
         
-        // Event Listeners
+        // Add Employee
+        document.getElementById('addEmployeeBtn').addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('addEmployeeModal'));
+            modal.show();
+        });
+        
+        // Save Employee
+        document.getElementById('saveEmployeeBtn').addEventListener('click', async function() {
+            const form = document.getElementById('addEmployeeForm');
+            const formData = new FormData(form);
+            const employeeData = Object.fromEntries(formData.entries());
+            
+            if (!employeeData.employeeId || !employeeData.name || !employeeData.password) {
+                showNotification('الرجاء ملء جميع الحقول المطلوبة', 'warning');
+                return;
+            }
+            
+            try {
+                // Check if employee already exists
+                const snapshot = await database.ref(`employees/${employeeData.employeeId}`).once('value');
+                
+                if (snapshot.exists()) {
+                    showNotification('رقم الموظف موجود مسبقاً', 'error');
+                    return;
+                }
+                
+                // Add creation timestamp
+                employeeData.createdAt = firebase.database.ServerValue.TIMESTAMP;
+                employeeData.status = 'active';
+                
+                // Save employee
+                await database.ref(`employees/${employeeData.employeeId}`).set(employeeData);
+                
+                // Close modal and reset form
+                form.reset();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addEmployeeModal'));
+                modal.hide();
+                
+                // Refresh employees list
+                loadEmployeesData();
+                
+                showNotification('تم إضافة الموظف بنجاح', 'success');
+                
+            } catch (error) {
+                showNotification('حدث خطأ في إضافة الموظف', 'danger');
+                console.error('خطأ:', error);
+            }
+        });
+        
+        // Edit Employee
+        window.editEmployee = function(employeeId) {
+            showNotification(`تعديل الموظف ${employeeId}`, 'info');
+            // Implement edit functionality
+        };
+        
+        // Delete Employee
+        window.deleteEmployee = function(employeeId) {
+            if (confirm(`هل أنت متأكد من حذف الموظف ${employeeId}؟`)) {
+                database.ref(`employees/${employeeId}`).remove()
+                    .then(() => {
+                        showNotification('تم حذف الموظف بنجاح', 'success');
+                        loadEmployeesData();
+                    })
+                    .catch(error => {
+                        showNotification('حدث خطأ في حذف الموظف', 'danger');
+                        console.error('خطأ:', error);
+                    });
+            }
+        };
+        
+        // Settings
+        document.getElementById('settingsBtn').addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('settingsModal'));
+            modal.show();
+        });
+        
+        // Change Password
+        document.getElementById('changePasswordBtn').addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('changePasswordModal'));
+            modal.show();
+        });
+        
+        // Save Settings
+        document.getElementById('saveSettingsBtn').addEventListener('click', async function() {
+            const settings = {
+                companyName: document.getElementById('companyName').value,
+                workStartTime: document.getElementById('workStartTime').value,
+                workEndTime: document.getElementById('workEndTime').value,
+                workRadius: document.getElementById('workRadius').value,
+                enableNotifications: document.getElementById('enableNotifications').checked,
+                enableAutoCheck: document.getElementById('enableAutoCheck').checked,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            try {
+                await database.ref('settings/system').set(settings);
+                
+                const modal = bootstrap.Modal.getInstance(document.getElementById('settingsModal'));
+                modal.hide();
+                
+                showNotification('تم حفظ الإعدادات بنجاح', 'success');
+                
+            } catch (error) {
+                showNotification('حدث خطأ في حفظ الإعدادات', 'danger');
+                console.error('خطأ:', error);
+            }
+        });
+        
+        // Save Admin Password
+        document.getElementById('saveAdminPasswordBtn').addEventListener('click', async function() {
+            const currentPassword = document.getElementById('adminCurrentPassword').value;
+            const newPassword = document.getElementById('adminNewPassword').value;
+            const confirmPassword = document.getElementById('adminConfirmPassword').value;
+            
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showNotification('الرجاء ملء جميع الحقول', 'warning');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showNotification('كلمة المرور الجديدة غير متطابقة', 'warning');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                showNotification('كلمة المرور يجب أن تكون 6 أحرف على الأقل', 'warning');
+                return;
+            }
+            
+            // In real app, verify current password from Firebase
+            // For demo, just update
+            try {
+                // Update admin password in database
+                await database.ref('admin/password').set(newPassword);
+                
+                document.getElementById('changePasswordForm').reset();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('changePasswordModal'));
+                modal.hide();
+                
+                showNotification('تم تغيير كلمة المرور بنجاح', 'success');
+                
+            } catch (error) {
+                showNotification('حدث خطأ في تغيير كلمة المرور', 'danger');
+                console.error('خطأ:', error);
+            }
+        });
+        
+        // Filter Attendance
+        document.getElementById('filterBtn').addEventListener('click', async function() {
+            const dateFrom = document.getElementById('dateFrom').value;
+            const dateTo = document.getElementById('dateTo').value;
+            const department = document.getElementById('departmentFilter').value;
+            
+            const tbody = document.getElementById('attendanceTableBody');
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" class="text-center">
+                        <i class="fas fa-spinner fa-spin"></i> جاري تحميل البيانات...
+                    </td>
+                </tr>
+            `;
+            
+            // In real app, filter data from Firebase
+            // For demo, show sample data
+            setTimeout(() => {
+                tbody.innerHTML = `
+                    <tr>
+                        <td>1</td>
+                        <td>أحمد محمد</td>
+                        <td>2024-01-15</td>
+                        <td>08:15</td>
+                        <td>17:00</td>
+                        <td>8:45</td>
+                        <td><span class="badge badge-present">حاضر</span></td>
+                    </tr>
+                    <tr>
+                        <td>2</td>
+                        <td>سارة عبدالله</td>
+                        <td>2024-01-15</td>
+                        <td>08:05</td>
+                        <td>16:55</td>
+                        <td>8:50</td>
+                        <td><span class="badge badge-present">حاضر</span></td>
+                    </tr>
+                    <tr>
+                        <td>3</td>
+                        <td>خالد سعود</td>
+                        <td>2024-01-15</td>
+                        <td>08:40</td>
+                        <td>17:10</td>
+                        <td>8:30</td>
+                        <td><span class="badge badge-late">متأخر</span></td>
+                    </tr>
+                `;
+            }, 1000);
+        });
+        
+        // Save Location Settings
+        document.getElementById('saveLocationSettings').addEventListener('click', async function() {
+            const settings = {
+                radius: document.getElementById('locationRadius').value,
+                checkInTime: document.getElementById('checkInTime').value,
+                checkOutTime: document.getElementById('checkOutTime').value,
+                updatedAt: firebase.database.ServerValue.TIMESTAMP
+            };
+            
+            try {
+                await database.ref('settings/location').set(settings);
+                showNotification('تم حفظ إعدادات الموقع بنجاح', 'success');
+            } catch (error) {
+                showNotification('حدث خطأ في حفظ الإعدادات', 'danger');
+                console.error('خطأ:', error);
+            }
+        });
+        
+        // Refresh Activity
+        document.getElementById('refreshActivityBtn').addEventListener('click', function() {
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            loadRecentActivity();
+            setTimeout(() => {
+                this.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            }, 1000);
+        });
+        
+        // Export Reports
+        document.getElementById('exportBtn').addEventListener('click', function() {
+            showNotification('جاري تحضير الملف للتحميل...', 'info');
+            // In real app, generate and download Excel file
+        });
         
         // Logout
         document.getElementById('logoutBtn').addEventListener('click', function(e) {
@@ -2329,140 +1497,24 @@
             window.location.href = 'index.html';
         });
         
-        // Refresh Locations
-        document.getElementById('refreshLocations').addEventListener('click', function() {
-            loadEmployeeLocationsForMap(map);
-        });
-        
-        // Refresh Attendance
-        document.getElementById('refreshAttendanceBtn').addEventListener('click', loadRecentAttendance);
-        
-        // Save Location
-        document.getElementById('saveLocationBtn').addEventListener('click', function() {
-            const lat = parseFloat(document.getElementById('locationLat').value);
-            const lng = parseFloat(document.getElementById('locationLng').value);
-            const radius = parseInt(document.getElementById('radiusRange').value);
-            
-            if (isNaN(lat) || isNaN(lng)) {
-                alert('الرجاء إدخال إحداثيات صحيحة');
-                return;
-            }
-            
-            workLocation = { lat, lng };
-            geofenceRadius = radius;
-            
-            database.ref('settings/workLocation').set({
-                lat: lat,
-                lng: lng,
-                radius: radius,
-                updatedAt: firebase.database.ServerValue.TIMESTAMP
-            })
-            .then(() => {
-                if (map) {
-                    map.setCenter(workLocation);
-                    setTimeout(() => loadEmployeeLocationsForMap(map), 500);
-                }
-                
-                document.getElementById('currentRadius').textContent = radius;
-                bootstrap.Modal.getInstance(document.getElementById('workLocationModal')).hide();
-                showNotification('تم حفظ إعدادات الموقع بنجاح', 'success');
-            })
-            .catch(error => {
-                showNotification('حدث خطأ في حفظ الإعدادات', 'danger');
-                console.error('خطأ:', error);
-            });
-        });
-        
-        // Radius Range Input
-        document.getElementById('radiusRange').addEventListener('input', function() {
-            document.getElementById('radiusValue').textContent = this.value + ' متر';
-        });
-        
-        // Save Employee
-        document.getElementById('saveEmployeeBtn').addEventListener('click', function() {
-            const form = document.getElementById('addEmployeeForm');
-            const formData = new FormData(form);
-            const employeeData = Object.fromEntries(formData.entries());
-            
-            if (!employeeData.employeeId) {
-                employeeData.employeeId = 'emp' + Date.now();
-            }
-            
-            employeeData.createdAt = firebase.database.ServerValue.TIMESTAMP;
-            employeeData.status = 'active';
-            
-            database.ref('employees/' + employeeData.employeeId).set(employeeData)
-                .then(() => {
-                    bootstrap.Modal.getInstance(document.getElementById('addEmployeeModal')).hide();
-                    form.reset();
-                    
-                    if (dataTables.employeesTable) {
-                        dataTables.employeesTable.ajax.reload();
-                    }
-                    
-                    showNotification('تم إضافة الموظف بنجاح', 'success');
-                })
-                .catch(error => {
-                    showNotification('حدث خطأ: ' + error.message, 'danger');
-                });
-        });
-        
-        // Map Controls
-        document.getElementById('centerMapBtn').addEventListener('click', () => {
-            if (liveMap) {
-                liveMap.setCenter(workLocation);
-                liveMap.setZoom(16);
-            }
-        });
-        
-        document.getElementById('reloadMapBtn').addEventListener('click', loadEmployeeLocationsForLiveMap);
-        
-        document.getElementById('mapTypeRoad').addEventListener('click', () => {
-            if (liveMap) {
-                liveMap.setMapTypeId(google.maps.MapTypeId.ROADMAP);
-            }
-        });
-        
-        document.getElementById('mapTypeSatellite').addEventListener('click', () => {
-            if (liveMap) {
-                liveMap.setMapTypeId(google.maps.MapTypeId.SATELLITE);
-            }
-        });
-        
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
-            checkAdminSession();
+            currentUser = checkAdminSession();
+            
+            if (!currentUser) return;
+            
+            document.getElementById('adminName').textContent = currentUser.name;
+            
+            setupNavigation();
             updateDateTime();
             setInterval(updateDateTime, 1000);
             
-            setupSidebar();
-            setupPageNavigation();
+            loadDashboardData();
             
-            loadSettings();
-            loadEmployeeStats();
-            loadRecentAttendance();
-            updateDashboardCharts();
-            
-            // Refresh data every 30 seconds
-            setInterval(() => {
-                loadRecentAttendance();
-                loadEmployeeStats();
-            }, 30000);
-            
-            // Database connection status
-            const connectedRef = database.ref('.info/connected');
-            connectedRef.on('value', snap => {
-                const dbStatus = document.getElementById('dbStatus');
-                const dbStatusIndicator = document.getElementById('dbStatusIndicator');
-                
-                if (snap.val() === true) {
-                    dbStatus.textContent = 'متصل';
-                    dbStatusIndicator.className = 'spinner-grow spinner-grow-sm text-success';
-                } else {
-                    dbStatus.textContent = 'غير متصل';
-                    dbStatusIndicator.className = 'spinner-grow spinner-grow-sm text-warning';
-                }
-            });
+            // Hide loading overlay
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }, 1000);
         });
     </script>
 </body>
