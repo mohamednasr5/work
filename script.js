@@ -1,6 +1,6 @@
-// 1. Firebase Configuration
+// 1. Firebase Config
 const firebaseConfig = {
-    apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE", // مفتاحك كما هو
+    apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE",
     authDomain: "hedor-bea3c.firebaseapp.com",
     databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
     projectId: "hedor-bea3c",
@@ -8,97 +8,92 @@ const firebaseConfig = {
     messagingSenderId: "369239455736",
     appId: "1:369239455736:web:116295854269abecf6480d"
 };
-
-// Initialize Firebase (Check if not already initialized)
-if (!firebase.apps.length) {
-    firebase.initializeApp(firebaseConfig);
-}
+if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// 2. Google Maps Setup
-let map, marker, circle;
-const workLocation = { lat: 24.7136, lng: 46.6753 }; // إحداثيات العمل
+// 2. إعدادات الخريطة (Leaflet + OpenStreetMap)
+let map, userMarker, workCircle;
+// إحداثيات العمل الافتراضية (يمكنك تغييرها)
+const workLocation = { lat: 24.7136, lng: 46.6753 }; 
 const allowedRadius = 100; // متر
 
 function initMap() {
     const mapEl = document.getElementById('map');
     if (!mapEl) return;
 
-    map = new google.maps.Map(mapEl, {
-        zoom: 16,
-        center: workLocation,
-        disableDefaultUI: true,
-        styles: [
-            { "featureType": "poi", "stylers": [{ "visibility": "off" }] }
-        ]
-    });
+    // إنشاء الخريطة
+    map = L.map('map').setView([workLocation.lat, workLocation.lng], 16);
 
-    // رسم دائرة العمل
-    circle = new google.maps.Circle({
-        strokeColor: "#4e54c8",
-        strokeOpacity: 0.8,
-        strokeWeight: 2,
-        fillColor: "#4e54c8",
-        fillOpacity: 0.15,
-        map: map,
-        center: workLocation,
+    // إضافة طبقة الخرائط المجانية من OpenStreetMap
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+
+    // رسم دائرة حول مكان العمل
+    workCircle = L.circle([workLocation.lat, workLocation.lng], {
+        color: '#4e54c8',
+        fillColor: '#4e54c8',
+        fillOpacity: 0.2,
         radius: allowedRadius
-    });
+    }).addTo(map);
 
-    // تتبع موقع المستخدم
+    // بدء تتبع الموقع
     if (navigator.geolocation) {
-        navigator.geolocation.watchPosition(updateUserLocation, handleLocationError, {
-            enableHighAccuracy: true
-        });
+        navigator.geolocation.watchPosition(updateUserLocation, 
+            (err) => console.log(err), 
+            { enableHighAccuracy: true }
+        );
     }
 }
 
 function updateUserLocation(position) {
-    const pos = {
-        lat: position.coords.latitude,
-        lng: position.coords.longitude
-    };
+    const userLat = position.coords.latitude;
+    const userLng = position.coords.longitude;
 
-    if (!marker) {
-        marker = new google.maps.Marker({
-            position: pos,
-            map: map,
-            icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 8,
-                fillColor: "#00d2ff",
-                fillOpacity: 1,
-                strokeWeight: 2,
-                strokeColor: "white"
-            }
-        });
+    // تحديث مكان الموظف على الخريطة
+    if (!userMarker) {
+        userMarker = L.marker([userLat, userLng]).addTo(map)
+            .bindPopup("أنت هنا").openPopup();
     } else {
-        marker.setPosition(pos);
+        userMarker.setLatLng([userLat, userLng]);
     }
-    map.setCenter(pos);
 
-    // حساب المسافة وتفعيل الأزرار (للموظف)
-    if(window.checkDistanceLogic) {
-        window.checkDistanceLogic(pos, workLocation, allowedRadius);
+    // حساب المسافة يدوياً (Haversine Formula)
+    const distance = getDistanceFromLatLonInMeters(userLat, userLng, workLocation.lat, workLocation.lng);
+    
+    // تحديث الواجهة إذا كنا في صفحة الموظف
+    if(window.updateEmployeeUI) {
+        window.updateEmployeeUI(distance, allowedRadius);
     }
+    
+    // حفظ الموقع الحالي للاستخدام عند الضغط
+    window.currentUserLocation = { lat: userLat, lng: userLng };
 }
 
-function handleLocationError(error) {
-    console.warn("خطأ في تحديد الموقع: " + error.message);
+// دالة حساب المسافة بالمتر (بديل Google Geometry)
+function getDistanceFromLatLonInMeters(lat1, lon1, lat2, lon2) {
+    var R = 6371; // نصف قطر الأرض بالكيلومتر
+    var dLat = deg2rad(lat2 - lat1);
+    var dLon = deg2rad(lon2 - lon1);
+    var a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    var d = R * c; // المسافة بالكيلومتر
+    return d * 1000; // تحويل لمتر
 }
 
-// 3. PWA Registration
+function deg2rad(deg) {
+    return deg * (Math.PI / 180);
+}
+
+// 3. PWA & Helpers
 if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('sw.js')
-            .then(reg => console.log('Service Worker Registered'))
-            .catch(err => console.log('SW Error:', err));
-    });
+    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js'));
 }
 
-// 4. Shared UI Functions
-function showNotification(msg, type = 'info') {
-    // إنشاء تنبيه بسيط
+function showNotification(msg, type='success') {
     const div = document.createElement('div');
     div.className = `alert alert-${type} position-fixed top-0 start-50 translate-middle-x mt-3`;
     div.style.zIndex = "9999";
@@ -107,15 +102,9 @@ function showNotification(msg, type = 'info') {
     setTimeout(() => div.remove(), 3000);
 }
 
-function logout() {
-    localStorage.removeItem('currentUser');
-    window.location.href = 'index.html';
-}
-
-// Global Logout Listener
-document.addEventListener('click', function(e) {
-    if(e.target && e.target.id == 'logoutBtn') {
-        e.preventDefault();
-        logout();
+document.addEventListener('click', e => {
+    if(e.target.id === 'logoutBtn') {
+        localStorage.removeItem('currentUser');
+        window.location.href = 'index.html';
     }
 });
