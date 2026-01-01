@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول - نظام الحضور والانصراف الذكي</title>
+    <title>نظام الحضور والانصراف الذكي - تسجيل الدخول</title>
     
     <!-- Bootstrap 5 Arabic -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -12,60 +12,111 @@
     <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     
     <style>
         :root {
             --primary-color: #2c3e50;
             --secondary-color: #3498db;
-            --accent-color: #2ecc71;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
             --danger-color: #e74c3c;
+            --info-color: #1abc9c;
+            --dark-color: #34495e;
+            --light-color: #ecf0f1;
         }
         
         * {
             font-family: 'Cairo', sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
         
         body {
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
-            padding: 20px 0;
+            justify-content: center;
+            padding: 20px;
         }
         
         .login-container {
             max-width: 450px;
-            margin: 0 auto;
+            width: 100%;
             animation: fadeIn 0.8s ease;
         }
         
         .login-card {
-            background: white;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
             border-radius: 20px;
-            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
-            border: none;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.2);
             overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .login-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
         }
         
         .login-header {
-            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             color: white;
-            padding: 25px;
+            padding: 30px;
             text-align: center;
             position: relative;
+            overflow: hidden;
+        }
+        
+        .login-header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 1px, transparent 1px);
+            background-size: 30px 30px;
+            animation: moveBackground 20s linear infinite;
+        }
+        
+        .logo {
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 1;
+        }
+        
+        .logo i {
+            font-size: 50px;
+            color: white;
         }
         
         .login-header h2 {
             margin: 0;
-            font-weight: 700;
+            font-weight: 800;
             font-size: 1.8rem;
+            position: relative;
+            z-index: 1;
         }
         
         .login-header p {
             opacity: 0.9;
             margin-top: 8px;
             font-size: 0.9rem;
+            position: relative;
+            z-index: 1;
         }
         
         .login-body {
@@ -76,109 +127,170 @@
             font-weight: 600;
             color: var(--primary-color);
             margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+        }
+        
+        .form-label i {
+            margin-left: 8px;
+            color: var(--secondary-color);
         }
         
         .form-control {
-            border-radius: 10px;
-            padding: 12px 15px;
+            border-radius: 12px;
+            padding: 15px;
             border: 2px solid #e1e5eb;
             transition: all 0.3s;
+            font-size: 1rem;
         }
         
         .form-control:focus {
             border-color: var(--secondary-color);
-            box-shadow: 0 0 0 0.25rem rgba(52, 152, 219, 0.25);
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.25);
         }
         
-        .btn-primary {
-            background: linear-gradient(to right, var(--secondary-color), #2980b9);
+        .input-group-text {
+            border-radius: 12px;
+            background: #f8f9fa;
+            border: 2px solid #e1e5eb;
+        }
+        
+        .btn-login {
+            background: linear-gradient(135deg, var(--secondary-color), #2980b9);
             border: none;
-            border-radius: 10px;
-            padding: 12px;
-            font-weight: 600;
+            border-radius: 12px;
+            padding: 15px;
+            font-weight: 700;
             width: 100%;
             transition: all 0.3s;
+            font-size: 1.1rem;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
         }
         
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 7px 14px rgba(52, 152, 219, 0.3);
+        .btn-login:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(52, 152, 219, 0.3);
+            background: linear-gradient(135deg, #2980b9, var(--secondary-color));
         }
         
-        .admin-toggle {
+        .btn-login:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .toggle-form {
             text-align: center;
             margin-top: 20px;
             padding-top: 20px;
             border-top: 1px solid #eee;
         }
         
-        .admin-toggle a {
+        .toggle-form a {
             color: var(--secondary-color);
             text-decoration: none;
             font-weight: 600;
             cursor: pointer;
-        }
-        
-        .status-message {
-            padding: 12px;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            display: none;
-        }
-        
-        .status-message.success {
-            background-color: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .status-message.error {
-            background-color: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        .logo {
-            width: 80px;
-            height: 80px;
-            background: white;
-            border-radius: 50%;
-            display: flex;
+            transition: color 0.3s;
+            display: inline-flex;
             align-items: center;
-            justify-content: center;
-            margin: 0 auto 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            gap: 8px;
         }
         
-        .logo i {
-            font-size: 40px;
-            background: linear-gradient(to right, var(--primary-color), var(--secondary-color));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+        .toggle-form a:hover {
+            color: var(--primary-color);
         }
         
         .gps-status {
             display: flex;
             align-items: center;
             justify-content: center;
+            gap: 10px;
             margin-top: 15px;
-            font-size: 0.9rem;
-            color: #666;
+            padding: 12px;
+            border-radius: 10px;
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
         }
         
         .gps-status i {
-            margin-left: 5px;
+            font-size: 1.2rem;
+        }
+        
+        .gps-status.success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        
+        .gps-status.warning {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        
+        .gps-status.danger {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        
+        .version {
+            text-align: center;
+            margin-top: 20px;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.9rem;
         }
         
         @keyframes fadeIn {
             from {
                 opacity: 0;
-                transform: translateY(20px);
+                transform: translateY(30px);
             }
             to {
                 opacity: 1;
                 transform: translateY(0);
             }
+        }
+        
+        @keyframes moveBackground {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(52, 152, 219, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(52, 152, 219, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(52, 152, 219, 0);
+            }
+        }
+        
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        
+        .password-toggle {
+            cursor: pointer;
+            color: #6c757d;
+            transition: color 0.3s;
+        }
+        
+        .password-toggle:hover {
+            color: var(--primary-color);
         }
         
         @media (max-width: 576px) {
@@ -189,88 +301,129 @@
             .login-body {
                 padding: 20px;
             }
+            
+            .login-header {
+                padding: 20px;
+            }
+            
+            .logo {
+                width: 80px;
+                height: 80px;
+            }
+            
+            .logo i {
+                font-size: 40px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="login-container">
-            <div class="login-card">
-                <div class="login-header">
-                    <div class="logo">
-                        <i class="fas fa-fingerprint"></i>
-                    </div>
-                    <h2>نظام الحضور والانصراف الذكي</h2>
-                    <p>التسجيل التلقائي عبر تحديد الموقع الجغرافي</p>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="logo">
+                    <i class="fas fa-fingerprint"></i>
                 </div>
-                
-                <div class="login-body">
-                    <!-- Status Message -->
-                    <div id="statusMessage" class="status-message"></div>
-                    
-                    <!-- Employee Login Form -->
-                    <form id="employeeForm">
-                        <div class="mb-3">
-                            <label for="employeeId" class="form-label">
-                                <i class="fas fa-id-card me-2"></i>
-                                رقم الموظف
-                            </label>
-                            <input type="text" class="form-control" id="employeeId" placeholder="أدخل رقم الموظف" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="employeePassword" class="form-label">
-                                <i class="fas fa-lock me-2"></i>
-                                كلمة المرور
-                            </label>
-                            <input type="password" class="form-control" id="employeePassword" placeholder="أدخل كلمة المرور" required>
-                        </div>
-                        
-                        <div class="gps-status">
-                            <i class="fas fa-satellite"></i>
-                            <span id="gpsText">جاري التحقق من GPS...</span>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary mt-4" id="loginBtn">
-                            <i class="fas fa-sign-in-alt me-2"></i>
-                            تسجيل الدخول
-                        </button>
-                    </form>
-                    
-                    <!-- Admin Login Form -->
-                    <form id="adminForm" style="display: none;">
-                        <div class="mb-3">
-                            <label for="adminPassword" class="form-label">
-                                <i class="fas fa-user-shield me-2"></i>
-                                كلمة مرور المدير
-                            </label>
-                            <input type="password" class="form-control" id="adminPassword" placeholder="أدخل كلمة مرور المدير" required>
-                            <div class="form-text text-muted">
-                                <small>كلمة المرور الافتراضية: admin123</small>
-                            </div>
-                        </div>
-                        
-                        <button type="submit" class="btn btn-primary mt-3" id="adminLoginBtn">
-                            <i class="fas fa-key me-2"></i>
-                            دخول المدير
-                        </button>
-                    </form>
-                    
-                    <!-- Toggle Admin -->
-                    <div class="admin-toggle">
-                        <a id="toggleAdminLink">
-                            <i class="fas fa-exchange-alt me-2"></i>
-                            <span id="toggleText">تسجيل دخول المدير</span>
-                        </a>
-                    </div>
-                </div>
+                <h2>نظام الحضور الذكي</h2>
+                <p>التسجيل التلقائي عبر تحديد الموقع الجغرافي</p>
             </div>
             
-            <div class="text-center mt-4 text-muted">
-                <small>
-                    <p>نظام الحضور والانصراف المتقدم باستخدام Geofencing © 2024</p>
-                </small>
+            <div class="login-body">
+                <!-- رسائل الحالة -->
+                <div id="statusMessage" class="alert alert-dismissible fade show d-none" role="alert">
+                    <span id="statusText"></span>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                
+                <!-- نموذج تسجيل الدخول للموظف -->
+                <form id="employeeForm" class="needs-validation" novalidate>
+                    <div class="mb-4">
+                        <label for="employeeId" class="form-label">
+                            <i class="fas fa-id-card"></i>
+                            رقم الموظف
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text">
+                                <i class="fas fa-user"></i>
+                            </span>
+                            <input type="text" class="form-control" id="employeeId" 
+                                   placeholder="أدخل رقم الموظف" required>
+                            <div class="invalid-feedback">
+                                الرجاء إدخال رقم الموظف
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <label for="employeePassword" class="form-label">
+                            <i class="fas fa-lock"></i>
+                            كلمة المرور
+                        </label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="employeePassword" 
+                                   placeholder="أدخل كلمة المرور" required>
+                            <span class="input-group-text password-toggle" id="toggleEmployeePassword">
+                                <i class="fas fa-eye"></i>
+                            </span>
+                            <div class="invalid-feedback">
+                                الرجاء إدخال كلمة المرور
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="gps-status" id="gpsStatus">
+                        <i class="fas fa-satellite"></i>
+                        <span id="gpsText">جاري التحقق من GPS...</span>
+                    </div>
+                    
+                    <button type="submit" class="btn-login mt-4" id="loginBtn">
+                        <i class="fas fa-sign-in-alt"></i>
+                        تسجيل الدخول
+                    </button>
+                </form>
+                
+                <!-- نموذج تسجيل الدخول للمدير -->
+                <form id="adminForm" class="needs-validation d-none" novalidate>
+                    <div class="mb-4">
+                        <label for="adminPassword" class="form-label">
+                            <i class="fas fa-user-shield"></i>
+                            كلمة مرور المدير
+                        </label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="adminPassword" 
+                                   placeholder="أدخل كلمة مرور المدير" required>
+                            <span class="input-group-text password-toggle" id="toggleAdminPassword">
+                                <i class="fas fa-eye"></i>
+                            </span>
+                            <div class="invalid-feedback">
+                                الرجاء إدخال كلمة مرور المدير
+                            </div>
+                        </div>
+                        <div class="form-text text-muted mt-2">
+                            <i class="fas fa-info-circle me-1"></i>
+                            كلمة المرور الافتراضية: admin123
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn-login" id="adminLoginBtn">
+                        <i class="fas fa-key"></i>
+                        دخول المدير
+                    </button>
+                </form>
+                
+                <!-- تبديل بين النماذج -->
+                <div class="toggle-form">
+                    <a id="toggleAdminLink">
+                        <i class="fas fa-exchange-alt"></i>
+                        <span id="toggleText">تسجيل دخول المدير</span>
+                    </a>
+                </div>
             </div>
+        </div>
+        
+        <div class="version">
+            <p>نظام الحضور والانصراف المتقدم باستخدام Geofencing © 2024</p>
+            <p class="mt-1">الإصدار 2.0.0</p>
         </div>
     </div>
     
@@ -293,7 +446,14 @@
         };
         
         // Initialize Firebase
-        const app = firebase.initializeApp(firebaseConfig);
+        try {
+            if (!firebase.apps.length) {
+                firebase.initializeApp(firebaseConfig);
+            }
+        } catch (error) {
+            console.error('فشل في تهيئة Firebase:', error);
+        }
+        
         const database = firebase.database();
         
         // DOM Elements
@@ -302,31 +462,80 @@
         const toggleAdminLink = document.getElementById('toggleAdminLink');
         const toggleText = document.getElementById('toggleText');
         const statusMessage = document.getElementById('statusMessage');
+        const statusText = document.getElementById('statusText');
+        const gpsStatus = document.getElementById('gpsStatus');
         const gpsText = document.getElementById('gpsText');
         
         let isAdminForm = false;
-        const ADMIN_PASSWORD = 'admin123'; // في نظام حقيقي يجب تخزين هذا بشكل آمن
+        const ADMIN_PASSWORD = 'admin123';
         
-        // Check GPS
-        function checkGPS() {
+        // Initialize GPS
+        function initializeGPS() {
             if (!navigator.geolocation) {
-                gpsText.innerHTML = '<i class="fas fa-exclamation-triangle text-danger me-2"></i>المتصفح لا يدعم GPS';
-                gpsText.style.color = '#e74c3c';
+                gpsStatus.className = 'gps-status danger';
+                gpsText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> المتصفح لا يدعم GPS';
                 return false;
             }
             
             navigator.geolocation.getCurrentPosition(
                 function(position) {
-                    gpsText.innerHTML = '<i class="fas fa-check-circle text-success me-2"></i>GPS متاح ويعمل بشكل صحيح';
-                    gpsText.style.color = '#27ae60';
+                    gpsStatus.className = 'gps-status success';
+                    gpsText.innerHTML = '<i class="fas fa-check-circle"></i> GPS متاح - دقة: ' + 
+                                       Math.round(position.coords.accuracy) + ' متر';
+                    localStorage.setItem('gpsEnabled', 'true');
                 },
                 function(error) {
-                    gpsText.innerHTML = '<i class="fas fa-exclamation-circle text-warning me-2"></i>الرجاء تفعيل GPS';
-                    gpsText.style.color = '#f39c12';
+                    let message = 'فشل في الحصول على الموقع';
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            message = 'تم رفض الإذن للوصول إلى الموقع';
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            message = 'معلومات الموقع غير متاحة';
+                            break;
+                        case error.TIMEOUT:
+                            message = 'انتهت مهلة طلب الموقع';
+                            break;
+                    }
+                    gpsStatus.className = 'gps-status warning';
+                    gpsText.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + message;
+                    localStorage.setItem('gpsEnabled', 'false');
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
                 }
             );
             
             return true;
+        }
+        
+        // Show/Hide Password
+        function setupPasswordToggle() {
+            document.getElementById('toggleEmployeePassword').addEventListener('click', function() {
+                const passwordInput = document.getElementById('employeePassword');
+                const icon = this.querySelector('i');
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    icon.className = 'fas fa-eye-slash';
+                } else {
+                    passwordInput.type = 'password';
+                    icon.className = 'fas fa-eye';
+                }
+            });
+            
+            document.getElementById('toggleAdminPassword').addEventListener('click', function() {
+                const passwordInput = document.getElementById('adminPassword');
+                const icon = this.querySelector('i');
+                if (passwordInput.type === 'password') {
+                    passwordInput.type = 'text';
+                    icon.className = 'fas fa-eye-slash';
+                } else {
+                    passwordInput.type = 'password';
+                    icon.className = 'fas fa-eye';
+                }
+            });
         }
         
         // Toggle Between Employee and Admin Forms
@@ -334,28 +543,34 @@
             isAdminForm = !isAdminForm;
             
             if (isAdminForm) {
-                employeeForm.style.display = 'none';
-                adminForm.style.display = 'block';
+                employeeForm.classList.add('d-none');
+                adminForm.classList.remove('d-none');
                 toggleText.textContent = 'تسجيل دخول الموظف';
             } else {
-                employeeForm.style.display = 'block';
-                adminForm.style.display = 'none';
+                employeeForm.classList.remove('d-none');
+                adminForm.classList.add('d-none');
                 toggleText.textContent = 'تسجيل دخول المدير';
             }
             
-            statusMessage.style.display = 'none';
+            statusMessage.classList.add('d-none');
         });
         
         // Employee Login
         employeeForm.addEventListener('submit', async function(e) {
             e.preventDefault();
+            e.stopPropagation();
+            
+            if (!this.checkValidity()) {
+                this.classList.add('was-validated');
+                return;
+            }
             
             const employeeId = document.getElementById('employeeId').value.trim();
             const password = document.getElementById('employeePassword').value;
             
             const loginBtn = document.getElementById('loginBtn');
             const originalText = loginBtn.innerHTML;
-            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري التحقق...';
+            loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق...';
             loginBtn.disabled = true;
             
             try {
@@ -366,51 +581,68 @@
                     const employeeData = snapshot.val();
                     
                     if (employeeData.password === password) {
-                        showMessage('تم تسجيل الدخول بنجاح! جاري التحويل...', 'success');
+                        if (employeeData.status === 'inactive') {
+                            showStatusMessage('الحساب غير نشط. الرجاء التواصل مع المدير.', 'danger');
+                            loginBtn.innerHTML = originalText;
+                            loginBtn.disabled = false;
+                            return;
+                        }
+                        
+                        showStatusMessage('تم تسجيل الدخول بنجاح! جاري التحويل...', 'success');
                         
                         // Save user session
                         localStorage.setItem('currentUser', JSON.stringify({
                             id: employeeId,
                             name: employeeData.name,
                             role: 'employee',
-                            department: employeeData.department
+                            department: employeeData.department,
+                            position: employeeData.position
                         }));
+                        
+                        // Save login timestamp
+                        localStorage.setItem('lastLogin', Date.now());
                         
                         // Redirect to employee dashboard
                         setTimeout(() => {
                             window.location.href = 'employee-dashboard.html';
                         }, 1500);
                     } else {
-                        showMessage('كلمة المرور غير صحيحة!', 'error');
+                        showStatusMessage('كلمة المرور غير صحيحة!', 'danger');
                         loginBtn.innerHTML = originalText;
                         loginBtn.disabled = false;
                     }
                 } else {
-                    showMessage('رقم الموظف غير موجود!', 'error');
+                    showStatusMessage('رقم الموظف غير موجود!', 'danger');
                     loginBtn.innerHTML = originalText;
                     loginBtn.disabled = false;
                 }
             } catch (error) {
-                showMessage('حدث خطأ في الاتصال بالخادم', 'error');
+                console.error('Login error:', error);
+                showStatusMessage('حدث خطأ في الاتصال بالخادم', 'danger');
                 loginBtn.innerHTML = originalText;
                 loginBtn.disabled = false;
-                console.error('Error:', error);
             }
         });
         
         // Admin Login
         adminForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            e.stopPropagation();
+            
+            if (!this.checkValidity()) {
+                this.classList.add('was-validated');
+                return;
+            }
             
             const adminPassword = document.getElementById('adminPassword').value;
             
             const adminLoginBtn = document.getElementById('adminLoginBtn');
             const originalText = adminLoginBtn.innerHTML;
-            adminLoginBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري التحقق...';
+            adminLoginBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري التحقق...';
             adminLoginBtn.disabled = true;
             
             if (adminPassword === ADMIN_PASSWORD) {
-                showMessage('مرحباً بك في لوحة التحكم!', 'success');
+                showStatusMessage('مرحباً بك في لوحة التحكم!', 'success');
                 
                 // Save admin session
                 localStorage.setItem('currentUser', JSON.stringify({
@@ -419,26 +651,28 @@
                     role: 'admin'
                 }));
                 
-                // Redirect to admin panel
+                // Save login timestamp
+                localStorage.setItem('lastLogin', Date.now());
+                
+                // Redirect to admin dashboard
                 setTimeout(() => {
                     window.location.href = 'admin-dashboard.html';
                 }, 1500);
             } else {
-                showMessage('كلمة مرور المدير غير صحيحة!', 'error');
+                showStatusMessage('كلمة مرور المدير غير صحيحة!', 'danger');
                 adminLoginBtn.innerHTML = originalText;
                 adminLoginBtn.disabled = false;
             }
         });
         
-        // Show Message
-        function showMessage(message, type) {
-            statusMessage.textContent = message;
-            statusMessage.className = 'status-message ' + type;
-            statusMessage.style.display = 'block';
+        // Show Status Message
+        function showStatusMessage(message, type) {
+            statusText.textContent = message;
+            statusMessage.className = `alert alert-${type} alert-dismissible fade show`;
+            statusMessage.classList.remove('d-none');
             
-            // Hide after 5 seconds
             setTimeout(() => {
-                statusMessage.style.display = 'none';
+                statusMessage.classList.add('d-none');
             }, 5000);
         }
         
@@ -448,6 +682,14 @@
             
             if (userData) {
                 const user = JSON.parse(userData);
+                
+                // Check if session expired (24 hours)
+                const lastLogin = localStorage.getItem('lastLogin');
+                if (lastLogin && (Date.now() - parseInt(lastLogin)) > 24 * 60 * 60 * 1000) {
+                    localStorage.removeItem('currentUser');
+                    localStorage.removeItem('lastLogin');
+                    return;
+                }
                 
                 if (user.role === 'admin') {
                     window.location.href = 'admin-dashboard.html';
@@ -460,10 +702,14 @@
         // Initialize
         document.addEventListener('DOMContentLoaded', function() {
             checkExistingSession();
-            checkGPS();
+            initializeGPS();
+            setupPasswordToggle();
             
-            // Check GPS every 30 seconds
-            setInterval(checkGPS, 30000);
+            // Check GPS every minute
+            setInterval(initializeGPS, 60000);
+            
+            // Auto focus on first input
+            document.getElementById('employeeId').focus();
         });
     </script>
 </body>
