@@ -1,0 +1,941 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>سجلات الحضور - نظام الحضور والانصراف</title>
+    
+    <!-- Bootstrap 5 Arabic -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap RTL -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-rtl@0.4.0/dist/css/bootstrap-rtl.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+        }
+        
+        * {
+            font-family: 'Cairo', sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1a2530 100%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.6rem;
+            background: linear-gradient(45deg, #fff, #3498db);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 25px;
+        }
+        
+        .card-header {
+            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
+            border-bottom: 2px solid #e9ecef;
+            border-radius: 15px 15px 0 0 !important;
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .table {
+            margin: 0;
+        }
+        
+        .table thead th {
+            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
+            color: var(--primary-color);
+            font-weight: 700;
+            border-bottom: 2px solid #dee2e6;
+        }
+        
+        .badge-present {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .badge-absent {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .badge-late {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .filter-card {
+            background: white;
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+        }
+        
+        .stat-card {
+            text-align: center;
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+            margin-bottom: 20px;
+        }
+        
+        .stat-total {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+        
+        .stat-present {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+        
+        .stat-late {
+            background: linear-gradient(135deg, #f39c12, #d35400);
+        }
+        
+        .stat-absent {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+    </style>
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="admin-dashboard.html">
+                <i class="fas fa-history me-2"></i>
+                سجلات الحضور
+            </a>
+            
+            <div class="d-flex align-items-center">
+                <a href="admin-dashboard.html" class="btn btn-outline-light me-3">
+                    <i class="fas fa-arrow-right me-2"></i>
+                    العودة
+                </a>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container-fluid mt-4">
+        <!-- Statistics -->
+        <div class="row mb-4">
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card stat-total">
+                    <i class="fas fa-calendar-check fa-2x mb-3"></i>
+                    <h3 id="totalDays">0</h3>
+                    <p>إجمالي أيام العمل</p>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card stat-present">
+                    <i class="fas fa-user-check fa-2x mb-3"></i>
+                    <h3 id="presentDays">0</h3>
+                    <p>أيام الحضور</p>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card stat-late">
+                    <i class="fas fa-clock fa-2x mb-3"></i>
+                    <h3 id="lateDays">0</h3>
+                    <p>أيام التأخير</p>
+                </div>
+            </div>
+            <div class="col-xl-3 col-md-6">
+                <div class="stat-card stat-absent">
+                    <i class="fas fa-user-times fa-2x mb-3"></i>
+                    <h3 id="absentDays">0</h3>
+                    <p>أيام الغياب</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row">
+            <!-- Filters -->
+            <div class="col-lg-3 mb-4">
+                <div class="filter-card">
+                    <h5 class="mb-4">
+                        <i class="fas fa-filter me-2"></i>
+                        تصفية السجلات
+                    </h5>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">الفترة</label>
+                        <select class="form-control" id="timePeriod">
+                            <option value="today">اليوم</option>
+                            <option value="yesterday">الأمس</option>
+                            <option value="week">هذا الأسبوع</option>
+                            <option value="month" selected>هذا الشهر</option>
+                            <option value="last-month">الشهر الماضي</option>
+                            <option value="custom">مخصص</option>
+                        </select>
+                    </div>
+                    
+                    <div id="customDateRange" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">من تاريخ</label>
+                            <input type="date" class="form-control" id="dateFrom">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="dateTo">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">الموظف</label>
+                        <select class="form-control" id="employeeFilter">
+                            <option value="">جميع الموظفين</option>
+                            <!-- سيتم تعبئتها بالجافاسكريبت -->
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">القسم</label>
+                        <select class="form-control" id="departmentFilter">
+                            <option value="">جميع الأقسام</option>
+                            <option value="تقنية المعلومات">تقنية المعلومات</option>
+                            <option value="الموارد البشرية">الموارد البشرية</option>
+                            <option value="المبيعات">المبيعات</option>
+                            <option value="التسويق">التسويق</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">حالة الحضور</label>
+                        <select class="form-control" id="statusFilter">
+                            <option value="">جميع الحالات</option>
+                            <option value="present">حاضر</option>
+                            <option value="late">متأخر</option>
+                            <option value="absent">غائب</option>
+                            <option value="early">مغادر مبكراً</option>
+                        </select>
+                    </div>
+                    
+                    <button class="btn btn-primary w-100 mb-2" id="filterBtn">
+                        <i class="fas fa-search me-2"></i>
+                        تصفية
+                    </button>
+                    <button class="btn btn-outline-secondary w-100" id="resetBtn">
+                        <i class="fas fa-redo me-2"></i>
+                        إعادة تعيين
+                    </button>
+                </div>
+                
+                <div class="card mt-4">
+                    <div class="card-body text-center">
+                        <button class="btn btn-success w-100 mb-2" id="exportExcelBtn">
+                            <i class="fas fa-file-excel me-2"></i>
+                            تصدير Excel
+                        </button>
+                        <button class="btn btn-danger w-100" id="exportPdfBtn">
+                            <i class="fas fa-file-pdf me-2"></i>
+                            تصدير PDF
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Attendance Records -->
+            <div class="col-lg-9">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-table me-2"></i>
+                            سجلات الحضور
+                        </div>
+                        <div class="d-flex" style="gap: 10px;">
+                            <div class="input-group" style="width: 250px;">
+                                <input type="text" class="form-control" id="searchInput" placeholder="بحث...">
+                                <button class="btn btn-outline-primary" id="searchBtn">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                            <button class="btn btn-primary" id="refreshBtn">
+                                <i class="fas fa-sync-alt"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>الموظف</th>
+                                        <th>التاريخ</th>
+                                        <th>وقت الدخول</th>
+                                        <th>وقت الخروج</th>
+                                        <th>ساعات العمل</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="attendanceTable">
+                                    <tr>
+                                        <td colspan="8" class="text-center text-muted">
+                                            استخدم عوامل التصفية لعرض السجلات
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <!-- Pagination -->
+                        <nav class="mt-4">
+                            <ul class="pagination justify-content-center" id="pagination">
+                                <li class="page-item disabled">
+                                    <a class="page-link" href="#" tabindex="-1">السابق</a>
+                                </li>
+                                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                                <li class="page-item">
+                                    <a class="page-link" href="#">التالي</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+                
+                <!-- Monthly Summary -->
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <i class="fas fa-chart-bar me-2"></i>
+                        ملخص شهري
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <canvas id="attendanceChart" height="200"></canvas>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>الموظف</th>
+                                                <th>الحضور</th>
+                                                <th>التأخير</th>
+                                                <th>الغياب</th>
+                                                <th>النسبة</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="monthlySummary">
+                                            <!-- سيتم تعبئتها بالجافاسكريبت -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE",
+            authDomain: "hedor-bea3c.firebaseapp.com",
+            databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
+            projectId: "hedor-bea3c",
+            storageBucket: "hedor-bea3c.firebasestorage.app",
+            messagingSenderId: "369239455736",
+            appId: "1:369239455736:web:116295854269abecf6480d",
+            measurementId: "G-R2MG1YKQEP"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
+        // Global Variables
+        let attendanceChart = null;
+        let allEmployees = [];
+        let currentUser = null;
+        
+        // Check User Session
+        function checkUserSession() {
+            const userData = localStorage.getItem('currentUser');
+            
+            if (!userData) {
+                window.location.href = 'index.html';
+                return false;
+            }
+            
+            const user = JSON.parse(userData);
+            currentUser = user;
+            
+            // Allow both admin and employees
+            if (user.role !== 'admin' && user.role !== 'employee') {
+                window.location.href = 'index.html';
+                return false;
+            }
+            
+            return true;
+        }
+        
+        // Load Employees for Filter
+        async function loadEmployees() {
+            try {
+                const snapshot = await database.ref('employees').once('value');
+                const select = document.getElementById('employeeFilter');
+                
+                if (currentUser.role === 'employee') {
+                    // Employees can only see their own records
+                    select.innerHTML = `
+                        <option value="${currentUser.id}">${currentUser.name || 'بياناتي'}</option>
+                    `;
+                    select.disabled = true;
+                } else {
+                    // Admin can see all employees
+                    select.innerHTML = '<option value="">جميع الموظفين</option>';
+                    
+                    snapshot.forEach(employeeSnap => {
+                        const employee = employeeSnap.val();
+                        const option = document.createElement('option');
+                        option.value = employeeSnap.key;
+                        option.textContent = employee.name;
+                        select.appendChild(option);
+                    });
+                }
+                
+                // Store all employees for later use
+                allEmployees = [];
+                snapshot.forEach(employeeSnap => {
+                    allEmployees.push({
+                        id: employeeSnap.key,
+                        ...employeeSnap.val()
+                    });
+                });
+                
+            } catch (error) {
+                console.error('خطأ في تحميل بيانات الموظفين:', error);
+            }
+        }
+        
+        // Load Attendance Records
+        async function loadAttendanceRecords(filters = {}) {
+            const table = document.getElementById('attendanceTable');
+            table.innerHTML = `
+                <tr>
+                    <td colspan="8" class="text-center">
+                        <i class="fas fa-spinner fa-spin"></i> جاري تحميل السجلات...
+                    </td>
+                </tr>
+            `;
+            
+            try {
+                let records = [];
+                
+                // If viewing as employee, only show their records
+                if (currentUser.role === 'employee') {
+                    const employeeId = currentUser.id;
+                    const snapshot = await database.ref(`attendance/${employeeId}`).once('value');
+                    
+                    if (snapshot.exists()) {
+                        snapshot.forEach(recordSnap => {
+                            const record = recordSnap.val();
+                            records.push({
+                                id: recordSnap.key,
+                                employeeId: employeeId,
+                                ...record
+                            });
+                        });
+                    }
+                } else {
+                    // Admin view - load all records
+                    const snapshot = await database.ref('attendance').once('value');
+                    
+                    snapshot.forEach(employeeSnap => {
+                        const employeeId = employeeSnap.key;
+                        const employeeRecords = employeeSnap.val();
+                        
+                        Object.keys(employeeRecords).forEach(recordId => {
+                            records.push({
+                                id: recordId,
+                                employeeId: employeeId,
+                                ...employeeRecords[recordId]
+                            });
+                        });
+                    });
+                }
+                
+                // Apply filters
+                records = applyFilters(records, filters);
+                
+                // Sort by timestamp (newest first)
+                records.sort((a, b) => b.timestamp - a.timestamp);
+                
+                // Display records
+                displayRecords(records);
+                
+                // Update statistics
+                updateStatistics(records);
+                
+                // Load monthly summary (for admin only)
+                if (currentUser.role === 'admin') {
+                    loadMonthlySummary();
+                }
+                
+            } catch (error) {
+                console.error('خطأ في تحميل سجلات الحضور:', error);
+                table.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center text-danger">
+                            حدث خطأ في تحميل السجلات
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        // Apply Filters
+        function applyFilters(records, filters) {
+            let filteredRecords = [...records];
+            
+            // Date filter
+            if (filters.dateFrom && filters.dateTo) {
+                const from = new Date(filters.dateFrom).getTime();
+                const to = new Date(filters.dateTo).getTime() + 86400000; // Add one day
+                
+                filteredRecords = filteredRecords.filter(record => {
+                    const recordDate = new Date(record.date).getTime();
+                    return recordDate >= from && recordDate <= to;
+                });
+            }
+            
+            // Employee filter
+            if (filters.employeeId) {
+                filteredRecords = filteredRecords.filter(record => record.employeeId === filters.employeeId);
+            }
+            
+            // Department filter
+            if (filters.department) {
+                filteredRecords = filteredRecords.filter(record => {
+                    const employee = allEmployees.find(e => e.id === record.employeeId);
+                    return employee && employee.department === filters.department;
+                });
+            }
+            
+            // Status filter
+            if (filters.status) {
+                filteredRecords = filteredRecords.filter(record => {
+                    // This is simplified - you'd need to calculate status from times
+                    return true; // Implement status calculation
+                });
+            }
+            
+            // Search filter
+            if (filters.search) {
+                const searchTerm = filters.search.toLowerCase();
+                filteredRecords = filteredRecords.filter(record => {
+                    const employee = allEmployees.find(e => e.id === record.employeeId);
+                    return employee && employee.name.toLowerCase().includes(searchTerm);
+                });
+            }
+            
+            return filteredRecords;
+        }
+        
+        // Display Records
+        function displayRecords(records) {
+            const table = document.getElementById('attendanceTable');
+            table.innerHTML = '';
+            
+            if (records.length === 0) {
+                table.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">
+                            لا توجد سجلات مطابقة لعوامل التصفية
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            let counter = 1;
+            
+            records.forEach(record => {
+                const employee = allEmployees.find(e => e.id === record.employeeId);
+                const employeeName = employee ? employee.name : 'غير معروف';
+                const employeeDept = employee ? employee.department : '--';
+                
+                // Format times
+                const checkInTime = record.type === 'checkin' ? 
+                    new Date(record.timestamp).toLocaleTimeString('ar-SA') : '--';
+                const checkOutTime = record.type === 'checkout' ? 
+                    new Date(record.timestamp).toLocaleTimeString('ar-SA') : '--';
+                
+                // Calculate work hours (simplified)
+                let workHours = '--';
+                let status = '--';
+                let statusClass = 'badge-secondary';
+                
+                // For now, just show type
+                if (record.type === 'checkin') {
+                    status = 'دخول';
+                    statusClass = 'badge-primary';
+                } else if (record.type === 'checkout') {
+                    status = 'خروج';
+                    statusClass = 'badge-info';
+                }
+                
+                const row = `
+                    <tr>
+                        <td>${counter}</td>
+                        <td>
+                            <div>${employeeName}</div>
+                            <small class="text-muted">${employeeDept}</small>
+                        </td>
+                        <td>${new Date(record.date).toLocaleDateString('ar-SA')}</td>
+                        <td>${checkInTime}</td>
+                        <td>${checkOutTime}</td>
+                        <td>${workHours}</td>
+                        <td>
+                            <span class="badge ${statusClass}">${status}</span>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="viewRecordDetails('${record.id}', '${record.employeeId}')">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                
+                table.innerHTML += row;
+                counter++;
+            });
+        }
+        
+        // Update Statistics
+        function updateStatistics(records) {
+            // This is simplified - you'd need to calculate actual statistics
+            const today = new Date().toISOString().split('T')[0];
+            const monthlyRecords = records.filter(record => {
+                const recordMonth = new Date(record.date).getMonth();
+                const currentMonth = new Date().getMonth();
+                return recordMonth === currentMonth;
+            });
+            
+            // Calculate unique dates
+            const uniqueDates = [...new Set(monthlyRecords.map(r => r.date))];
+            
+            // For demo purposes
+            document.getElementById('totalDays').textContent = '22';
+            document.getElementById('presentDays').textContent = '18';
+            document.getElementById('lateDays').textContent = '3';
+            document.getElementById('absentDays').textContent = '1';
+        }
+        
+        // Load Monthly Summary
+        async function loadMonthlySummary() {
+            try {
+                // Get current month attendance
+                const currentMonth = new Date().getMonth();
+                const currentYear = new Date().getFullYear();
+                
+                const summaryData = [];
+                
+                // For each employee, calculate monthly attendance
+                for (const employee of allEmployees) {
+                    const snapshot = await database.ref(`attendance/${employee.id}`).once('value');
+                    
+                    if (snapshot.exists()) {
+                        let presentDays = 0;
+                        let lateDays = 0;
+                        let absentDays = 0;
+                        
+                        snapshot.forEach(recordSnap => {
+                            const record = recordSnap.val();
+                            const recordDate = new Date(record.date);
+                            
+                            if (recordDate.getMonth() === currentMonth && recordDate.getFullYear() === currentYear) {
+                                if (record.type === 'checkin') {
+                                    presentDays++;
+                                    
+                                    // Check if late (after 8:30 AM)
+                                    const checkInTime = new Date(record.timestamp);
+                                    const hour = checkInTime.getHours();
+                                    const minute = checkInTime.getMinutes();
+                                    
+                                    if (hour > 8 || (hour === 8 && minute > 30)) {
+                                        lateDays++;
+                                    }
+                                }
+                            }
+                        });
+                        
+                        // Assuming 22 work days in month
+                        const workDays = 22;
+                        absentDays = workDays - presentDays;
+                        const attendanceRate = Math.round((presentDays / workDays) * 100);
+                        
+                        if (presentDays > 0 || absentDays > 0) {
+                            summaryData.push({
+                                name: employee.name,
+                                present: presentDays,
+                                late: lateDays,
+                                absent: absentDays,
+                                rate: attendanceRate
+                            });
+                        }
+                    }
+                }
+                
+                // Sort by attendance rate (highest first)
+                summaryData.sort((a, b) => b.rate - a.rate);
+                
+                // Display summary
+                displayMonthlySummary(summaryData);
+                
+                // Update chart
+                updateAttendanceChart(summaryData);
+                
+            } catch (error) {
+                console.error('خطأ في تحميل الملخص الشهري:', error);
+            }
+        }
+        
+        // Display Monthly Summary
+        function displayMonthlySummary(data) {
+            const tbody = document.getElementById('monthlySummary');
+            tbody.innerHTML = '';
+            
+            if (data.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center text-muted">
+                            لا توجد بيانات لهذا الشهر
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            // Show top 5 employees
+            data.slice(0, 5).forEach(item => {
+                const row = `
+                    <tr>
+                        <td>${item.name}</td>
+                        <td>${item.present}</td>
+                        <td>${item.late}</td>
+                        <td>${item.absent}</td>
+                        <td>
+                            <div class="progress" style="height: 10px;">
+                                <div class="progress-bar ${item.rate >= 90 ? 'bg-success' : item.rate >= 80 ? 'bg-warning' : 'bg-danger'}" 
+                                     style="width: ${item.rate}%">
+                                </div>
+                            </div>
+                            <small>${item.rate}%</small>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+        
+        // Update Attendance Chart
+        function updateAttendanceChart(data) {
+            const ctx = document.getElementById('attendanceChart');
+            
+            if (attendanceChart) {
+                attendanceChart.destroy();
+            }
+            
+            // Get top 5 employees for chart
+            const topEmployees = data.slice(0, 5);
+            
+            attendanceChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: topEmployees.map(e => e.name),
+                    datasets: [{
+                        label: 'أيام الحضور',
+                        data: topEmployees.map(e => e.present),
+                        backgroundColor: 'rgba(52, 152, 219, 0.7)',
+                        borderColor: 'rgba(52, 152, 219, 1)',
+                        borderWidth: 1
+                    }, {
+                        label: 'أيام التأخير',
+                        data: topEmployees.map(e => e.late),
+                        backgroundColor: 'rgba(243, 156, 18, 0.7)',
+                        borderColor: 'rgba(243, 156, 18, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+        
+        // View Record Details
+        window.viewRecordDetails = function(recordId, employeeId) {
+            // In real app, show modal with details
+            alert(`عرض تفاصيل السجل ${recordId} للموظف ${employeeId}`);
+        };
+        
+        // Show Notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; left: 20px; z-index: 9999; min-width: 300px;';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+        
+        // Event Listeners
+        document.getElementById('filterBtn').addEventListener('click', function() {
+            const filters = {
+                dateFrom: document.getElementById('dateFrom').value,
+                dateTo: document.getElementById('dateTo').value,
+                employeeId: document.getElementById('employeeFilter').value,
+                department: document.getElementById('departmentFilter').value,
+                status: document.getElementById('statusFilter').value,
+                search: document.getElementById('searchInput').value
+            };
+            
+            loadAttendanceRecords(filters);
+        });
+        
+        document.getElementById('resetBtn').addEventListener('click', function() {
+            document.getElementById('dateFrom').value = '';
+            document.getElementById('dateTo').value = '';
+            document.getElementById('employeeFilter').value = '';
+            document.getElementById('departmentFilter').value = '';
+            document.getElementById('statusFilter').value = '';
+            document.getElementById('searchInput').value = '';
+            
+            loadAttendanceRecords({});
+        });
+        
+        document.getElementById('searchBtn').addEventListener('click', function() {
+            document.getElementById('filterBtn').click();
+        });
+        
+        document.getElementById('searchInput').addEventListener('keyup', function(e) {
+            if (e.key === 'Enter') {
+                document.getElementById('filterBtn').click();
+            }
+        });
+        
+        document.getElementById('refreshBtn').addEventListener('click', function() {
+            loadAttendanceRecords({});
+        });
+        
+        document.getElementById('exportExcelBtn').addEventListener('click', function() {
+            showNotification('جاري تحضير ملف Excel للتحميل...', 'info');
+            // In real app, generate Excel file
+        });
+        
+        document.getElementById('exportPdfBtn').addEventListener('click', function() {
+            showNotification('جاري تحضير ملف PDF للتحميل...', 'info');
+            // In real app, generate PDF file
+        });
+        
+        // Show/Hide custom date range
+        document.getElementById('timePeriod').addEventListener('change', function() {
+            const customRange = document.getElementById('customDateRange');
+            
+            if (this.value === 'custom') {
+                customRange.style.display = 'block';
+                
+                // Set default dates (last 30 days)
+                const today = new Date();
+                const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
+                
+                document.getElementById('dateFrom').value = thirtyDaysAgo.toISOString().split('T')[0];
+                document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+            } else {
+                customRange.style.display = 'none';
+                
+                // Set dates based on selected period
+                const today = new Date();
+                let fromDate = new Date();
+                
+                switch(this.value) {
+                    case 'today':
+                        fromDate = today;
+                        break;
+                    case 'yesterday':
+                        fromDate = new Date(today.getTime() - (24 * 60 * 60 * 1000));
+                        break;
+                    case 'week':
+                        fromDate = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000));
+                        break;
+                    case 'month':
+                        fromDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                        break;
+                    case 'last-month':
+                        fromDate = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                        const toDate = new Date(today.getFullYear(), today.getMonth(), 0);
+                        break;
+                }
+                
+                // Apply filter immediately
+                setTimeout(() => {
+                    document.getElementById('filterBtn').click();
+                }, 100);
+            }
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async function() {
+            if (!checkUserSession()) return;
+            
+            await loadEmployees();
+            await loadAttendanceRecords({});
+            
+            // Set initial date range for current month
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            document.getElementById('dateFrom').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+        });
+    </script>
+</body>
+</html>
