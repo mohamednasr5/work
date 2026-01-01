@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تسجيل الدخول - نظام الحضور والانصراف</title>
+    <title>تسجيل الدخول - نظام الحضور والانصراف الذكي</title>
     
     <!-- Bootstrap 5 Arabic -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -200,7 +200,7 @@
                     <div class="logo">
                         <i class="fas fa-fingerprint"></i>
                     </div>
-                    <h2>نظام الحضور والانصراف</h2>
+                    <h2>نظام الحضور والانصراف الذكي</h2>
                     <p>التسجيل التلقائي عبر تحديد الموقع الجغرافي</p>
                 </div>
                 
@@ -246,7 +246,7 @@
                             </label>
                             <input type="password" class="form-control" id="adminPassword" placeholder="أدخل كلمة مرور المدير" required>
                             <div class="form-text text-muted">
-                                <small>كلمة المرور الافتراضية: 742018</small>
+                                <small>كلمة المرور الافتراضية: admin123</small>
                             </div>
                         </div>
                         
@@ -268,7 +268,7 @@
             
             <div class="text-center mt-4 text-muted">
                 <small>
-                    <p>نظام الحضور والانصراف المتقدم باستخدام Geofencing</p>
+                    <p>نظام الحضور والانصراف المتقدم باستخدام Geofencing © 2024</p>
                 </small>
             </div>
         </div>
@@ -293,7 +293,7 @@
         };
         
         // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
+        const app = firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         
         // DOM Elements
@@ -305,6 +305,7 @@
         const gpsText = document.getElementById('gpsText');
         
         let isAdminForm = false;
+        const ADMIN_PASSWORD = 'admin123'; // في نظام حقيقي يجب تخزين هذا بشكل آمن
         
         // Check GPS
         function checkGPS() {
@@ -346,7 +347,7 @@
         });
         
         // Employee Login
-        employeeForm.addEventListener('submit', function(e) {
+        employeeForm.addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const employeeId = document.getElementById('employeeId').value.trim();
@@ -357,43 +358,44 @@
             loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري التحقق...';
             loginBtn.disabled = true;
             
-            // Check Firebase for employee
-            database.ref('employees/' + employeeId).once('value')
-                .then(snapshot => {
-                    if (snapshot.exists()) {
-                        const employeeData = snapshot.val();
+            try {
+                // Check Firebase for employee
+                const snapshot = await database.ref('employees/' + employeeId).once('value');
+                
+                if (snapshot.exists()) {
+                    const employeeData = snapshot.val();
+                    
+                    if (employeeData.password === password) {
+                        showMessage('تم تسجيل الدخول بنجاح! جاري التحويل...', 'success');
                         
-                        if (employeeData.password === password) {
-                            showMessage('تم تسجيل الدخول بنجاح! جاري التحويل...', 'success');
-                            
-                            // Save user session
-                            localStorage.setItem('currentUser', JSON.stringify({
-                                id: employeeId,
-                                name: employeeData.name,
-                                role: 'employee',
-                                department: employeeData.department
-                            }));
-                            
-                            // Redirect to employee dashboard
-                            setTimeout(() => {
-                                window.location.href = 'employee-dashboard.html';
-                            }, 1500);
-                        } else {
-                            showMessage('كلمة المرور غير صحيحة!', 'error');
-                            loginBtn.innerHTML = originalText;
-                            loginBtn.disabled = false;
-                        }
+                        // Save user session
+                        localStorage.setItem('currentUser', JSON.stringify({
+                            id: employeeId,
+                            name: employeeData.name,
+                            role: 'employee',
+                            department: employeeData.department
+                        }));
+                        
+                        // Redirect to employee dashboard
+                        setTimeout(() => {
+                            window.location.href = 'employee-dashboard.html';
+                        }, 1500);
                     } else {
-                        showMessage('رقم الموظف غير موجود!', 'error');
+                        showMessage('كلمة المرور غير صحيحة!', 'error');
                         loginBtn.innerHTML = originalText;
                         loginBtn.disabled = false;
                     }
-                })
-                .catch(error => {
-                    showMessage('حدث خطأ: ' + error.message, 'error');
+                } else {
+                    showMessage('رقم الموظف غير موجود!', 'error');
                     loginBtn.innerHTML = originalText;
                     loginBtn.disabled = false;
-                });
+                }
+            } catch (error) {
+                showMessage('حدث خطأ في الاتصال بالخادم', 'error');
+                loginBtn.innerHTML = originalText;
+                loginBtn.disabled = false;
+                console.error('Error:', error);
+            }
         });
         
         // Admin Login
@@ -401,14 +403,13 @@
             e.preventDefault();
             
             const adminPassword = document.getElementById('adminPassword').value;
-            const MASTER_PASSWORD = '742018';
             
             const adminLoginBtn = document.getElementById('adminLoginBtn');
             const originalText = adminLoginBtn.innerHTML;
             adminLoginBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>جاري التحقق...';
             adminLoginBtn.disabled = true;
             
-            if (adminPassword === MASTER_PASSWORD) {
+            if (adminPassword === ADMIN_PASSWORD) {
                 showMessage('مرحباً بك في لوحة التحكم!', 'success');
                 
                 // Save admin session
@@ -420,7 +421,7 @@
                 
                 // Redirect to admin panel
                 setTimeout(() => {
-                    window.location.href = 'admin.html';
+                    window.location.href = 'admin-dashboard.html';
                 }, 1500);
             } else {
                 showMessage('كلمة مرور المدير غير صحيحة!', 'error');
@@ -449,7 +450,7 @@
                 const user = JSON.parse(userData);
                 
                 if (user.role === 'admin') {
-                    window.location.href = 'admin.html';
+                    window.location.href = 'admin-dashboard.html';
                 } else if (user.role === 'employee') {
                     window.location.href = 'employee-dashboard.html';
                 }
