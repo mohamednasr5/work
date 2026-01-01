@@ -1,29 +1,21 @@
 {
-
-  "name": "نظام الحضور الذكي",
-
+  "name": "نظام الحضور",
   "short_name": "حضور",
-
   "start_url": "index.html",
-
   "display": "standalone",
-
   "background_color": "#f5f7fa",
-
   "theme_color": "#4e54c8",
-
+  "orientation": "portrait",
   "icons": [
-
     {
-
-      "src": "icon-192x192.png",
-
+      "src": "https://cdn-icons-png.flaticon.com/512/2921/2921222.png",
       "sizes": "192x192",
-
       "type": "image/png"
-
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2921/2921222.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
-
   ]
-
 }
