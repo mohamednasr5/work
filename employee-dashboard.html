@@ -2,1097 +2,151 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>لوحة تحكم الموظف - نظام الحضور الذكي</title>
-    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>لوحة الموظف</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
-    
-    <style>
-        :root {
-            --primary-color: #2c3e50;
-            --secondary-color: #3498db;
-            --success-color: #2ecc71;
-            --warning-color: #f39c12;
-            --danger-color: #e74c3c;
-            --info-color: #1abc9c;
-            --dark-color: #34495e;
-            --light-color: #ecf0f1;
-        }
-        
-        * {
-            font-family: 'Cairo', sans-serif;
-        }
-        
-        body {
-            background-color: #f5f7fa;
-            min-height: 100vh;
-        }
-        
-        .loading-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-            color: white;
-        }
-        
-        .loading-spinner {
-            width: 80px;
-            height: 80px;
-            border: 5px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            border-top-color: white;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            100% { transform: rotate(360deg); }
-        }
-        
-        .navbar {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--dark-color) 100%);
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            padding: 1rem 0;
-        }
-        
-        .navbar-brand {
-            font-weight: 800;
-            font-size: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .time-display {
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 10px;
-            padding: 8px 15px;
-            color: white;
-            font-weight: 600;
-        }
-        
-        .main-container {
-            max-width: 1400px;
-            margin: 30px auto;
-            padding: 0 20px;
-        }
-        
-        .card {
-            border: none;
-            border-radius: 15px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
-            margin-bottom: 30px;
-            background: white;
-            transition: all 0.3s ease;
-        }
-        
-        .card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
-        }
-        
-        .card-header {
-            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
-            border-bottom: 2px solid #e9ecef;
-            padding: 20px;
-            font-weight: 700;
-            color: var(--primary-color);
-            font-size: 1.1rem;
-        }
-        
-        .status-badge {
-            font-size: 1.2rem;
-            padding: 12px 25px;
-            border-radius: 50px;
-            font-weight: 700;
-            display: inline-flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        .status-badge.present {
-            background: linear-gradient(135deg, var(--success-color), #27ae60);
-            color: white;
-        }
-        
-        .status-badge.absent {
-            background: linear-gradient(135deg, var(--danger-color), #c0392b);
-            color: white;
-        }
-        
-        .btn-action {
-            padding: 15px 30px;
-            font-size: 1.1rem;
-            border-radius: 12px;
-            border: none;
-            font-weight: 700;
-            transition: all 0.3s;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            width: 100%;
-        }
-        
-        .btn-check-in {
-            background: linear-gradient(135deg, var(--success-color), #27ae60);
-            color: white;
-        }
-        
-        .btn-check-out {
-            background: linear-gradient(135deg, var(--danger-color), #c0392b);
-            color: white;
-        }
-        
-        .btn-action:hover:not(:disabled) {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
-        }
-        
-        .btn-action:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-        
-        .info-box {
-            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-            padding: 20px;
-            border-radius: 12px;
-        }
-        
-        .info-item {
-            display: flex;
-            justify-content: space-between;
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(0,0,0,0.1);
-        }
-        
-        .info-item:last-child {
-            border-bottom: none;
-        }
-        
-        .map-container {
-            height: 300px;
-            border-radius: 12px;
-            overflow: hidden;
-            border: 2px solid #e9ecef;
-        }
-        
-        #employeeMap {
-            width: 100%;
-            height: 100%;
-        }
-        
-        .profile-avatar {
-            width: 100px;
-            height: 100px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto;
-            border: 4px solid white;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            font-size: 2.5rem;
-            color: white;
-            font-weight: bold;
-        }
-        
-        .stat-card {
-            text-align: center;
-            padding: 20px;
-            border-radius: 15px;
-            color: white;
-            margin-bottom: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
-        
-        .stat-icon {
-            width: 60px;
-            height: 60px;
-            border-radius: 15px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 15px;
-            font-size: 24px;
-            background: rgba(255, 255, 255, 0.2);
-        }
-        
-        .stat-present { background: linear-gradient(135deg, var(--success-color), #27ae60); }
-        .stat-absent { background: linear-gradient(135deg, var(--danger-color), #c0392b); }
-        .stat-late { background: linear-gradient(135deg, var(--warning-color), #d35400); }
-        .stat-hours { background: linear-gradient(135deg, var(--secondary-color), #2980b9); }
-        
-        .gps-alert {
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-        
-        .pulse {
-            animation: pulse 2s infinite;
-        }
-    </style>
+    <link rel="stylesheet" href="style.css">
+    <link rel="manifest" href="manifest.json">
 </head>
 <body>
-    <div id="loadingOverlay" class="loading-overlay">
-        <div class="loading-spinner"></div>
-        <h4 class="mt-4">جاري تحميل بياناتك...</h4>
-        <p class="mt-2">الرجاء الانتظار</p>
-    </div>
-    
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="#">
-                <i class="fas fa-fingerprint"></i>
-                نظام الحضور الذكي
-            </a>
-            
-            <div class="d-flex align-items-center">
-                <div class="time-display me-3 d-none d-md-block">
-                    <i class="fas fa-clock me-2"></i>
-                    <span id="currentTime">--:--:--</span>
-                    <span id="currentDate" class="ms-2"></span>
-                </div>
-                
-                <div class="dropdown">
-                    <button class="btn btn-outline-light dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                        <i class="fas fa-user-circle fa-lg me-2"></i>
-                        <span id="employeeName">الموظف</span>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item text-danger" href="#" id="logoutBtn">
-                            <i class="fas fa-sign-out-alt me-2"></i>تسجيل الخروج
-                        </a></li>
-                    </ul>
-                </div>
-            </div>
+
+    <nav class="navbar-custom d-none d-lg-block">
+        <div class="container d-flex justify-content-between">
+            <span class="navbar-brand"><i class="fas fa-user-clock me-2"></i> بوابة الموظف</span>
+            <span id="userNameDisplay">مرحباً</span>
         </div>
     </nav>
-    
-    <div class="main-container">
+
+    <div class="container mt-3 mt-lg-0">
+        <div class="d-lg-none mb-3">
+            <h4 class="fw-bold" id="userNameMobile">مرحباً..</h4>
+            <p class="text-muted small">قم بتسجيل حضورك اليومي</p>
+        </div>
+
         <div class="row">
             <div class="col-lg-8">
-                <div class="card">
-                    <div class="card-header">
-                        <i class="fas fa-info-circle"></i>
-                        حالة الحضور الحالية
-                    </div>
-                    <div class="card-body text-center p-4">
-                        <div id="statusBadge" class="status-badge absent mb-4">
-                            <i class="fas fa-user-clock"></i>
-                            <span id="statusText">لم يتم التسجيل</span>
-                        </div>
-                        
-                        <div class="info-box">
-                            <div class="info-item">
-                                <span class="label">
-                                    <i class="fas fa-clock me-2"></i>
-                                    وقت الدخول
-                                </span>
-                                <span class="value" id="checkInTime">--:--:--</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="label">
-                                    <i class="fas fa-clock me-2"></i>
-                                    وقت الخروج
-                                </span>
-                                <span class="value" id="checkOutTime">--:--:--</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="label">
-                                    <i class="fas fa-hourglass-half me-2"></i>
-                                    ساعات العمل
-                                </span>
-                                <span class="value" id="workHours">0 ساعة 0 دقيقة</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="label">
-                                    <i class="fas fa-calendar-day me-2"></i>
-                                    تاريخ اليوم
-                                </span>
-                                <span class="value" id="todayDate">--/--/----</span>
-                            </div>
-                        </div>
+                <div class="glass-card p-3">
+                    <h5 class="mb-3 fw-bold text-primary"><i class="fas fa-map-marker-alt me-2"></i> موقعك الحالي</h5>
+                    <div id="map" class="map-frame"></div>
+                    <div class="mt-2 d-flex justify-content-between align-items-center">
+                        <small class="text-muted" id="distanceText">جاري حساب المسافة...</small>
+                        <span class="badge bg-secondary" id="gpsAccuracy">DQL: --</span>
                     </div>
                 </div>
-                
-                <div class="card">
-                    <div class="card-header">
-                        <i class="fas fa-hand-pointer"></i>
-                        تسجيل الحضور والانصراف
-                    </div>
-                    <div class="card-body p-4">
-                        <div id="gpsAlert" class="gps-alert alert-warning">
-                            <i class="fas fa-satellite-dish"></i>
-                            <span id="gpsText">جاري تحديد الموقع...</span>
-                        </div>
-                        
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <button id="checkInBtn" class="btn-action btn-check-in" disabled>
-                                    <i class="fas fa-sign-in-alt"></i>
-                                    تسجيل الدخول
-                                </button>
-                            </div>
-                            <div class="col-md-6">
-                                <button id="checkOutBtn" class="btn-action btn-check-out" disabled>
-                                    <i class="fas fa-sign-out-alt"></i>
-                                    تسجيل الخروج
-                                </button>
-                            </div>
-                        </div>
-                        
-                        <div class="alert alert-info mt-4">
-                            <i class="fas fa-info-circle me-2"></i>
-                            يجب أن تكون داخل نطاق موقع العمل (<span id="workRadius">50</span> متر) لتتمكن من التسجيل
-                        </div>
-                        
-                        <div class="row mt-3">
-                            <div class="col-md-6">
-                                <div class="info-item">
-                                    <span class="label">المسافة من العمل:</span>
-                                    <span class="value" id="distanceFromWork">-- متر</span>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="info-item">
-                                    <span class="label">دقة GPS:</span>
-                                    <span class="value" id="gpsAccuracy">-- متر</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <div>
-                            <i class="fas fa-history"></i>
-                            سجل الحضور الأخير
-                        </div>
-                        <button class="btn btn-sm btn-primary" id="refreshHistoryBtn">
-                            <i class="fas fa-sync-alt"></i>
+
+                <div class="row g-2 mb-4">
+                    <div class="col-6">
+                        <button id="checkInBtn" class="btn-glass bg-success text-white" disabled>
+                            <i class="fas fa-fingerprint fa-2x d-block mb-1"></i>
+                            تسجيل دخول
                         </button>
                     </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>التاريخ</th>
-                                        <th>وقت الدخول</th>
-                                        <th>وقت الخروج</th>
-                                        <th>ساعات العمل</th>
-                                        <th>الحالة</th>
-                                        <th>المسافة</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="historyTableBody">
-                                    <tr>
-                                        <td colspan="6" class="text-center text-muted">
-                                            <i class="fas fa-spinner fa-spin me-2"></i>
-                                            جاري تحميل السجلات...
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
+                    <div class="col-6">
+                        <button id="checkOutBtn" class="btn-glass bg-danger text-white" disabled>
+                            <i class="fas fa-sign-out-alt fa-2x d-block mb-1"></i>
+                            تسجيل خروج
+                        </button>
                     </div>
                 </div>
             </div>
-            
+
             <div class="col-lg-4">
-                <div class="card">
-                    <div class="card-header">
-                        <i class="fas fa-user"></i>
-                        البيانات الشخصية
-                    </div>
-                    <div class="card-body text-center">
-                        <div class="profile-avatar mb-3" id="profileAvatar">م</div>
-                        <h5 class="mb-2" id="profileName">اسم الموظف</h5>
-                        <p class="text-muted mb-3" id="profileId">ID: --</p>
-                        
-                        <div class="info-box text-start">
-                            <div class="info-item">
-                                <span class="label">القسم</span>
-                                <span class="value" id="profileDepartment">--</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="label">المسمى الوظيفي</span>
-                                <span class="value" id="profilePosition">--</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="label">تاريخ التعيين</span>
-                                <span class="value" id="profileHireDate">--</span>
-                            </div>
+                <div class="glass-card p-3 text-center">
+                    <h5 class="mb-3">حالة اليوم</h5>
+                    <div id="statusBadge" class="status-pill absent mb-3">غائب</div>
+                    <hr>
+                    <div class="row text-center">
+                        <div class="col-6 border-start">
+                            <small class="d-block text-muted">دخول</small>
+                            <strong id="inTime">--:--</strong>
                         </div>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <div class="card-header">
-                        <i class="fas fa-chart-bar"></i>
-                        إحصائيات هذا الشهر
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-6 mb-3">
-                                <div class="stat-card stat-present">
-                                    <div class="stat-icon"><i class="fas fa-check-circle"></i></div>
-                                    <h3 id="statPresentDays">0</h3>
-                                    <p class="mb-0">أيام حضور</p>
-                                </div>
-                            </div>
-                            <div class="col-6 mb-3">
-                                <div class="stat-card stat-absent">
-                                    <div class="stat-icon"><i class="fas fa-times-circle"></i></div>
-                                    <h3 id="statAbsentDays">0</h3>
-                                    <p class="mb-0">أيام غياب</p>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="stat-card stat-late">
-                                    <div class="stat-icon"><i class="fas fa-clock"></i></div>
-                                    <h3 id="statLateDays">0</h3>
-                                    <p class="mb-0">تأخيرات</p>
-                                </div>
-                            </div>
-                            <div class="col-6">
-                                <div class="stat-card stat-hours">
-                                    <div class="stat-icon"><i class="fas fa-hourglass-half"></i></div>
-                                    <h3 id="statTotalHours">0</h3>
-                                    <p class="mb-0">إجمالي الساعات</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="card">
-                    <div class="card-header">
-                        <i class="fas fa-map-marker-alt"></i>
-                        موقعك الحالي
-                    </div>
-                    <div class="card-body">
-                        <div class="map-container mb-3">
-                            <div id="employeeMap"></div>
-                        </div>
-                        <div class="info-box">
-                            <div class="info-item">
-                                <span class="label">
-                                    <i class="fas fa-ruler-combined me-2"></i>
-                                    المسافة من العمل
-                                </span>
-                                <span class="value" id="mapDistance">-- متر</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="label">
-                                    <i class="fas fa-satellite me-2"></i>
-                                    آخر تحديث
-                                </span>
-                                <span class="value" id="lastLocationUpdate">--:--:--</span>
-                            </div>
+                        <div class="col-6">
+                            <small class="d-block text-muted">خروج</small>
+                            <strong id="outTime">--:--</strong>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+    <div class="mobile-nav">
+        <div class="mobile-nav-items">
+            <a href="#" class="nav-item-link active"><i class="fas fa-home"></i>الرئيسية</a>
+            <a href="profile.html" class="nav-item-link"><i class="fas fa-user"></i>حسابي</a>
+            <a href="#" id="logoutBtn" class="nav-item-link"><i class="fas fa-sign-out-alt"></i>خروج</a>
+        </div>
+    </div>
+
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_API_KEY&callback=initMap&libraries=geometry" async defer></script>
+    <script src="script.js"></script>
     
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE8",
-            authDomain: "hedor-bea3c.firebaseapp.com",
-            databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
-            projectId: "hedor-bea3c",
-            storageBucket: "hedor-bea3c.firebasestorage.app",
-            messagingSenderId: "369239455736",
-            appId: "1:369239455736:web:116295854269abecf6480d"
-        };
-        
-        if (!firebase.apps.length) {
-            firebase.initializeApp(firebaseConfig);
-        }
-        
-        const database = firebase.database();
-        
-        let currentUser = null;
-        let todayCheckIn = null;
-        let todayCheckOut = null;
-        let currentPosition = null;
-        let employeeMap = null;
-        let workLocation = { lat: 24.7136, lng: 46.6753, radius: 50 };
-        let locationWatchId = null;
-        
-        function checkUserSession() {
-            const userData = localStorage.getItem('currentUser');
-            if (!userData) {
-                window.location.href = 'index.html';
-                return null;
-            }
-            const user = JSON.parse(userData);
-            if (user.role !== 'employee') {
-                window.location.href = 'index.html';
-                return null;
-            }
-            return user;
-        }
-        
-        function calculateDistance(lat1, lng1, lat2, lng2) {
-            const R = 6371e3;
-            const φ1 = lat1 * Math.PI / 180;
-            const φ2 = lat2 * Math.PI / 180;
-            const Δφ = (lat2 - lat1) * Math.PI / 180;
-            const Δλ = (lng2 - lng1) * Math.PI / 180;
-            const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-                      Math.cos(φ1) * Math.cos(φ2) *
-                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-            return R * c;
-        }
-        
-        function showNotification(message, type) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type} position-fixed top-0 start-50 translate-middle-x mt-3`;
-            alertDiv.style.zIndex = '10000';
-            alertDiv.textContent = message;
-            document.body.appendChild(alertDiv);
-            setTimeout(() => alertDiv.remove(), 3000);
-        }
-        
-        async function loadEmployeeData() {
-            try {
-                const snapshot = await database.ref(`employees/${currentUser.id}`).once('value');
-                if (snapshot.exists()) {
-                    const employee = snapshot.val();
-                    document.getElementById('employeeName').textContent = employee.name || 'الموظف';
-                    document.getElementById('profileName').textContent = employee.name || 'الموظف';
-                    document.getElementById('profileId').textContent = `ID: ${currentUser.id}`;
-                    document.getElementById('profileDepartment').textContent = employee.department || '--';
-                    document.getElementById('profilePosition').textContent = employee.position || '--';
-                    document.getElementById('profileHireDate').textContent = employee.hireDate ? new Date(employee.hireDate).toLocaleDateString('ar-SA') : '--';
-                    
-                    const firstLetter = employee.name ? employee.name.charAt(0) : 'م';
-                    document.getElementById('profileAvatar').textContent = firstLetter;
-                }
-            } catch (error) {
-                console.error('Error loading employee data:', error);
-            }
-        }
-        
-        function updateDateTime() {
-            const now = new Date();
-            document.getElementById('currentTime').textContent = now.toLocaleTimeString('ar-SA');
-            document.getElementById('currentDate').textContent = now.toLocaleDateString('ar-SA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            document.getElementById('todayDate').textContent = now.toLocaleDateString('ar-SA');
-        }
-        
-        function initializeMap() {
-            if (!employeeMap) {
-                employeeMap = L.map('employeeMap').setView([workLocation.lat, workLocation.lng], 15);
-                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors',
-                    maxZoom: 19
-                }).addTo(employeeMap);
-                
-                database.ref('settings/workLocation').once('value').then(snapshot => {
-                    if (snapshot.exists()) {
-                        const locationData = snapshot.val();
-                        workLocation = {
-                            lat: locationData.lat || 24.7136,
-                            lng: locationData.lng || 46.6753,
-                            radius: locationData.radius || 50
-                        };
-                        updateWorkLocationOnMap();
-                    } else {
-                        updateWorkLocationOnMap();
-                    }
-                }).catch(() => {
-                    updateWorkLocationOnMap();
-                });
-            }
-        }
-        
-        function updateWorkLocationOnMap() {
-            if (!employeeMap || !workLocation) return;
-            
-            if (window.workCircle) {
-                employeeMap.removeLayer(window.workCircle);
-            }
-            if (window.locationMarker) {
-                employeeMap.removeLayer(window.locationMarker);
-            }
-            
-            window.locationMarker = L.marker([workLocation.lat, workLocation.lng]).addTo(employeeMap);
-            window.locationMarker.bindPopup('موقع العمل الرئيسي').openPopup();
-            
-            window.workCircle = L.circle([workLocation.lat, workLocation.lng], {
-                color: '#3498db',
-                fillColor: '#3498db',
-                fillOpacity: 0.1,
-                radius: workLocation.radius
-            }).addTo(employeeMap);
-            
-            const radiusElement = document.getElementById('workRadius');
-            if (radiusElement) {
-                radiusElement.textContent = workLocation.radius;
-            }
-        }
-        
-        function startLocationTracking() {
-            if (!navigator.geolocation) {
-                updateGPSStatus('المتصفح لا يدعم تحديد الموقع', 'danger');
-                return;
-            }
-            
-            if (locationWatchId) {
-                navigator.geolocation.clearWatch(locationWatchId);
-            }
-            
-            locationWatchId = navigator.geolocation.watchPosition(
-                (position) => {
-                    currentPosition = {
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude,
-                        accuracy: position.coords.accuracy,
-                        timestamp: Date.now()
-                    };
-                    
-                    updateGPSStatus('تم تحديد موقعك بنجاح', 'success');
-                    document.getElementById('gpsAccuracy').textContent = Math.round(position.coords.accuracy) + ' متر';
-                    
-                    if (workLocation) {
-                        const distance = calculateDistance(
-                            currentPosition.lat,
-                            currentPosition.lng,
-                            workLocation.lat,
-                            workLocation.lng
-                        );
-                        
-                        document.getElementById('distanceFromWork').textContent = Math.round(distance) + ' متر';
-                        document.getElementById('mapDistance').textContent = Math.round(distance) + ' متر';
-                        checkLocationRange(distance);
-                    }
-                    
-                    updateMapWithCurrentLocation();
-                    saveLocationToFirebase();
-                    document.getElementById('lastLocationUpdate').textContent = new Date().toLocaleTimeString('ar-SA');
-                },
-                (error) => {
-                    let errorMessage = 'فشل في تحديد الموقع';
-                    if (error.code === error.PERMISSION_DENIED) errorMessage = 'تم رفض الإذن للوصول إلى الموقع';
-                    else if (error.code === error.POSITION_UNAVAILABLE) errorMessage = 'معلومات الموقع غير متاحة';
-                    else if (error.code === error.TIMEOUT) errorMessage = 'انتهت مهلة طلب الموقع';
-                    updateGPSStatus(errorMessage, 'danger');
-                },
-                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        // Logic for Employee Page
+        const user = JSON.parse(localStorage.getItem('currentUser'));
+        if(!user || user.role !== 'employee') window.location.href = 'index.html';
+
+        document.getElementById('userNameDisplay').innerText = user.name;
+        document.getElementById('userNameMobile').innerText = 'مرحباً ' + user.name;
+
+        // دالة يتم استدعاؤها من script.js عند تحديث الموقع
+        window.checkDistanceLogic = function(userPos, workPos, radius) {
+            const distance = google.maps.geometry.spherical.computeDistanceBetween(
+                new google.maps.LatLng(userPos),
+                new google.maps.LatLng(workPos)
             );
-        }
-        
-        function updateGPSStatus(message, type) {
-            const gpsAlert = document.getElementById('gpsAlert');
-            const gpsText = document.getElementById('gpsText');
-            gpsAlert.className = `gps-alert alert-${type}`;
-            gpsText.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'}"></i> ${message}`;
-        }
-        
-        function checkLocationRange(distance) {
-            const checkInBtn = document.getElementById('checkInBtn');
-            const checkOutBtn = document.getElementById('checkOutBtn');
             
-            if (distance <= workLocation.radius) {
-                if (!todayCheckIn) {
-                    checkInBtn.disabled = false;
-                    checkOutBtn.disabled = true;
-                } else if (!todayCheckOut) {
-                    checkInBtn.disabled = true;
-                    checkOutBtn.disabled = false;
-                } else {
-                    checkInBtn.disabled = true;
-                    checkOutBtn.disabled = true;
-                }
+            document.getElementById('distanceText').innerText = `تبعد ${Math.round(distance)} متر عن العمل`;
+            
+            const inBtn = document.getElementById('checkInBtn');
+            const outBtn = document.getElementById('checkOutBtn');
+            
+            if(distance <= radius) {
+                inBtn.disabled = false;
+                outBtn.disabled = false;
+                inBtn.style.opacity = "1";
+                outBtn.style.opacity = "1";
             } else {
-                checkInBtn.disabled = true;
-                checkOutBtn.disabled = true;
+                inBtn.disabled = true;
+                outBtn.disabled = true;
+                inBtn.style.opacity = "0.5";
+                outBtn.style.opacity = "0.5";
             }
-        }
-        
-        function updateMapWithCurrentLocation() {
-            if (!employeeMap || !currentPosition) return;
-            
-            if (window.currentLocationMarker) {
-                window.currentLocationMarker.setLatLng([currentPosition.lat, currentPosition.lng]);
-            } else {
-                window.currentLocationMarker = L.marker([currentPosition.lat, currentPosition.lng]).addTo(employeeMap);
-                window.accuracyCircle = L.circle([currentPosition.lat, currentPosition.lng], {
-                    color: '#2ecc71',
-                    fillColor: '#2ecc71',
-                    fillOpacity: 0.2,
-                    radius: currentPosition.accuracy || 20
-                }).addTo(employeeMap);
-            }
-            
-            if (window.accuracyCircle) {
-                window.accuracyCircle.setRadius(currentPosition.accuracy || 20);
-                window.accuracyCircle.setLatLng([currentPosition.lat, currentPosition.lng]);
-            }
-            
-            employeeMap.setView([currentPosition.lat, currentPosition.lng], 16);
-        }
-        
-        function saveLocationToFirebase() {
-            if (!currentPosition || !currentUser) return;
-            database.ref(`locations/${currentUser.id}`).set({
-                lat: currentPosition.lat,
-                lng: currentPosition.lng,
-                accuracy: currentPosition.accuracy,
-                timestamp: firebase.database.ServerValue.TIMESTAMP
-            });
-        }
-        
-        document.getElementById('checkInBtn').addEventListener('click', async function() {
-            if (!currentPosition) {
-                showNotification('لم يتم تحديد موقعك بعد', 'warning');
-                return;
-            }
-            
-            const now = Date.now();
-            const today = new Date().toISOString().split('T')[0];
-            
-            if (todayCheckIn) {
-                showNotification('لقد سجلت دخولك بالفعل اليوم', 'warning');
-                return;
-            }
-            
-            const attendanceData = {
-                employeeId: currentUser.id,
-                type: 'checkin',
-                timestamp: now,
-                date: today,
-                location: { lat: currentPosition.lat, lng: currentPosition.lng },
-                accuracy: currentPosition.accuracy,
-                distance: calculateDistance(currentPosition.lat, currentPosition.lng, workLocation.lat, workLocation.lng)
-            };
-            
-            try {
-                await database.ref(`attendance/${currentUser.id}/${now}`).set(attendanceData);
-                todayCheckIn = now;
-                document.getElementById('checkInTime').textContent = new Date(now).toLocaleTimeString('ar-SA');
-                updateStatus();
-                checkLocationRange(attendanceData.distance);
-                showNotification('تم تسجيل الدخول بنجاح', 'success');
-                loadAttendanceHistory();
-                loadMonthlyStatistics();
-                document.getElementById('statusBadge').classList.add('pulse');
-            } catch (error) {
-                console.error('Error checking in:', error);
-                showNotification('حدث خطأ في تسجيل الدخول', 'danger');
-            }
-        });
-        
-        document.getElementById('checkOutBtn').addEventListener('click', async function() {
-            if (!currentPosition) {
-                showNotification('لم يتم تحديد موقعك بعد', 'warning');
-                return;
-            }
-            
-            if (!todayCheckIn) {
-                showNotification('يجب تسجيل الدخول أولا', 'warning');
-                return;
-            }
-            
-            if (todayCheckOut) {
-                showNotification('لقد سجلت خروجك بالفعل اليوم', 'warning');
-                return;
-            }
-            
-            const now = Date.now();
-            const today = new Date().toISOString().split('T')[0];
-            
-            const attendanceData = {
-                employeeId: currentUser.id,
-                type: 'checkout',
-                timestamp: now,
-                date: today,
-                location: { lat: currentPosition.lat, lng: currentPosition.lng },
-                accuracy: currentPosition.accuracy,
-                distance: calculateDistance(currentPosition.lat, currentPosition.lng, workLocation.lat, workLocation.lng)
-            };
-            
-            try {
-                await database.ref(`attendance/${currentUser.id}/${now}`).set(attendanceData);
-                todayCheckOut = now;
-                document.getElementById('checkOutTime').textContent = new Date(now).toLocaleTimeString('ar-SA');
-                updateWorkHours();
-                updateStatus();
-                checkLocationRange(attendanceData.distance);
-                showNotification('تم تسجيل الخروج بنجاح', 'success');
-                loadAttendanceHistory();
-                loadMonthlyStatistics();
-            } catch (error) {
-                console.error('Error checking out:', error);
-                showNotification('حدث خطأ في تسجيل الخروج', 'danger');
-            }
-        });
-        
-        function updateStatus() {
-            const statusBadge = document.getElementById('statusBadge');
-            const statusText = document.getElementById('statusText');
-            
-            if (todayCheckIn && todayCheckOut) {
-                statusBadge.className = 'status-badge present';
-                statusText.textContent = 'انتهى العمل';
-            } else if (todayCheckIn) {
-                statusBadge.className = 'status-badge present';
-                statusText.textContent = 'حاضر الآن';
-            } else {
-                statusBadge.className = 'status-badge absent';
-                statusText.textContent = 'لم يتم التسجيل';
-            }
-        }
-        
-        function updateWorkHours() {
-            if (todayCheckIn && todayCheckOut) {
-                const diffMs = todayCheckOut - todayCheckIn;
-                const diffHrs = Math.floor(diffMs / 3600000);
-                const diffMins = Math.floor((diffMs % 3600000) / 60000);
-                document.getElementById('workHours').textContent = `${diffHrs} ساعة ${diffMins} دقيقة`;
-            }
-        }
-        
-        async function loadTodayAttendance() {
-            const today = new Date().toISOString().split('T')[0];
-            try {
-                const snapshot = await database.ref(`attendance/${currentUser.id}`).orderByChild('date').equalTo(today).once('value');
-                if (snapshot.exists()) {
-                    const records = snapshot.val();
-                    Object.keys(records).forEach(timestamp => {
-                        const record = records[timestamp];
-                        if (record.type === 'checkin') {
-                            todayCheckIn = parseInt(timestamp);
-                            document.getElementById('checkInTime').textContent = new Date(parseInt(timestamp)).toLocaleTimeString('ar-SA');
-                        } else if (record.type === 'checkout') {
-                            todayCheckOut = parseInt(timestamp);
-                            document.getElementById('checkOutTime').textContent = new Date(parseInt(timestamp)).toLocaleTimeString('ar-SA');
-                        }
-                    });
-                    updateStatus();
-                    updateWorkHours();
-                }
-            } catch (error) {
-                console.error('Error loading today attendance:', error);
-            }
-        }
-        
-        async function loadAttendanceHistory() {
-            const tbody = document.getElementById('historyTableBody');
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</td></tr>';
-            
-            try {
-                const snapshot = await database.ref(`attendance/${currentUser.id}`).orderByChild('timestamp').limitToLast(50).once('value');
-                
-                if (!snapshot.exists()) {
-                    tbody.innerHTML = '<tr><td colspan="6" class="text-center">لا توجد سجلات</td></tr>';
-                    return;
-                }
-                
-                const records = snapshot.val();
-                const dailyRecords = {};
-                
-                Object.keys(records).forEach(timestamp => {
-                    const record = records[timestamp];
-                    const date = record.date;
-                    
-                    if (!dailyRecords[date]) {
-                        dailyRecords[date] = { checkin: null, checkout: null };
-                    }
-                    
-                    if (record.type === 'checkin') {
-                        dailyRecords[date].checkin = parseInt(timestamp);
-                        dailyRecords[date].distance = record.distance;
-                    } else if (record.type === 'checkout') {
-                        dailyRecords[date].checkout = parseInt(timestamp);
-                    }
-                });
-                
-                tbody.innerHTML = '';
-                const sortedDates = Object.keys(dailyRecords).sort().reverse();
-                
-                sortedDates.slice(0, 10).forEach(date => {
-                    const record = dailyRecords[date];
-                    const checkInTime = record.checkin ? new Date(record.checkin).toLocaleTimeString('ar-SA') : '--:--:--';
-                    const checkOutTime = record.checkout ? new Date(record.checkout).toLocaleTimeString('ar-SA') : '--:--:--';
-                    
-                    let workHours = '--';
-                    let status = 'غائب';
-                    let statusClass = 'badge bg-danger';
-                    
-                    if (record.checkin && record.checkout) {
-                        const diffMs = record.checkout - record.checkin;
-                        const diffHrs = Math.floor(diffMs / 3600000);
-                        const diffMins = Math.floor((diffMs % 3600000) / 60000);
-                        workHours = `${diffHrs}:${diffMins.toString().padStart(2, '0')}`;
-                        status = 'حاضر';
-                        statusClass = 'badge bg-success';
-                    } else if (record.checkin) {
-                        status = 'لم ينصرف';
-                        statusClass = 'badge bg-warning';
-                    }
-                    
-                    const formattedDate = new Date(date).toLocaleDateString('ar-SA');
-                    const distance = record.distance ? Math.round(record.distance) + ' متر' : '--';
-                    
-                    tbody.innerHTML += `
-                        <tr>
-                            <td>${formattedDate}</td>
-                            <td>${checkInTime}</td>
-                            <td>${checkOutTime}</td>
-                            <td>${workHours}</td>
-                            <td><span class="${statusClass}">${status}</span></td>
-                            <td>${distance}</td>
-                        </tr>
-                    `;
-                });
-                
-            } catch (error) {
-                console.error('Error loading history:', error);
-                tbody.innerHTML = '<tr><td colspan="6" class="text-center text-danger">حدث خطأ في تحميل السجلات</td></tr>';
-            }
-        }
-        
-        async function loadMonthlyStatistics() {
+        };
+
+        // Check-in/out Handlers (Simple Implementation)
+        document.getElementById('checkInBtn').onclick = () => registerAction('checkin');
+        document.getElementById('checkOutBtn').onclick = () => registerAction('checkout');
+
+        async function registerAction(type) {
             const now = new Date();
-            const currentMonth = now.getMonth();
-            const currentYear = now.getFullYear();
+            const timestamp = now.getTime();
+            const dateStr = now.toISOString().split('T')[0];
             
-            try {
-                const snapshot = await database.ref(`attendance/${currentUser.id}`).once('value');
-                
-                if (!snapshot.exists()) {
-                    document.getElementById('statPresentDays').textContent = '0';
-                    document.getElementById('statAbsentDays').textContent = '0';
-                    document.getElementById('statLateDays').textContent = '0';
-                    document.getElementById('statTotalHours').textContent = '0';
-                    return;
-                }
-                
-                const records = snapshot.val();
-                const monthlyRecords = {};
-                let totalHours = 0;
-                let presentDays = 0;
-                let lateDays = 0;
-                
-                Object.keys(records).forEach(timestamp => {
-                    const record = records[timestamp];
-                    const recordDate = new Date(record.date);
-                    
-                    if (recordDate.getFullYear() === currentYear && recordDate.getMonth() === currentMonth) {
-                        const date = record.date;
-                        
-                        if (!monthlyRecords[date]) {
-                            monthlyRecords[date] = { checkin: null, checkout: null };
-                        }
-                        
-                        if (record.type === 'checkin') {
-                            monthlyRecords[date].checkin = parseInt(timestamp);
-                            
-                            const checkInTime = new Date(record.timestamp);
-                            const checkInHour = checkInTime.getHours();
-                            const checkInMinute = checkInTime.getMinutes();
-                            
-                            if (checkInHour > 8 || (checkInHour === 8 && checkInMinute > 30)) {
-                                lateDays++;
-                            }
-                        } else if (record.type === 'checkout') {
-                            monthlyRecords[date].checkout = parseInt(timestamp);
-                        }
-                    }
-                });
-                
-                Object.keys(monthlyRecords).forEach(date => {
-                    const record = monthlyRecords[date];
-                    if (record.checkin) {
-                        presentDays++;
-                        if (record.checkout) {
-                            const diffMs = record.checkout - record.checkin;
-                            totalHours += diffMs / 3600000;
-                        }
-                    }
-                });
-                
-                const workDays = 22;
-                const absentDays = workDays - presentDays;
-                
-                document.getElementById('statPresentDays').textContent = presentDays;
-                document.getElementById('statAbsentDays').textContent = absentDays;
-                document.getElementById('statLateDays').textContent = lateDays;
-                document.getElementById('statTotalHours').textContent = Math.round(totalHours);
-                
-            } catch (error) {
-                console.error('Error loading monthly stats:', error);
+            await database.ref(`attendance/${user.id}/${timestamp}`).set({
+                type: type,
+                time: timestamp,
+                date: dateStr,
+                location: window.currentPos || 'GPS'
+            });
+            
+            showNotification(type === 'checkin' ? 'تم تسجيل الدخول' : 'تم تسجيل الخروج', 'success');
+            updateUI(type, now);
+        }
+
+        function updateUI(type, date) {
+            const timeStr = date.toLocaleTimeString('ar-SA');
+            if(type === 'checkin') {
+                document.getElementById('inTime').innerText = timeStr;
+                document.getElementById('statusBadge').className = 'status-pill present';
+                document.getElementById('statusBadge').innerText = 'حاضر';
+            } else {
+                document.getElementById('outTime').innerText = timeStr;
             }
         }
-        
-        document.getElementById('refreshHistoryBtn').addEventListener('click', loadAttendanceHistory);
-        
-        document.getElementById('logoutBtn').addEventListener('click', function() {
-            if (confirm('هل تريد تسجيل الخروج؟')) {
-                localStorage.removeItem('currentUser');
-                window.location.href = 'index.html';
-            }
-        });
-        
-        window.addEventListener('load', async function() {
-            try {
-                currentUser = checkUserSession();
-                if (!currentUser) return;
-                
-                await loadEmployeeData();
-                updateDateTime();
-                setInterval(updateDateTime, 1000);
-                
-                initializeMap();
-                startLocationTracking();
-                
-                await loadTodayAttendance();
-                await loadAttendanceHistory();
-                await loadMonthlyStatistics();
-                
-                document.getElementById('loadingOverlay').style.display = 'none';
-            } catch (error) {
-                console.error('خطأ في تهيئة التطبيق:', error);
-                showNotification('حدث خطأ في تحميل البيانات', 'danger');
-                document.getElementById('loadingOverlay').style.display = 'none';
-            }
-        });
     </script>
 </body>
 </html>
