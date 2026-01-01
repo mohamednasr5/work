@@ -1,0 +1,2064 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة تحكم المدير - نظام الحضور والانصراف الذكي</title>
+    
+    <!-- Bootstrap 5 Arabic -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap RTL -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-rtl@0.4.0/dist/css/bootstrap-rtl.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --success-color: #2ecc71;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --info-color: #1abc9c;
+            --dark-color: #34495e;
+            --light-color: #ecf0f1;
+        }
+        
+        * {
+            font-family: 'Cairo', sans-serif;
+        }
+        
+        body {
+            background-color: #f8f9fa;
+            min-height: 100vh;
+        }
+        
+        /* Loading Overlay */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        
+        /* Navbar */
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, #1a2530 100%);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+            padding: 15px 0;
+        }
+        
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.6rem;
+            background: linear-gradient(45deg, #fff, #3498db);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        /* Sidebar */
+        .sidebar {
+            background: linear-gradient(180deg, #2c3e50 0%, #1a2530 100%);
+            min-height: calc(100vh - 70px);
+            padding: 20px 0;
+            position: sticky;
+            top: 70px;
+            box-shadow: 3px 0 15px rgba(0, 0, 0, 0.1);
+        }
+        
+        .nav-pills .nav-link {
+            color: rgba(255, 255, 255, 0.8);
+            border-radius: 10px;
+            padding: 15px 20px;
+            margin: 5px 15px;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+        }
+        
+        .nav-pills .nav-link:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            transform: translateX(-5px);
+        }
+        
+        .nav-pills .nav-link.active {
+            background: linear-gradient(45deg, var(--secondary-color), #2980b9);
+            color: white;
+            font-weight: 600;
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        .nav-pills .nav-link i {
+            margin-left: 12px;
+            font-size: 1.2rem;
+        }
+        
+        /* Main Content */
+        .main-content {
+            padding: 30px;
+            min-height: calc(100vh - 70px);
+        }
+        
+        /* Stats Cards */
+        .stat-card {
+            text-align: center;
+            padding: 25px 20px;
+            border-radius: 15px;
+            margin-bottom: 25px;
+            color: white;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .stat-card.present {
+            background: linear-gradient(135deg, #2ecc71, #27ae60);
+        }
+        
+        .stat-card.absent {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+        }
+        
+        .stat-card.late {
+            background: linear-gradient(135deg, #f39c12, #d35400);
+        }
+        
+        .stat-card.total {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+        }
+        
+        .stat-card .stat-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.9;
+        }
+        
+        .stat-card h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin: 10px 0;
+        }
+        
+        /* Cards */
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            margin-bottom: 30px;
+            transition: all 0.3s;
+        }
+        
+        .card:hover {
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+        }
+        
+        .card-header {
+            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
+            border-bottom: 2px solid #e9ecef;
+            border-radius: 15px 15px 0 0 !important;
+            padding: 20px;
+            font-weight: 700;
+            color: var(--primary-color);
+            font-size: 1.1rem;
+        }
+        
+        .card-header i {
+            margin-left: 10px;
+            color: var(--secondary-color);
+        }
+        
+        /* Tables */
+        .table {
+            margin: 0;
+        }
+        
+        .table thead th {
+            background: linear-gradient(90deg, #f8f9fa, #e9ecef);
+            color: var(--primary-color);
+            font-weight: 700;
+            border-bottom: 2px solid #dee2e6;
+            padding: 15px;
+        }
+        
+        .table tbody td {
+            padding: 15px;
+            vertical-align: middle;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .table tbody tr:hover {
+            background-color: rgba(52, 152, 219, 0.05);
+        }
+        
+        /* Badges */
+        .badge-present {
+            background-color: #d4edda;
+            color: #155724;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        
+        .badge-absent {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        
+        .badge-late {
+            background-color: #fff3cd;
+            color: #856404;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+        }
+        
+        /* Map Container */
+        .map-container {
+            height: 400px;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid #dee2e6;
+            background: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .map-placeholder {
+            text-align: center;
+            color: #6c757d;
+        }
+        
+        .map-placeholder i {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background: linear-gradient(45deg, var(--secondary-color), #2980b9);
+            border: none;
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-weight: 600;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+        
+        /* Responsive */
+        @media (max-width: 992px) {
+            .sidebar {
+                position: static;
+                min-height: auto;
+            }
+            
+            .main-content {
+                padding: 20px;
+            }
+            
+            .map-container {
+                height: 300px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .stat-card {
+                margin-bottom: 15px;
+            }
+            
+            .stat-card h2 {
+                font-size: 2rem;
+            }
+        }
+        
+        /* Notifications */
+        .notification-badge {
+            position: absolute;
+            top: -5px;
+            left: -5px;
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Search Box */
+        .search-box {
+            position: relative;
+        }
+        
+        .search-box input {
+            padding-right: 40px;
+            border-radius: 25px;
+        }
+        
+        .search-box i {
+            position: absolute;
+            right: 15px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="spinner-border text-primary" style="width: 4rem; height: 4rem;"></div>
+        <h5 class="mt-4 text-primary">جاري تحميل لوحة التحكم...</h5>
+        <p class="text-muted mt-2">الرجاء الانتظار</p>
+    </div>
+    
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-chart-network me-2"></i>
+                لوحة تحكم المدير
+            </a>
+            
+            <div class="d-flex align-items-center">
+                <!-- Current Time -->
+                <div class="text-white me-4 d-none d-md-block">
+                    <i class="fas fa-clock me-2"></i>
+                    <span id="currentTime">--:--:--</span>
+                    <div id="currentDate" class="small opacity-75"></div>
+                </div>
+                
+                <!-- Notifications -->
+                <div class="dropdown me-3">
+                    <button class="btn btn-outline-light position-relative" type="button" id="notificationsDropdown" data-bs-toggle="dropdown">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge" id="notificationCount">3</span>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end" style="min-width: 350px;">
+                        <li class="dropdown-header">الإشعارات</li>
+                        <li>
+                            <a class="dropdown-item" href="#">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-user-clock text-warning"></i>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <p class="mb-0"><strong>موظف متأخر</strong></p>
+                                        <small class="text-muted">منذ 45 دقيقة</small>
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#">
+                                <div class="d-flex align-items-start">
+                                    <div class="flex-shrink-0">
+                                        <i class="fas fa-user-check text-success"></i>
+                                    </div>
+                                    <div class="flex-grow-1 ms-3">
+                                        <p class="mb-0"><strong>تم تسجيل حضور جديد</strong></p>
+                                        <small class="text-muted">منذ 10 دقائق</small>
+                                    </div>
+                                </div>
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item text-center" href="#">عرض جميع الإشعارات</a></li>
+                    </ul>
+                </div>
+                
+                <!-- User Menu -->
+                <div class="dropdown">
+                    <button class="btn btn-outline-light dropdown-toggle d-flex align-items-center" type="button" id="userDropdown" data-bs-toggle="dropdown">
+                        <div class="me-2 d-none d-md-block">
+                            <span id="adminName">المدير العام</span>
+                        </div>
+                        <i class="fas fa-user-circle fa-lg"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li class="dropdown-header">
+                            <span id="dropdownAdminName">المدير العام</span>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item" href="settings.html">
+                                <i class="fas fa-cogs me-2"></i>
+                                إعدادات النظام
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                                <i class="fas fa-key me-2"></i>
+                                تغيير كلمة المرور
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="#" id="logoutBtn">
+                                <i class="fas fa-sign-out-alt me-2"></i>
+                                تسجيل الخروج
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <div class="col-lg-3 col-xl-2">
+                <div class="sidebar">
+                    <ul class="nav nav-pills flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link active" href="#" data-section="dashboard">
+                                <i class="fas fa-tachometer-alt"></i>
+                                الرئيسية
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="map">
+                                <i class="fas fa-map-marked-alt"></i>
+                                الخريطة المباشرة
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="employees">
+                                <i class="fas fa-users"></i>
+                                إدارة الموظفين
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-section="attendance">
+                                <i class="fas fa-clipboard-check"></i>
+                                سجلات الحضور
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="reports.html">
+                                <i class="fas fa-chart-bar"></i>
+                                التقارير
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="settings.html">
+                                <i class="fas fa-cog"></i>
+                                الإعدادات
+                            </a>
+                        </li>
+                    </ul>
+                    
+                    <!-- System Status -->
+                    <div class="mt-4 px-3">
+                        <div class="text-white-50 small mb-2">حالة النظام</div>
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <span class="text-white-50">قاعدة البيانات</span>
+                            <div class="d-flex align-items-center">
+                                <span class="text-success me-2" id="dbStatus">متصل</span>
+                                <div class="spinner-grow spinner-grow-sm text-success" id="dbStatusIndicator"></div>
+                            </div>
+                        </div>
+                        <div class="d-flex align-items-center justify-content-between">
+                            <span class="text-white-50">GPS</span>
+                            <span class="text-success" id="gpsStatus">نشط</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Main Content -->
+            <div class="col-lg-9 col-xl-10">
+                <div class="main-content">
+                    <!-- Dashboard Section -->
+                    <div id="dashboardSection" class="section-content">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <h3 class="text-primary mb-1">
+                                    <i class="fas fa-tachometer-alt me-2"></i>
+                                    لوحة التحكم الرئيسية
+                                </h3>
+                                <p class="text-muted mb-0">نظرة عامة على أداء النظام وإحصائيات الحضور</p>
+                            </div>
+                            <div class="search-box">
+                                <input type="text" class="form-control" id="searchInput" placeholder="بحث...">
+                                <i class="fas fa-search"></i>
+                            </div>
+                        </div>
+                        
+                        <!-- Stats Cards -->
+                        <div class="row">
+                            <div class="col-xl-3 col-md-6">
+                                <div class="stat-card present">
+                                    <i class="fas fa-user-check stat-icon"></i>
+                                    <h2 id="presentCount">0</h2>
+                                    <p>موظف حاضر الآن</p>
+                                    <div class="small mt-2 opacity-75">
+                                        <i class="fas fa-arrow-up me-1"></i>
+                                        <span id="presentChange">+2 من الأمس</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-xl-3 col-md-6">
+                                <div class="stat-card absent">
+                                    <i class="fas fa-user-times stat-icon"></i>
+                                    <h2 id="absentCount">0</h2>
+                                    <p>موظف غائب</p>
+                                    <div class="small mt-2 opacity-75">
+                                        <i class="fas fa-arrow-down me-1"></i>
+                                        <span id="absentChange">-1 من الأمس</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-xl-3 col-md-6">
+                                <div class="stat-card late">
+                                    <i class="fas fa-clock stat-icon"></i>
+                                    <h2 id="lateCount">0</h2>
+                                    <p>متأخر اليوم</p>
+                                    <div class="small mt-2 opacity-75">
+                                        <i class="fas fa-arrow-down me-1"></i>
+                                        <span id="lateChange">-3 من الأمس</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-xl-3 col-md-6">
+                                <div class="stat-card total">
+                                    <i class="fas fa-users stat-icon"></i>
+                                    <h2 id="totalEmployees">0</h2>
+                                    <p>إجمالي الموظفين</p>
+                                    <div class="small mt-2 opacity-75">
+                                        <i class="fas fa-user-plus me-1"></i>
+                                        <span id="employeesChange">+1 جديد</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Map and Recent Activity -->
+                        <div class="row mt-4">
+                            <div class="col-lg-8">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="fas fa-map-marked-alt"></i>
+                                            خريطة موقع العمل والموظفين
+                                        </div>
+                                        <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#workLocationModal">
+                                            <i class="fas fa-edit me-1"></i>
+                                            تعديل الموقع
+                                        </button>
+                                    </div>
+                                    <div class="card-body p-0">
+                                        <div class="map-container">
+                                            <div class="map-placeholder">
+                                                <i class="fas fa-map-marked-alt"></i>
+                                                <h5>خريطة مواقع الموظفين</h5>
+                                                <p>يتم عرض مواقع الموظفين في الوقت الفعلي</p>
+                                                <button class="btn btn-primary mt-2" id="loadMapBtn">
+                                                    <i class="fas fa-map me-2"></i>
+                                                    تحميل الخريطة
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div class="p-3 border-top">
+                                            <div class="row">
+                                                <div class="col-md-6">
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="text-muted">داخل نطاق العمل:</span>
+                                                        <strong id="employeesInRange">0</strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="text-muted">خارج نطاق العمل:</span>
+                                                        <strong id="employeesOutRange">0</strong>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-6">
+                                                    <div class="d-flex justify-content-between mb-2">
+                                                        <span class="text-muted">نطاق التسجيل:</span>
+                                                        <strong id="currentRadius">20 متر</strong>
+                                                    </div>
+                                                    <div class="d-flex justify-content-between">
+                                                        <span class="text-muted">آخر تحديث:</span>
+                                                        <strong id="lastLocationUpdate">--:--:--</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-lg-4">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="fas fa-history"></i>
+                                            آخر الحركات
+                                        </div>
+                                        <button class="btn btn-sm btn-primary" id="refreshActivityBtn">
+                                            <i class="fas fa-sync-alt"></i>
+                                        </button>
+                                    </div>
+                                    <div class="card-body" style="max-height: 400px; overflow-y: auto;">
+                                        <div id="recentActivityList">
+                                            <div class="activity-item mb-3">
+                                                <div class="d-flex">
+                                                    <div class="flex-shrink-0">
+                                                        <div class="rounded-circle bg-success text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                            <i class="fas fa-user-check"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex-grow-1 ms-3">
+                                                        <h6 class="mb-0">أحمد محمد</h6>
+                                                        <p class="text-muted mb-1">سجل دخول الساعة 08:15</p>
+                                                        <small class="text-muted">منذ 5 دقائق</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="activity-item mb-3">
+                                                <div class="d-flex">
+                                                    <div class="flex-shrink-0">
+                                                        <div class="rounded-circle bg-warning text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                            <i class="fas fa-clock"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex-grow-1 ms-3">
+                                                        <h6 class="mb-0">سارة عبدالله</h6>
+                                                        <p class="text-muted mb-1">سجل دخول متأخر الساعة 08:45</p>
+                                                        <small class="text-muted">منذ 30 دقيقة</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="activity-item mb-3">
+                                                <div class="d-flex">
+                                                    <div class="flex-shrink-0">
+                                                        <div class="rounded-circle bg-danger text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                                            <i class="fas fa-user-times"></i>
+                                                        </div>
+                                                    </div>
+                                                    <div class="flex-grow-1 ms-3">
+                                                        <h6 class="mb-0">خالد سعود</h6>
+                                                        <p class="text-muted mb-1">لم يسجل حضور اليوم</p>
+                                                        <small class="text-muted">منذ ساعتين</small>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Recent Attendance -->
+                        <div class="row mt-4">
+                            <div class="col-12">
+                                <div class="card">
+                                    <div class="card-header d-flex justify-content-between align-items-center">
+                                        <div>
+                                            <i class="fas fa-table"></i>
+                                            سجلات الحضور اليومية
+                                        </div>
+                                        <div>
+                                            <button class="btn btn-sm btn-outline-primary me-2" id="exportTodayBtn">
+                                                <i class="fas fa-download me-1"></i>
+                                                تصدير
+                                            </button>
+                                            <button class="btn btn-sm btn-primary" id="refreshTodayBtn">
+                                                <i class="fas fa-sync-alt"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>#</th>
+                                                        <th>الموظف</th>
+                                                        <th>القسم</th>
+                                                        <th>وقت الدخول</th>
+                                                        <th>وقت الخروج</th>
+                                                        <th>ساعات العمل</th>
+                                                        <th>الحالة</th>
+                                                        <th>الإجراءات</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="todayAttendanceTable">
+                                                    <tr>
+                                                        <td colspan="8" class="text-center text-muted">
+                                                            جاري تحميل بيانات اليوم...
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Map Section -->
+                    <div id="mapSection" class="section-content" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <h3 class="text-primary mb-1">
+                                    <i class="fas fa-map-marked-alt me-2"></i>
+                                    الخريطة المباشرة
+                                </h3>
+                                <p class="text-muted mb-0">تتبع مواقع الموظفين في الوقت الفعلي</p>
+                            </div>
+                            <div class="d-flex" style="gap: 10px;">
+                                <button class="btn btn-outline-primary" id="centerMapBtn">
+                                    <i class="fas fa-crosshairs me-2"></i>
+                                    مركز الخريطة
+                                </button>
+                                <button class="btn btn-primary" id="reloadMapBtn">
+                                    <i class="fas fa-sync-alt me-2"></i>
+                                    تحديث
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-body p-0">
+                                <div class="map-container" style="height: 500px;">
+                                    <div class="map-placeholder">
+                                        <i class="fas fa-map-marked-alt fa-3x"></i>
+                                        <h4 class="mt-3">خريطة المواقع المباشرة</h4>
+                                        <p class="text-muted">يتم عرض مواقع الموظفين الحاليين على الخريطة</p>
+                                        <button class="btn btn-primary mt-2" id="loadLiveMapBtn">
+                                            <i class="fas fa-play me-2"></i>
+                                            تشغيل الخريطة
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-4">
+                            <div class="col-lg-8">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-user-friends"></i>
+                                        قائمة المواقع
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="table-responsive">
+                                            <table class="table table-hover">
+                                                <thead>
+                                                    <tr>
+                                                        <th>#</th>
+                                                        <th>الموظف</th>
+                                                        <th>القسم</th>
+                                                        <th>الحالة</th>
+                                                        <th>آخر تحديث</th>
+                                                        <th>المسافة</th>
+                                                        <th>الإجراءات</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="employeesLocationTable">
+                                                    <tr>
+                                                        <td colspan="7" class="text-center text-muted">
+                                                            جاري تحميل بيانات المواقع...
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-lg-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <i class="fas fa-chart-line"></i>
+                                        إحصائيات التتبع
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <span>يتم تتبعهم الآن:</span>
+                                            <strong id="trackingNow">0</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <span>دقة GPS المتوسطة:</span>
+                                            <strong id="avgGpsAccuracy">-- متر</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <span>داخل نطاق العمل:</span>
+                                            <strong id="inRangeCount">0</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between mb-3">
+                                            <span>خارج نطاق العمل:</span>
+                                            <strong id="outRangeCount">0</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between">
+                                            <span>آخر تحديث:</span>
+                                            <strong id="mapLastUpdate">--:--:--</strong>
+                                        </div>
+                                        
+                                        <hr class="my-4">
+                                        
+                                        <div class="mb-3">
+                                            <label class="form-label">فلترة حسب القسم</label>
+                                            <select class="form-control" id="departmentFilter">
+                                                <option value="all">الكل</option>
+                                                <option value="تقنية المعلومات">تقنية المعلومات</option>
+                                                <option value="الموارد البشرية">الموارد البشرية</option>
+                                                <option value="المبيعات">المبيعات</option>
+                                                <option value="التسويق">التسويق</option>
+                                            </select>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <label class="form-label">فلترة حسب الحالة</label>
+                                            <div class="d-flex flex-wrap" style="gap: 10px;">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="filterPresent" checked>
+                                                    <label class="form-check-label" for="filterPresent">
+                                                        <span class="badge badge-present">حاضر</span>
+                                                    </label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="filterAbsent" checked>
+                                                    <label class="form-check-label" for="filterAbsent">
+                                                        <span class="badge badge-absent">غائب</span>
+                                                    </label>
+                                                </div>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" id="filterLate" checked>
+                                                    <label class="form-check-label" for="filterLate">
+                                                        <span class="badge badge-late">متأخر</span>
+                                                    </label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <button class="btn btn-primary w-100" id="applyFiltersBtn">
+                                            <i class="fas fa-filter me-2"></i>
+                                            تطبيق الفلاتر
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Employees Section -->
+                    <div id="employeesSection" class="section-content" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <h3 class="text-primary mb-1">
+                                    <i class="fas fa-users me-2"></i>
+                                    إدارة الموظفين
+                                </h3>
+                                <p class="text-muted mb-0">عرض وإدارة بيانات جميع الموظفين</p>
+                            </div>
+                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addEmployeeModal">
+                                <i class="fas fa-plus me-2"></i>
+                                إضافة موظف جديد
+                            </button>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-list"></i>
+                                    قائمة الموظفين
+                                </div>
+                                <div class="d-flex" style="gap: 10px;">
+                                    <div class="search-box">
+                                        <input type="text" class="form-control form-control-sm" id="searchEmployeeInput" placeholder="بحث عن موظف...">
+                                        <i class="fas fa-search"></i>
+                                    </div>
+                                    <button class="btn btn-sm btn-primary" id="refreshEmployeesBtn">
+                                        <i class="fas fa-sync-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>الصورة</th>
+                                                <th>الاسم</th>
+                                                <th>الرقم الوظيفي</th>
+                                                <th>القسم</th>
+                                                <th>المسمى الوظيفي</th>
+                                                <th>تاريخ التعيين</th>
+                                                <th>الحالة</th>
+                                                <th>الإجراءات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="employeesTable">
+                                            <tr>
+                                                <td colspan="9" class="text-center text-muted">
+                                                    جاري تحميل بيانات الموظفين...
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Attendance Section -->
+                    <div id="attendanceSection" class="section-content" style="display: none;">
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <div>
+                                <h3 class="text-primary mb-1">
+                                    <i class="fas fa-clipboard-check me-2"></i>
+                                    سجلات الحضور
+                                </h3>
+                                <p class="text-muted mb-0">عرض وإدارة سجلات الحضور والانصراف</p>
+                            </div>
+                            <div class="d-flex" style="gap: 10px;">
+                                <button class="btn btn-outline-primary" id="exportAllBtn">
+                                    <i class="fas fa-download me-2"></i>
+                                    تصدير الكل
+                                </button>
+                                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#filterModal">
+                                    <i class="fas fa-filter me-2"></i>
+                                    تصفية
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Filters -->
+                        <div class="card mb-4" id="filterCard" style="display: none;">
+                            <div class="card-body">
+                                <div class="row g-3">
+                                    <div class="col-md-3">
+                                        <label class="form-label">التاريخ من</label>
+                                        <input type="date" class="form-control" id="dateFrom">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">التاريخ إلى</label>
+                                        <input type="date" class="form-control" id="dateTo">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">القسم</label>
+                                        <select class="form-control" id="attendanceDepartmentFilter">
+                                            <option value="">جميع الأقسام</option>
+                                            <option value="تقنية المعلومات">تقنية المعلومات</option>
+                                            <option value="الموارد البشرية">الموارد البشرية</option>
+                                            <option value="المبيعات">المبيعات</option>
+                                            <option value="التسويق">التسويق</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3 d-flex align-items-end">
+                                        <button class="btn btn-primary w-100" id="applyAttendanceFilterBtn">
+                                            <i class="fas fa-filter me-2"></i>
+                                            تطبيق
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Attendance Table -->
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>#</th>
+                                                <th>الموظف</th>
+                                                <th>التاريخ</th>
+                                                <th>وقت الدخول</th>
+                                                <th>وقت الخروج</th>
+                                                <th>ساعات العمل</th>
+                                                <th>الحالة</th>
+                                                <th>المسافة</th>
+                                                <th>الإجراءات</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="allAttendanceTable">
+                                            <tr>
+                                                <td colspan="9" class="text-center text-muted">
+                                                    استخدم عوامل التصفية لعرض البيانات
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modals -->
+    
+    <!-- Work Location Modal -->
+    <div class="modal fade" id="workLocationModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-map-marker-alt me-2"></i>
+                        تعديل موقع العمل
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-lg-8">
+                            <div class="map-container" style="height: 300px;">
+                                <div class="map-placeholder">
+                                    <i class="fas fa-map-marked-alt"></i>
+                                    <p>خريطة تعديل موقع العمل</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4">
+                            <div class="mb-3">
+                                <label class="form-label">إحداثيات الموقع</label>
+                                <div class="row g-2 mb-3">
+                                    <div class="col">
+                                        <input type="text" class="form-control" id="locationLat" placeholder="خط العرض" value="24.7136">
+                                    </div>
+                                    <div class="col">
+                                        <input type="text" class="form-control" id="locationLng" placeholder="خط الطول" value="46.6753">
+                                    </div>
+                                </div>
+                                <button class="btn btn-outline-primary w-100" id="getCurrentLocationBtn">
+                                    <i class="fas fa-location-arrow me-2"></i>
+                                    استخدام موقعي الحالي
+                                </button>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">نطاق التسجيل (متر)</label>
+                                <input type="range" class="form-range" id="radiusRange" min="10" max="200" value="20" step="5">
+                                <div class="d-flex justify-content-between mt-2">
+                                    <span>10</span>
+                                    <strong id="radiusValue">20 متر</strong>
+                                    <span>200</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label class="form-label">اسم الموقع</label>
+                                <input type="text" class="form-control" id="locationName" value="المقر الرئيسي">
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <small>الموظفون خارج النطاق المحدد لن يتمكنوا من تسجيل الحضور.</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" id="saveLocationBtn">
+                        <i class="fas fa-save me-2"></i>
+                        حفظ التغييرات
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Add Employee Modal -->
+    <div class="modal fade" id="addEmployeeModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-user-plus me-2"></i>
+                        إضافة موظف جديد
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="addEmployeeForm">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">الاسم الكامل</label>
+                                    <input type="text" class="form-control" name="name" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">الرقم الوظيفي</label>
+                                    <input type="text" class="form-control" name="employeeId" required>
+                                    <div class="form-text">سيستخدم لتسجيل الدخول</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">القسم</label>
+                                    <select class="form-select" name="department" required>
+                                        <option value="">اختر القسم</option>
+                                        <option value="تقنية المعلومات">تقنية المعلومات</option>
+                                        <option value="الموارد البشرية">الموارد البشرية</option>
+                                        <option value="المبيعات">المبيعات</option>
+                                        <option value="التسويق">التسويق</option>
+                                        <option value="المالية">المالية</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">المسمى الوظيفي</label>
+                                    <input type="text" class="form-control" name="position" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">البريد الإلكتروني</label>
+                                    <input type="email" class="form-control" name="email">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">رقم الهاتف</label>
+                                    <input type="tel" class="form-control" name="phone">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">تاريخ التعيين</label>
+                                    <input type="date" class="form-control" name="hireDate" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label">كلمة المرور</label>
+                                    <input type="password" class="form-control" name="password" required>
+                                    <div class="form-text">يجب أن تكون 6 أحرف على الأقل</div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" id="saveEmployeeBtn">
+                        <i class="fas fa-save me-2"></i>
+                        حفظ الموظف
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filter Modal -->
+    <div class="modal fade" id="filterModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-filter me-2"></i>
+                        تصفية سجلات الحضور
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">الفترة الزمنية</label>
+                        <select class="form-control" id="filterTimePeriod">
+                            <option value="today">اليوم</option>
+                            <option value="week">هذا الأسبوع</option>
+                            <option value="month">هذا الشهر</option>
+                            <option value="last-month">الشهر الماضي</option>
+                            <option value="custom">مخصص</option>
+                        </select>
+                    </div>
+                    
+                    <div id="customDateRange" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label">من تاريخ</label>
+                            <input type="date" class="form-control" id="filterDateFrom">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">إلى تاريخ</label>
+                            <input type="date" class="form-control" id="filterDateTo">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">الحالة</label>
+                        <select class="form-control" id="filterStatus">
+                            <option value="">جميع الحالات</option>
+                            <option value="present">حاضر</option>
+                            <option value="late">متأخر</option>
+                            <option value="absent">غائب</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" id="applyFilterBtn">
+                        <i class="fas fa-check me-2"></i>
+                        تطبيق الفلتر
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Change Password Modal -->
+    <div class="modal fade" id="changePasswordModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-key me-2"></i>
+                        تغيير كلمة المرور
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="changePasswordForm">
+                        <div class="mb-3">
+                            <label class="form-label">كلمة المرور الحالية</label>
+                            <input type="password" class="form-control" id="adminCurrentPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">كلمة المرور الجديدة</label>
+                            <input type="password" class="form-control" id="adminNewPassword" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">تأكيد كلمة المرور الجديدة</label>
+                            <input type="password" class="form-control" id="adminConfirmPassword" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">إلغاء</button>
+                    <button type="button" class="btn btn-primary" id="saveAdminPasswordBtn">
+                        <i class="fas fa-save me-2"></i>
+                        حفظ
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    
+    <script>
+        // Firebase Configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE",
+            authDomain: "hedor-bea3c.firebaseapp.com",
+            databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
+            projectId: "hedor-bea3c",
+            storageBucket: "hedor-bea3c.firebasestorage.app",
+            messagingSenderId: "369239455736",
+            appId: "1:369239455736:web:116295854269abecf6480d",
+            measurementId: "G-R2MG1YKQEP"
+        };
+        
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        
+        // Global Variables
+        let currentUser = null;
+        let employeesData = [];
+        
+        // Check Admin Session
+        function checkAdminSession() {
+            const userData = localStorage.getItem('currentUser');
+            
+            if (!userData) {
+                window.location.href = 'index.html';
+                return null;
+            }
+            
+            const user = JSON.parse(userData);
+            
+            if (user.role !== 'admin') {
+                window.location.href = 'index.html';
+                return null;
+            }
+            
+            return user;
+        }
+        
+        // Update Date and Time
+        function updateDateTime() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('ar-SA');
+            const dateString = now.toLocaleDateString('ar-SA', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+            
+            document.getElementById('currentTime').textContent = timeString;
+            document.getElementById('currentDate').textContent = dateString;
+            
+            // Update last update time
+            const lastUpdate = document.getElementById('lastLocationUpdate');
+            if (lastUpdate) {
+                lastUpdate.textContent = timeString;
+            }
+        }
+        
+        // Setup Navigation
+        function setupNavigation() {
+            const navLinks = document.querySelectorAll('.nav-link[data-section]');
+            
+            navLinks.forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Remove active class from all links
+                    navLinks.forEach(l => l.classList.remove('active'));
+                    
+                    // Add active class to clicked link
+                    this.classList.add('active');
+                    
+                    // Hide all sections
+                    const sections = document.querySelectorAll('.section-content');
+                    sections.forEach(section => {
+                        section.style.display = 'none';
+                    });
+                    
+                    // Show selected section
+                    const sectionId = this.getAttribute('data-section') + 'Section';
+                    document.getElementById(sectionId).style.display = 'block';
+                    
+                    // Load section data
+                    loadSectionData(this.getAttribute('data-section'));
+                });
+            });
+        }
+        
+        // Load Section Data
+        function loadSectionData(section) {
+            switch(section) {
+                case 'dashboard':
+                    loadDashboardData();
+                    break;
+                case 'map':
+                    loadMapData();
+                    break;
+                case 'employees':
+                    loadEmployeesData();
+                    break;
+                case 'attendance':
+                    loadAttendanceData();
+                    break;
+            }
+        }
+        
+        // Load Dashboard Data
+        async function loadDashboardData() {
+            try {
+                // Load employees count
+                const employeesSnapshot = await database.ref('employees').once('value');
+                const totalEmployees = employeesSnapshot.numChildren();
+                document.getElementById('totalEmployees').textContent = totalEmployees;
+                
+                // Store employees data for later use
+                employeesData = [];
+                employeesSnapshot.forEach(employeeSnap => {
+                    employeesData.push({
+                        id: employeeSnap.key,
+                        ...employeeSnap.val()
+                    });
+                });
+                
+                // Load today's attendance
+                const today = new Date().toISOString().split('T')[0];
+                let presentCount = 0;
+                let lateCount = 0;
+                
+                // Check each employee's attendance for today
+                for (const employee of employeesData) {
+                    const attendanceSnapshot = await database.ref(`attendance/${employee.id}`)
+                        .orderByChild('date')
+                        .equalTo(today)
+                        .once('value');
+                    
+                    if (attendanceSnapshot.exists()) {
+                        let hasCheckedIn = false;
+                        let checkInTime = null;
+                        
+                        attendanceSnapshot.forEach(record => {
+                            if (record.val().type === 'checkin') {
+                                hasCheckedIn = true;
+                                checkInTime = new Date(record.val().timestamp);
+                            }
+                        });
+                        
+                        if (hasCheckedIn) {
+                            presentCount++;
+                            
+                            // Check if late (after 8:30 AM)
+                            if (checkInTime) {
+                                const hour = checkInTime.getHours();
+                                const minute = checkInTime.getMinutes();
+                                
+                                if (hour > 8 || (hour === 8 && minute > 30)) {
+                                    lateCount++;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Update dashboard stats
+                document.getElementById('presentCount').textContent = presentCount;
+                document.getElementById('absentCount').textContent = totalEmployees - presentCount;
+                document.getElementById('lateCount').textContent = lateCount;
+                
+                // Update employees in/out range
+                document.getElementById('employeesInRange').textContent = presentCount;
+                document.getElementById('employeesOutRange').textContent = totalEmployees - presentCount;
+                
+                // Load today's attendance table
+                loadTodayAttendanceTable();
+                
+            } catch (error) {
+                console.error('خطأ في تحميل بيانات الرئيسية:', error);
+                showNotification('حدث خطأ في تحميل البيانات', 'danger');
+            }
+        }
+        
+        // Load Today's Attendance Table
+        async function loadTodayAttendanceTable() {
+            const today = new Date().toISOString().split('T')[0];
+            const tbody = document.getElementById('todayAttendanceTable');
+            
+            try {
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</td></tr>';
+                
+                let tableHTML = '';
+                let rowCount = 1;
+                
+                for (const employee of employeesData) {
+                    const attendanceSnapshot = await database.ref(`attendance/${employee.id}`)
+                        .orderByChild('date')
+                        .equalTo(today)
+                        .once('value');
+                    
+                    let checkInTime = '--';
+                    let checkOutTime = '--';
+                    let workHours = '--';
+                    let status = 'غائب';
+                    let statusClass = 'badge-absent';
+                    
+                    if (attendanceSnapshot.exists()) {
+                        let checkInRecord = null;
+                        let checkOutRecord = null;
+                        
+                        attendanceSnapshot.forEach(record => {
+                            const recordData = record.val();
+                            if (recordData.type === 'checkin') {
+                                checkInRecord = recordData;
+                                checkInTime = new Date(recordData.timestamp).toLocaleTimeString('ar-SA');
+                            } else if (recordData.type === 'checkout') {
+                                checkOutRecord = recordData;
+                                checkOutTime = new Date(recordData.timestamp).toLocaleTimeString('ar-SA');
+                            }
+                        });
+                        
+                        if (checkInRecord) {
+                            status = 'حاضر';
+                            statusClass = 'badge-present';
+                            
+                            // Check if late
+                            const checkInDate = new Date(checkInRecord.timestamp);
+                            const hour = checkInDate.getHours();
+                            const minute = checkInDate.getMinutes();
+                            
+                            if (hour > 8 || (hour === 8 && minute > 30)) {
+                                status = 'متأخر';
+                                statusClass = 'badge-late';
+                            }
+                            
+                            if (checkOutRecord) {
+                                // Calculate work hours
+                                const diffMs = checkOutRecord.timestamp - checkInRecord.timestamp;
+                                const diffHrs = Math.floor(diffMs / 3600000);
+                                const diffMins = Math.floor((diffMs % 3600000) / 60000);
+                                workHours = `${diffHrs}:${diffMins.toString().padStart(2, '0')}`;
+                            }
+                        }
+                    }
+                    
+                    tableHTML += `
+                        <tr>
+                            <td>${rowCount}</td>
+                            <td>${employee.name}</td>
+                            <td>${employee.department || '--'}</td>
+                            <td>${checkInTime}</td>
+                            <td>${checkOutTime}</td>
+                            <td>${workHours}</td>
+                            <td>
+                                <span class="${statusClass}">${status}</span>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="viewEmployeeAttendance('${employee.id}')">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    
+                    rowCount++;
+                }
+                
+                tbody.innerHTML = tableHTML || '<tr><td colspan="8" class="text-center text-muted">لا توجد سجلات حضور اليوم</td></tr>';
+                
+            } catch (error) {
+                console.error('خطأ في تحميل جدول اليوم:', error);
+                tbody.innerHTML = '<tr><td colspan="8" class="text-center text-danger">حدث خطأ في تحميل البيانات</td></tr>';
+            }
+        }
+        
+        // Load Map Data
+        async function loadMapData() {
+            const table = document.getElementById('employeesLocationTable');
+            
+            try {
+                table.innerHTML = '<tr><td colspan="7" class="text-center"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</td></tr>';
+                
+                let tableHTML = '';
+                let rowCount = 1;
+                let trackingCount = 0;
+                let accuracySum = 0;
+                let accuracyCount = 0;
+                let inRangeCount = 0;
+                let outRangeCount = 0;
+                
+                // For now, show employees with their status
+                for (const employee of employeesData) {
+                    // Get latest location
+                    const locationSnapshot = await database.ref(`locations/${employee.id}`).once('value');
+                    
+                    let lastUpdate = '--';
+                    let distance = '--';
+                    let status = 'غير معروف';
+                    let statusClass = 'badge-absent';
+                    
+                    if (locationSnapshot.exists()) {
+                        trackingCount++;
+                        const location = locationSnapshot.val();
+                        lastUpdate = new Date(location.timestamp).toLocaleTimeString('ar-SA');
+                        
+                        if (location.accuracy) {
+                            accuracySum += location.accuracy;
+                            accuracyCount++;
+                        }
+                        
+                        // For demo, just show random status
+                        const statuses = ['حاضر', 'متأخر', 'غائب'];
+                        const statusIndex = Math.floor(Math.random() * statuses.length);
+                        status = statuses[statusIndex];
+                        
+                        if (status === 'حاضر') {
+                            statusClass = 'badge-present';
+                            inRangeCount++;
+                        } else if (status === 'متأخر') {
+                            statusClass = 'badge-late';
+                            inRangeCount++;
+                        } else {
+                            statusClass = 'badge-absent';
+                            outRangeCount++;
+                        }
+                        
+                        // Random distance for demo
+                        distance = Math.floor(Math.random() * 200) + ' متر';
+                    }
+                    
+                    tableHTML += `
+                        <tr>
+                            <td>${rowCount}</td>
+                            <td>${employee.name}</td>
+                            <td>${employee.department || '--'}</td>
+                            <td>
+                                <span class="${statusClass}">${status}</span>
+                            </td>
+                            <td>${lastUpdate}</td>
+                            <td>${distance}</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="trackEmployee('${employee.id}')">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                    
+                    rowCount++;
+                }
+                
+                table.innerHTML = tableHTML;
+                
+                // Update tracking stats
+                document.getElementById('trackingNow').textContent = trackingCount;
+                document.getElementById('avgGpsAccuracy').textContent = accuracyCount > 0 ? 
+                    Math.round(accuracySum / accuracyCount) + ' متر' : '-- متر';
+                document.getElementById('inRangeCount').textContent = inRangeCount;
+                document.getElementById('outRangeCount').textContent = outRangeCount;
+                document.getElementById('mapLastUpdate').textContent = new Date().toLocaleTimeString('ar-SA');
+                
+            } catch (error) {
+                console.error('خطأ في تحميل بيانات الخريطة:', error);
+                table.innerHTML = '<tr><td colspan="7" class="text-center text-danger">حدث خطأ في تحميل البيانات</td></tr>';
+            }
+        }
+        
+        // Load Employees Data
+        async function loadEmployeesData() {
+            const tbody = document.getElementById('employeesTable');
+            
+            try {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</td></tr>';
+                
+                let tableHTML = '';
+                let rowCount = 1;
+                
+                for (const employee of employeesData) {
+                    // Get employee's first letter for avatar
+                    const firstLetter = employee.name ? employee.name.charAt(0) : '?';
+                    
+                    // Format hire date
+                    const hireDate = employee.hireDate ? 
+                        new Date(employee.hireDate).toLocaleDateString('ar-SA') : '--';
+                    
+                    tableHTML += `
+                        <tr>
+                            <td>${rowCount}</td>
+                            <td>
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                                    ${firstLetter}
+                                </div>
+                            </td>
+                            <td>${employee.name}</td>
+                            <td>${employee.id}</td>
+                            <td>${employee.department || '--'}</td>
+                            <td>${employee.position || '--'}</td>
+                            <td>${hireDate}</td>
+                            <td>
+                                <span class="badge-present">نشط</span>
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <button class="btn btn-outline-primary" onclick="editEmployee('${employee.id}')">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-outline-danger" onclick="deleteEmployee('${employee.id}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    `;
+                    
+                    rowCount++;
+                }
+                
+                tbody.innerHTML = tableHTML;
+                
+            } catch (error) {
+                console.error('خطأ في تحميل بيانات الموظفين:', error);
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">حدث خطأ في تحميل البيانات</td></tr>';
+            }
+        }
+        
+        // Load Attendance Data
+        async function loadAttendanceData() {
+            const tbody = document.getElementById('allAttendanceTable');
+            
+            try {
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center"><i class="fas fa-spinner fa-spin"></i> جاري التحميل...</td></tr>';
+                
+                // For demo, show sample data
+                setTimeout(() => {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td>1</td>
+                            <td>أحمد محمد</td>
+                            <td>2024-01-15</td>
+                            <td>08:15</td>
+                            <td>17:00</td>
+                            <td>8:45</td>
+                            <td><span class="badge-present">حاضر</span></td>
+                            <td>15 متر</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>سارة عبدالله</td>
+                            <td>2024-01-15</td>
+                            <td>08:05</td>
+                            <td>16:55</td>
+                            <td>8:50</td>
+                            <td><span class="badge-present">حاضر</span></td>
+                            <td>8 متر</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>3</td>
+                            <td>خالد سعود</td>
+                            <td>2024-01-15</td>
+                            <td>08:40</td>
+                            <td>17:10</td>
+                            <td>8:30</td>
+                            <td><span class="badge-late">متأخر</span></td>
+                            <td>25 متر</td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                }, 1000);
+                
+            } catch (error) {
+                console.error('خطأ في تحميل سجلات الحضور:', error);
+                tbody.innerHTML = '<tr><td colspan="9" class="text-center text-danger">حدث خطأ في تحميل البيانات</td></tr>';
+            }
+        }
+        
+        // Show Notification
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+            notification.style.cssText = 'top: 20px; left: 20px; z-index: 9999; min-width: 300px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);';
+            notification.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.remove();
+                }
+            }, 5000);
+        }
+        
+        // Event Listeners
+        
+        // Logout
+        document.getElementById('logoutBtn').addEventListener('click', function(e) {
+            e.preventDefault();
+            localStorage.removeItem('currentUser');
+            window.location.href = 'index.html';
+        });
+        
+        // Save Employee
+        document.getElementById('saveEmployeeBtn').addEventListener('click', async function() {
+            const form = document.getElementById('addEmployeeForm');
+            const formData = new FormData(form);
+            const employeeData = Object.fromEntries(formData.entries());
+            
+            if (!employeeData.employeeId || !employeeData.name || !employeeData.password) {
+                showNotification('الرجاء ملء جميع الحقول المطلوبة', 'warning');
+                return;
+            }
+            
+            try {
+                // Check if employee already exists
+                const snapshot = await database.ref(`employees/${employeeData.employeeId}`).once('value');
+                
+                if (snapshot.exists()) {
+                    showNotification('رقم الموظف موجود مسبقاً', 'error');
+                    return;
+                }
+                
+                // Add creation timestamp
+                employeeData.createdAt = firebase.database.ServerValue.TIMESTAMP;
+                employeeData.status = 'active';
+                
+                // Save employee
+                await database.ref(`employees/${employeeData.employeeId}`).set(employeeData);
+                
+                // Close modal and reset form
+                form.reset();
+                const modal = bootstrap.Modal.getInstance(document.getElementById('addEmployeeModal'));
+                modal.hide();
+                
+                // Refresh employees list
+                loadEmployeesData();
+                
+                showNotification('تم إضافة الموظف بنجاح', 'success');
+                
+            } catch (error) {
+                showNotification('حدث خطأ في إضافة الموظف', 'danger');
+                console.error('خطأ:', error);
+            }
+        });
+        
+        // Save Location
+        document.getElementById('saveLocationBtn').addEventListener('click', async function() {
+            const lat = document.getElementById('locationLat').value;
+            const lng = document.getElementById('locationLng').value;
+            const radius = document.getElementById('radiusRange').value;
+            const name = document.getElementById('locationName').value;
+            
+            if (!lat || !lng || isNaN(parseFloat(lat)) || isNaN(parseFloat(lng))) {
+                showNotification('الرجاء إدخال إحداثيات صحيحة', 'warning');
+                return;
+            }
+            
+            try {
+                await database.ref('settings/workLocation').set({
+                    lat: parseFloat(lat),
+                    lng: parseFloat(lng),
+                    radius: parseInt(radius),
+                    name: name,
+                    updatedAt: firebase.database.ServerValue.TIMESTAMP
+                });
+                
+                document.getElementById('currentRadius').textContent = radius + ' متر';
+                
+                const modal = bootstrap.Modal.getInstance(document.getElementById('workLocationModal'));
+                modal.hide();
+                
+                showNotification('تم حفظ إعدادات الموقع بنجاح', 'success');
+                
+            } catch (error) {
+                showNotification('حدث خطأ في حفظ الإعدادات', 'danger');
+                console.error('خطأ:', error);
+            }
+        });
+        
+        // Get Current Location
+        document.getElementById('getCurrentLocationBtn').addEventListener('click', function() {
+            if (!navigator.geolocation) {
+                showNotification('المتصفح لا يدعم تحديد الموقع', 'warning');
+                return;
+            }
+            
+            navigator.geolocation.getCurrentPosition(
+                function(position) {
+                    document.getElementById('locationLat').value = position.coords.latitude.toFixed(6);
+                    document.getElementById('locationLng').value = position.coords.longitude.toFixed(6);
+                    showNotification('تم الحصول على موقعك الحالي', 'success');
+                },
+                function(error) {
+                    showNotification('فشل في الحصول على الموقع: ' + error.message, 'error');
+                }
+            );
+        });
+        
+        // Radius Range Input
+        document.getElementById('radiusRange').addEventListener('input', function() {
+            document.getElementById('radiusValue').textContent = this.value + ' متر';
+        });
+        
+        // Refresh Today Attendance
+        document.getElementById('refreshTodayBtn').addEventListener('click', function() {
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            loadTodayAttendanceTable();
+            setTimeout(() => {
+                this.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            }, 1000);
+        });
+        
+        // Refresh Employees
+        document.getElementById('refreshEmployeesBtn').addEventListener('click', function() {
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            loadEmployeesData();
+            setTimeout(() => {
+                this.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            }, 1000);
+        });
+        
+        // Refresh Map
+        document.getElementById('reloadMapBtn').addEventListener('click', function() {
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            loadMapData();
+            setTimeout(() => {
+                this.innerHTML = '<i class="fas fa-sync-alt"></i>';
+            }, 1000);
+        });
+        
+        // Load Map
+        document.getElementById('loadMapBtn').addEventListener('click', function() {
+            showNotification('جاري تحميل الخريطة...', 'info');
+            // In real app, load Google Maps API
+        });
+        
+        // Load Live Map
+        document.getElementById('loadLiveMapBtn').addEventListener('click', function() {
+            showNotification('جاري تشغيل الخريطة المباشرة...', 'info');
+            // In real app, load Google Maps API with live tracking
+        });
+        
+        // Apply Filters for Map
+        document.getElementById('applyFiltersBtn').addEventListener('click', function() {
+            showNotification('تم تطبيق الفلاتر', 'success');
+            loadMapData();
+        });
+        
+        // Apply Attendance Filter
+        document.getElementById('applyAttendanceFilterBtn').addEventListener('click', function() {
+            showNotification('جاري تطبيق الفلتر...', 'info');
+            loadAttendanceData();
+        });
+        
+        // Show Filter Card
+        document.getElementById('applyFilterBtn').addEventListener('click', function() {
+            const filterCard = document.getElementById('filterCard');
+            filterCard.style.display = 'block';
+            const modal = bootstrap.Modal.getInstance(document.getElementById('filterModal'));
+            modal.hide();
+            showNotification('تم تطبيق الفلتر', 'success');
+        });
+        
+        // Show/Hide custom date range in filter modal
+        document.getElementById('filterTimePeriod').addEventListener('change', function() {
+            const customRange = document.getElementById('customDateRange');
+            customRange.style.display = this.value === 'custom' ? 'block' : 'none';
+        });
+        
+        // Export Today Data
+        document.getElementById('exportTodayBtn').addEventListener('click', function() {
+            showNotification('جاري تحضير الملف للتحميل...', 'info');
+            // In real app, generate and download Excel file
+        });
+        
+        // Export All Data
+        document.getElementById('exportAllBtn').addEventListener('click', function() {
+            showNotification('جاري تحضير جميع البيانات للتحميل...', 'info');
+            // In real app, generate and download Excel file
+        });
+        
+        // Employee Functions
+        window.editEmployee = function(employeeId) {
+            showNotification(`تعديل الموظف ${employeeId}`, 'info');
+            // Implement edit functionality
+        };
+        
+        window.deleteEmployee = function(employeeId) {
+            if (confirm(`هل أنت متأكد من حذف الموظف ${employeeId}؟ هذا الإجراء لا يمكن التراجع عنه.`)) {
+                database.ref(`employees/${employeeId}`).remove()
+                    .then(() => {
+                        showNotification('تم حذف الموظف بنجاح', 'success');
+                        loadEmployeesData();
+                    })
+                    .catch(error => {
+                        showNotification('حدث خطأ في حذف الموظف', 'danger');
+                        console.error('خطأ:', error);
+                    });
+            }
+        };
+        
+        window.viewEmployeeAttendance = function(employeeId) {
+            showNotification(`عرض سجلات الموظف ${employeeId}`, 'info');
+            // Implement view attendance functionality
+        };
+        
+        window.trackEmployee = function(employeeId) {
+            showNotification(`تتبع الموظف ${employeeId}`, 'info');
+            // Implement tracking functionality
+        };
+        
+        // Database Connection Status
+        const connectedRef = database.ref('.info/connected');
+        connectedRef.on('value', snap => {
+            const dbStatus = document.getElementById('dbStatus');
+            const dbStatusIndicator = document.getElementById('dbStatusIndicator');
+            
+            if (snap.val() === true) {
+                dbStatus.textContent = 'متصل';
+                dbStatusIndicator.className = 'spinner-grow spinner-grow-sm text-success';
+            } else {
+                dbStatus.textContent = 'غير متصل';
+                dbStatusIndicator.className = 'spinner-grow spinner-grow-sm text-warning';
+            }
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', async function() {
+            currentUser = checkAdminSession();
+            
+            if (!currentUser) return;
+            
+            // Set admin name
+            document.getElementById('adminName').textContent = currentUser.name;
+            document.getElementById('dropdownAdminName').textContent = currentUser.name;
+            
+            setupNavigation();
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            
+            // Load initial data
+            await loadDashboardData();
+            
+            // Hide loading overlay
+            setTimeout(() => {
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }, 1000);
+            
+            // Set default dates for filters
+            const today = new Date();
+            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            
+            document.getElementById('dateFrom').value = firstDay.toISOString().split('T')[0];
+            document.getElementById('dateTo').value = today.toISOString().split('T')[0];
+        });
+    </script>
+</body>
+</html>
