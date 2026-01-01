@@ -1,0 +1,29 @@
+{
+
+  "name": "نظام الحضور الذكي",
+
+  "short_name": "حضور",
+
+  "start_url": "index.html",
+
+  "display": "standalone",
+
+  "background_color": "#f5f7fa",
+
+  "theme_color": "#4e54c8",
+
+  "icons": [
+
+    {
+
+      "src": "icon-192x192.png",
+
+      "sizes": "192x192",
+
+      "type": "image/png"
+
+    }
+
+  ]
+
+}
