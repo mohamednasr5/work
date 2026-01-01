@@ -835,21 +835,24 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     
     <script>
-        // Firebase Configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE",
-            authDomain: "hedor-bea3c.firebaseapp.com",
-            databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
-            projectId: "hedor-bea3c",
-            storageBucket: "hedor-bea3c.firebasestorage.app",
-            messagingSenderId: "369239455736",
-            appId: "1:369239455736:web:116295854269abecf6480d",
-            measurementId: "G-R2MG1YKQEP"
-        };
-        
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
+       // Firebase Configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE8",
+    authDomain: "hedor-bea3c.firebaseapp.com",
+    databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
+    projectId: "hedor-bea3c",
+    storageBucket: "hedor-bea3c.firebasestorage.app",
+    messagingSenderId: "369239455736",
+    appId: "1:369239455736:web:116295854269abecf6480d",
+    measurementId: "G-R2MG1YKQEP"
+};
+
+// Initialize Firebase
+if (!firebase.apps.length) {
+    firebase.initializeApp(firebaseConfig);
+}
+const database = firebase.database();
+
         
         // Global Variables
         let currentUser = null;
