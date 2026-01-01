@@ -1,43 +1,39 @@
 @import url('https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap');
+/* استدعاء مكتبة خرائط Leaflet */
+@import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
 
 :root {
     --primary: #4e54c8;
     --secondary: #8f94fb;
     --accent: #00d2ff;
-    --text-dark: #2d3436;
-    --text-light: #ffffff;
-    --glass-bg: rgba(255, 255, 255, 0.85);
-    --glass-border: 1px solid rgba(255, 255, 255, 0.3);
+    --glass-bg: rgba(255, 255, 255, 0.90);
+    --glass-border: 1px solid rgba(255, 255, 255, 0.4);
     --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
 }
 
 body {
     font-family: 'Tajawal', sans-serif;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-    background-attachment: fixed;
     min-height: 100vh;
     direction: rtl;
     text-align: right;
     margin: 0;
-    padding-bottom: 80px; /* مساحة للقائمة السفلية في الموبايل */
+    padding-bottom: 80px;
 }
 
-/* Glassmorphism Effect */
 .glass-card {
     background: var(--glass-bg);
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
     border-radius: 20px;
     border: var(--glass-border);
     box-shadow: var(--shadow);
     margin-bottom: 20px;
-    overflow: hidden;
+    padding: 20px;
     transition: transform 0.3s ease;
 }
 
-.glass-card:hover {
-    transform: translateY(-5px);
-}
+.glass-card:hover { transform: translateY(-3px); }
 
 /* Navbar */
 .navbar-custom {
@@ -49,12 +45,6 @@ body {
     margin-bottom: 25px;
 }
 
-.navbar-brand {
-    font-weight: 800;
-    font-size: 1.4rem;
-    color: white !important;
-}
-
 /* Buttons */
 .btn-glass {
     background: linear-gradient(45deg, var(--primary), var(--secondary));
@@ -63,86 +53,41 @@ body {
     padding: 12px 25px;
     border-radius: 12px;
     font-weight: bold;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-    transition: all 0.3s;
     width: 100%;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    transition: 0.3s;
 }
+.btn-glass:disabled { opacity: 0.6; cursor: not-allowed; filter: grayscale(100%); }
 
-.btn-glass:hover {
-    filter: brightness(1.1);
-    transform: scale(1.02);
-}
-
-/* Map Container */
-.map-frame {
-    border-radius: 15px;
-    overflow: hidden;
-    border: 4px solid white;
-    box-shadow: inset 0 0 20px rgba(0,0,0,0.1);
+/* Map */
+#map {
     height: 350px;
     width: 100%;
+    border-radius: 15px;
+    z-index: 1; /* مهم لكي لا يغطي على القوائم */
 }
 
-/* Status Badges */
-.status-pill {
-    padding: 8px 20px;
-    border-radius: 50px;
-    font-weight: bold;
-    display: inline-block;
-}
-.present { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
-.absent { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
-
-/* Mobile Bottom Navigation (PWA Style) */
+/* Mobile Nav */
 .mobile-nav {
     display: none;
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
+    bottom: 0; left: 0; right: 0;
     background: white;
-    box-shadow: 0 -5px 20px rgba(0,0,0,0.1);
-    padding: 10px;
+    box-shadow: 0 -5px 20px rgba(0,0,0,0.05);
+    padding: 12px;
     z-index: 1000;
     border-radius: 20px 20px 0 0;
 }
-
-.mobile-nav-items {
-    display: flex;
-    justify-content: space-around;
-    align-items: center;
-}
-
-.nav-item-link {
-    text-align: center;
-    color: #a0a0a0;
-    text-decoration: none;
-    font-size: 0.8rem;
-}
-
-.nav-item-link.active {
-    color: var(--primary);
-}
-
-.nav-item-link i {
-    font-size: 1.5rem;
-    display: block;
-    margin-bottom: 5px;
-}
+.mobile-nav-items { display: flex; justify-content: space-around; }
+.nav-item-link { text-align: center; color: #aaa; text-decoration: none; font-size: 0.8rem; }
+.nav-item-link.active { color: var(--primary); }
+.nav-item-link i { font-size: 1.4rem; display: block; margin-bottom: 4px; }
 
 @media (max-width: 991px) {
     .mobile-nav { display: block; }
-    .sidebar-desktop { display: none; }
+    .navbar-custom { border-radius: 0 0 15px 15px; }
 }
 
-/* Loading */
-.loader-overlay {
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(255,255,255,0.95);
-    z-index: 9999;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    flex-direction: column;
-}
+.status-pill { padding: 5px 15px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; }
+.present { background: #d1e7dd; color: #0f5132; }
+.absent { background: #f8d7da; color: #842029; }
