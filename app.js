@@ -1603,3 +1603,416 @@ class ParliamentRequestsSystem {
         };
     }
 }
+// في نهاية class ParliamentRequestsSystem، أضف هذه الدوال:
+
+    // تعديل طلب
+    async editRequest(requestId) {
+        try {
+            const request = await window.firebaseApp.RequestManager.getRequest(requestId);
+            if (!request) {
+                this.showAlert('خطأ', 'لم يتم العثور على الطلب');
+                return;
+            }
+
+            // الانتقال إلى صفحة إضافة طلب
+            this.switchPage('add-request');
+
+            // ملء النموذج بالبيانات
+            setTimeout(() => {
+                this.fillFormForEdit(request);
+                this.currentEditingRequestId = requestId;
+                
+                // تغيير عنوان الصفحة
+                const sectionHeader = document.querySelector('#add-request .section-header');
+                if (sectionHeader) {
+                    sectionHeader.querySelector('h2').innerHTML = '<i class="fas fa-edit"></i> تعديل الطلب';
+                    sectionHeader.querySelector('p').textContent = 'قم بتعديل بيانات الطلب';
+                }
+
+                // تغيير نص زر الحفظ
+                const submitBtn = this.elements.newRequestForm.querySelector('.submit-btn');
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<i class="fas fa-save"></i> تحديث الطلب';
+                }
+            }, 100);
+        } catch (error) {
+            console.error('خطأ في تعديل الطلب:', error);
+            this.showAlert('خطأ', 'حدث خطأ في تحميل بيانات الطلب');
+        }
+    }
+
+    // ملء النموذج للتعديل
+    fillFormForEdit(request) {
+        // ملء الحقول الأساسية
+        if (this.elements.manualRequestNumber) {
+            this.elements.manualRequestNumber.value = request.manualRequestNumber || '';
+            this.elements.manualRequestNumber.disabled = true; // منع تعديل الرقم
+        }
+        
+        if (this.elements.requestTitle) {
+            this.elements.requestTitle.value = request.requestTitle || '';
+        }
+        
+        if (this.elements.requestDetails) {
+            this.elements.requestDetails.value = request.requestDetails || '';
+        }
+        
+        if (this.elements.receivingAuthority) {
+            this.elements.receivingAuthority.value = request.receivingAuthority || '';
+        }
+        
+        if (this.elements.submissionDate) {
+            this.elements.submissionDate.value = request.submissionDate || '';
+        }
+
+        // المستندات
+        if (request.documents && request.documents.length > 0) {
+            this.elements.hasDocuments.checked = true;
+            this.elements.documentsSection.style.display = 'block';
+            this.documents = [...request.documents];
+            this.displayDocuments();
+        }
+
+        // الرد
+        if (request.responseStatus) {
+            this.elements.hasResponse.checked = true;
+            this.elements.responseSection.style.display = 'block';
+            
+            if (this.elements.responseDetails) {
+                this.elements.responseDetails.value = request.responseDetails || '';
+            }
+            
+            if (this.elements.responseDate) {
+                this.elements.responseDate.value = request.responseDate || '';
+            }
+        }
+    }
+
+    // حذف طلب
+    async deleteRequest(requestId) {
+        // إظهار تأكيد الحذف
+        const confirmed = await this.showConfirmDialog(
+            'تأكيد الحذف',
+            'هل أنت متأكد من حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.'
+        );
+
+        if (!confirmed) return;
+
+        try {
+            const result = await window.firebaseApp.RequestManager.deleteRequest(requestId);
+
+            if (result.success) {
+                this.showAlert('نجاح', 'تم حذف الطلب بنجاح');
+                
+                // إعادة تحميل البيانات
+                await this.loadData();
+                
+                // إغلاق النافذة المنبثقة إذا كانت مفتوحة
+                this.closeModal();
+            } else {
+                this.showAlert('خطأ', 'فشل في حذف الطلب: ' + result.error);
+            }
+        } catch (error) {
+            console.error('خطأ في حذف الطلب:', error);
+            this.showAlert('خطأ', 'حدث خطأ في حذف الطلب');
+        }
+    }
+
+    // نافذة تأكيد
+    showConfirmDialog(title, message) {
+        return new Promise((resolve) => {
+            const alertModal = this.elements.alertModal;
+            if (!alertModal) {
+                resolve(false);
+                return;
+            }
+
+            document.getElementById('alertTitle').textContent = title;
+            document.getElementById('alertMessage').textContent = message;
+
+            alertModal.style.display = 'flex';
+            alertModal.classList.add('fade-in');
+
+            // إظهار زر الإلغاء
+            const cancelBtn = document.getElementById('alertCancel');
+            if (cancelBtn) {
+                cancelBtn.style.display = 'inline-flex';
+            }
+
+            // تغيير أيقونة التنبيه
+            const alertIcon = alertModal.querySelector('.alert-icon');
+            if (alertIcon) {
+                alertIcon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                alertIcon.style.color = 'var(--accent-color)';
+            }
+
+            // إغلاق عند النقر على موافق
+            const confirmBtn = document.getElementById('alertConfirm');
+            confirmBtn.onclick = () => {
+                alertModal.style.display = 'none';
+                alertModal.classList.remove('fade-in');
+                resolve(true);
+            };
+
+            // إغلاق عند النقر على إلغاء
+            if (cancelBtn) {
+                cancelBtn.onclick = () => {
+                    alertModal.style.display = 'none';
+                    alertModal.classList.remove('fade-in');
+                    resolve(false);
+                };
+            }
+        });
+    }
+
+    // تحديث دالة submitNewRequest لدعم التعديل
+    async submitNewRequest(e) {
+        e.preventDefault();
+
+        try {
+            const requestData = {
+                manualRequestNumber: this.elements.manualRequestNumber.value.trim() || null,
+                requestTitle: this.elements.requestTitle.value.trim(),
+                requestDetails: this.elements.requestDetails.value.trim(),
+                receivingAuthority: this.elements.receivingAuthority.value,
+                submissionDate: this.elements.submissionDate.value,
+                status: 'pending',
+                documents: this.elements.hasDocuments.checked ? this.documents : [],
+                responseStatus: this.elements.hasResponse.checked,
+                responseDetails: this.elements.hasResponse.checked ? this.elements.responseDetails.value.trim() : null,
+                responseDate: this.elements.hasResponse.checked ? this.elements.responseDate.value : null
+            };
+
+            // التحقق من وجود تعديل
+            if (this.currentEditingRequestId) {
+                // تحديث الطلب
+                const result = await window.firebaseApp.RequestManager.updateRequest(
+                    this.currentEditingRequestId,
+                    requestData
+                );
+
+                if (result.success) {
+                    this.showAlert('نجاح', 'تم تحديث الطلب بنجاح');
+                    this.resetForm();
+                    this.currentEditingRequestId = null;
+                    
+                    // إعادة عنوان الصفحة
+                    const sectionHeader = document.querySelector('#add-request .section-header');
+                    if (sectionHeader) {
+                        sectionHeader.querySelector('h2').innerHTML = '<i class="fas fa-plus-circle"></i> إضافة طلب جديد';
+                        sectionHeader.querySelector('p').textContent = 'قم بإدخال بيانات الطلب الجديد للنائب أحمد الحديدي';
+                    }
+                    
+                    await this.loadData();
+                    this.switchPage('requests');
+                } else {
+                    this.showAlert('خطأ', 'فشل في تحديث الطلب: ' + result.error);
+                }
+            } else {
+                // التحقق من رقم الطلب اليدوي إذا تم إدخاله
+                let manualRequestNumber = requestData.manualRequestNumber;
+                
+                if (manualRequestNumber) {
+                    const allRequests = Object.values(this.allRequests || {});
+                    const isDuplicate = allRequests.some(req => 
+                        req.manualRequestNumber === manualRequestNumber || req.id === manualRequestNumber
+                    );
+                    
+                    if (isDuplicate) {
+                        this.showAlert('خطأ', 'رقم الطلب موجود مسبقاً. يرجى اختيار رقم آخر');
+                        return;
+                    }
+                }
+
+                // إضافة طلب جديد
+                const result = await window.firebaseApp.RequestManager.addRequest(requestData);
+
+                if (result.success) {
+                    this.showAlert('نجاح', 'تم إضافة الطلب بنجاح');
+                    this.resetForm();
+                    await this.loadData();
+                    this.switchPage('requests');
+                } else {
+                    this.showAlert('خطأ', 'فشل في إضافة الطلب: ' + result.error);
+                }
+            }
+        } catch (error) {
+            console.error('خطأ في إرسال الطلب:', error);
+            this.showAlert('خطأ', 'حدث خطأ في حفظ الطلب');
+        }
+    }
+
+    // تحديث resetForm لإلغاء وضع التعديل
+    resetForm() {
+        if (this.elements.newRequestForm) {
+            this.elements.newRequestForm.reset();
+        }
+        this.documents = [];
+        this.displayDocuments();
+        this.elements.documentsSection.style.display = 'none';
+        this.elements.responseSection.style.display = 'none';
+        
+        // إلغاء وضع التعديل
+        this.currentEditingRequestId = null;
+        
+        // إعادة تفعيل حقل رقم الطلب
+        if (this.elements.manualRequestNumber) {
+            this.elements.manualRequestNumber.disabled = false;
+        }
+        
+        // إعادة عنوان الصفحة
+        const sectionHeader = document.querySelector('#add-request .section-header');
+        if (sectionHeader) {
+            sectionHeader.querySelector('h2').innerHTML = '<i class="fas fa-plus-circle"></i> إضافة طلب جديد';
+            sectionHeader.querySelector('p').textContent = 'قم بإدخال بيانات الطلب الجديد للنائب أحمد الحديدي';
+        }
+        
+        // إعادة نص زر الحفظ
+        const submitBtn = this.elements.newRequestForm.querySelector('.submit-btn');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الطلب';
+        }
+        
+        // إعادة تعيين التاريخ الحالي
+        const today = new Date().toISOString().split('T')[0];
+        this.elements.submissionDate.value = today;
+        this.elements.responseDate.value = today;
+    }
+
+    // تحديث createRequestCard لإضافة أزرار التعديل والحذف
+    createRequestCard(request) {
+        const card = document.createElement('div');
+        card.className = `request-card ${request.status} fade-in-up`;
+        
+        const displayId = request.manualRequestNumber || request.id;
+        const statusText = this.getStatusText(request.status);
+        const statusClass = request.status;
+
+        card.innerHTML = `
+            <div class="request-header">
+                <span class="request-id">${displayId}</span>
+                <span class="request-status ${statusClass}">${statusText}</span>
+            </div>
+            <h4 class="request-title">${request.requestTitle}</h4>
+            <p class="request-details">${request.requestDetails?.substring(0, 100) || 'لا توجد تفاصيل'}...</p>
+            <div class="request-meta">
+                <span class="meta-item">
+                    <i class="fas fa-building"></i>
+                    ${request.receivingAuthority}
+                </span>
+                <span class="meta-item">
+                    <i class="fas fa-calendar"></i>
+                    ${new Date(request.submissionDate).toLocaleDateString('ar-EG')}
+                </span>
+            </div>
+            <div class="request-actions">
+                <button class="action-btn view-btn" onclick="window.parliamentSystem.showRequestDetails('${request.id}')">
+                    <i class="fas fa-eye"></i> عرض
+                </button>
+                <button class="action-btn edit-btn" onclick="window.parliamentSystem.editRequest('${request.id}')">
+                    <i class="fas fa-edit"></i> تعديل
+                </button>
+                <button class="action-btn delete-btn" onclick="window.parliamentSystem.deleteRequest('${request.id}')">
+                    <i class="fas fa-trash"></i> حذف
+                </button>
+                <button class="action-btn print-btn" onclick="window.parliamentSystem.printRequest('${request.id}')">
+                    <i class="fas fa-print"></i> طباعة
+                </button>
+            </div>
+        `;
+
+        return card;
+    }
+
+    // تحديث showRequestDetails لإضافة زر الحذف
+    async showRequestDetails(requestId) {
+        try {
+            const request = await window.firebaseApp.RequestManager.getRequest(requestId);
+            if (!request) {
+                this.showAlert('خطأ', 'لم يتم العثور على الطلب');
+                return;
+            }
+
+            this.currentRequestId = requestId;
+            const displayId = request.manualRequestNumber || request.id;
+            const statusText = this.getStatusText(request.status);
+
+            this.elements.requestModalBody.innerHTML = `
+                <div class="request-details-full">
+                    <div class="detail-section">
+                        <h3><i class="fas fa-info-circle"></i> معلومات الطلب</h3>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">رقم الطلب:</span>
+                                <span class="detail-value">${displayId}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">الحالة:</span>
+                                <span class="detail-value"><span class="request-status ${request.status}">${statusText}</span></span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">العنوان:</span>
+                                <span class="detail-value">${request.requestTitle}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">الجهة المستقبلة:</span>
+                                <span class="detail-value">${request.receivingAuthority}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">تاريخ التقديم:</span>
+                                <span class="detail-value">${new Date(request.submissionDate).toLocaleDateString('ar-EG')}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3><i class="fas fa-align-right"></i> التفاصيل</h3>
+                        <p class="detail-text">${request.requestDetails || 'لا توجد تفاصيل'}</p>
+                    </div>
+
+                    ${request.documents && request.documents.length > 0 ? `
+                        <div class="detail-section">
+                            <h3><i class="fas fa-paperclip"></i> المستندات المرفقة</h3>
+                            <ul class="documents-list-modal">
+                                ${request.documents.map(doc => `<li><i class="fas fa-file"></i> ${doc}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+
+                    ${request.responseStatus ? `
+                        <div class="detail-section">
+                            <h3><i class="fas fa-reply"></i> الرد</h3>
+                            <p class="detail-text">${request.responseDetails || 'لا يوجد رد'}</p>
+                            <div class="detail-item">
+                                <span class="detail-label">تاريخ الرد:</span>
+                                <span class="detail-value">${new Date(request.responseDate).toLocaleDateString('ar-EG')}</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            // تحديث أزرار النافذة المنبثقة
+            const modalFooter = this.elements.requestModal.querySelector('.modal-footer');
+            modalFooter.innerHTML = `
+                <button class="modal-btn print-btn" onclick="window.parliamentSystem.printRequest('${requestId}')">
+                    <i class="fas fa-print"></i> طباعة
+                </button>
+                <button class="modal-btn edit-btn" onclick="window.parliamentSystem.editRequest('${requestId}'); window.parliamentSystem.closeModal();">
+                    <i class="fas fa-edit"></i> تعديل
+                </button>
+                <button class="modal-btn delete-btn" onclick="window.parliamentSystem.deleteRequest('${requestId}')">
+                    <i class="fas fa-trash"></i> حذف
+                </button>
+                <button class="modal-btn close-btn" onclick="window.parliamentSystem.closeModal()">
+                    <i class="fas fa-times"></i> إغلاق
+                </button>
+            `;
+
+            this.elements.requestModal.style.display = 'flex';
+            this.elements.requestModal.classList.add('fade-in');
+        } catch (error) {
+            console.error('خطأ في عرض تفاصيل الطلب:', error);
+            this.showAlert('خطأ', 'حدث خطأ في عرض تفاصيل الطلب');
+        }
+    }
