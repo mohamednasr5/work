@@ -403,6 +403,7 @@ body {
     position: relative;
     overflow: hidden;
     box-shadow: var(--shadow-sm);
+    background: var(--bg-secondary);
 }
 
 .stat-card:hover {
@@ -771,7 +772,8 @@ body {
 }
 
 .request-actions {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.5rem;
     margin-top: 1rem;
     padding-top: 1rem;
@@ -779,7 +781,6 @@ body {
 }
 
 .action-btn {
-    flex: 1;
     padding: 0.6rem 0.5rem;
     border: none;
     border-radius: var(--radius-md);
@@ -805,12 +806,16 @@ body {
     background: var(--info-color);
 }
 
-.action-btn.print-btn:hover {
-    background: var(--success-color);
+.action-btn.edit-btn:hover {
+    background: var(--warning-color);
 }
 
-.action-btn.export-btn:hover {
-    background: var(--warning-color);
+.action-btn.delete-btn:hover {
+    background: var(--accent-color);
+}
+
+.action-btn.print-btn:hover {
+    background: var(--success-color);
 }
 
 .pagination {
@@ -1537,6 +1542,7 @@ input:checked + .slider:before {
     gap: 1rem;
     padding: 1.5rem;
     border-top: 1px solid var(--border-color);
+    flex-wrap: wrap;
 }
 
 .modal-btn {
@@ -1571,13 +1577,23 @@ input:checked + .slider:before {
     transform: translateY(-2px);
 }
 
-.modal-btn.close-btn {
+.modal-btn.delete-btn {
     background: var(--accent-color);
     color: white;
 }
 
-.modal-btn.close-btn:hover {
+.modal-btn.delete-btn:hover {
     background: #c0392b;
+    transform: translateY(-2px);
+}
+
+.modal-btn.close-btn {
+    background: var(--bg-tertiary);
+    color: var(--text-primary);
+}
+
+.modal-btn.close-btn:hover {
+    background: var(--border-color);
     transform: translateY(-2px);
 }
 
@@ -1787,6 +1803,10 @@ input:checked + .slider:before {
         align-items: flex-start;
         gap: 0.5rem;
     }
+    
+    .modal-footer {
+        justify-content: center;
+    }
 }
 
 @media (max-width: 480px) {
@@ -1835,11 +1855,7 @@ input:checked + .slider:before {
     }
     
     .request-actions {
-        flex-direction: column;
-    }
-    
-    .action-btn {
-        width: 100%;
+        grid-template-columns: 1fr;
     }
 }
 
@@ -1898,38 +1914,4 @@ input:checked + .slider:before {
 * {
     scrollbar-width: thin;
     scrollbar-color: var(--border-color) var(--bg-tertiary);
-}
-/* أنماط أزرار الإجراءات المحدثة */
-.request-actions {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.5rem;
-    margin-top: 1rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border-color);
-}
-
-.action-btn.edit-btn:hover {
-    background: var(--warning-color);
-}
-
-.action-btn.delete-btn:hover {
-    background: var(--accent-color);
-}
-
-.modal-btn.delete-btn {
-    background: var(--accent-color);
-    color: white;
-}
-
-.modal-btn.delete-btn:hover {
-    background: #c0392b;
-    transform: translateY(-2px);
-}
-
-/* تحسين عرض الأزرار في الشاشات الصغيرة */
-@media (max-width: 480px) {
-    .request-actions {
-        grid-template-columns: 1fr;
-    }
 }
