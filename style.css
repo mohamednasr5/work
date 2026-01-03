@@ -1899,3 +1899,37 @@ input:checked + .slider:before {
     scrollbar-width: thin;
     scrollbar-color: var(--border-color) var(--bg-tertiary);
 }
+/* أنماط أزرار الإجراءات المحدثة */
+.request-actions {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.action-btn.edit-btn:hover {
+    background: var(--warning-color);
+}
+
+.action-btn.delete-btn:hover {
+    background: var(--accent-color);
+}
+
+.modal-btn.delete-btn {
+    background: var(--accent-color);
+    color: white;
+}
+
+.modal-btn.delete-btn:hover {
+    background: #c0392b;
+    transform: translateY(-2px);
+}
+
+/* تحسين عرض الأزرار في الشاشات الصغيرة */
+@media (max-width: 480px) {
+    .request-actions {
+        grid-template-columns: 1fr;
+    }
+}
