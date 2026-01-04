@@ -1,372 +1,349 @@
-// إعدادات Firebase
+// =====================================================
+// Firebase Configuration & Database Management
+// نظام إدارة الطلبات البرلمانية - البنية التحتية
+// =====================================================
+
+// Firebase Configuration Object
 const firebaseConfig = {
-    apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE8",
-    authDomain: "hedor-bea3c.firebaseapp.com",
-    databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
-    projectId: "hedor-bea3c",
-    storageBucket: "hedor-bea3c.firebasestorage.app",
-    messagingSenderId: "369239455736",
-    appId: "1:369239455736:web:116295854269abecf6480d",
-    measurementId: "G-R2MG1YKQEP"
+  apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE8",
+  authDomain: "hedor-bea3c.firebaseapp.com",
+  databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
+  projectId: "hedor-bea3c",
+  storageBucket: "hedor-bea3c.firebasestorage.app",
+  messagingSenderId: "369239455736",
+  appId: "1:369239455736:web:116295854269abecf6480d",
+  measurementId: "G-R2MG1YKQEP"
 };
 
-// تهيئة Firebase
+// Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// مراجع قاعدة البيانات
+// Database References Object
 const dbRef = {
-    requests: database.ref('parliament-requests'),
-    notifications: database.ref('notifications'),
-    settings: database.ref('settings'),
-    statistics: database.ref('statistics')
+  requests: database.ref('parliament-requests'),
+  notifications: database.ref('notifications'),
+  settings: database.ref('settings'),
+  statistics: database.ref('statistics'),
+  users: database.ref('users'),
+  logs: database.ref('logs'),
+  attachments: database.ref('attachments')
 };
 
-// دالة للتحقق من اتصال Firebase
-function checkFirebaseConnection() {
-    const connectedRef = database.ref(".info/connected");
-    connectedRef.on("value", function(snap) {
-        if (snap.val() === true) {
-            console.log("✓ متصل بـ Firebase");
-            document.body.classList.add('firebase-connected');
-        } else {
-            console.log("✗ غير متصل بـ Firebase");
-            document.body.classList.remove('firebase-connected');
-        }
+// =====================================================
+// Firebase Connection Manager
+// =====================================================
+
+class FirebaseConnectionManager {
+  constructor() {
+    this.isConnected = false;
+    this.connectionStatusElement = null;
+    this.init();
+  }
+
+  init() {
+    this.checkConnection();
+    this.setupConnectionListener();
+    this.setupOfflineSupport();
+  }
+
+  checkConnection() {
+    const connectedRef = database.ref('.info/connected');
+    connectedRef.on('value', (snap) => {
+      this.isConnected = snap.val() === true;
+      this.updateConnectionStatus();
+      console.log(this.isConnected ? '✓ Connected to Firebase' : '✗ Disconnected from Firebase');
     });
-}
+  }
 
-// دالة لحفظ البيانات في Local Storage كنسخة احتياطية
-function backupToLocalStorage(data, key) {
-    try {
-        localStorage.setItem(`backup_${key}`, JSON.stringify(data));
-        localStorage.setItem(`backup_${key}_timestamp`, new Date().toISOString());
-    } catch (error) {
-        console.error('خطأ في حفظ النسخة الاحتياطية:', error);
+  setupConnectionListener() {
+    window.addEventListener('online', () => {
+      this.isConnected = true;
+      this.updateConnectionStatus();
+      console.log('✓ Internet connection restored');
+    });
+
+    window.addEventListener('offline', () => {
+      this.isConnected = false;
+      this.updateConnectionStatus();
+      console.log('✗ Internet connection lost');
+    });
+  }
+
+  setupOfflineSupport() {
+    database.goOffline(); // Enable offline persistence
+    database.goOnline();
+  }
+
+  updateConnectionStatus() {
+    document.body.classList.toggle('firebase-connected', this.isConnected);
+    document.body.classList.toggle('firebase-disconnected', !this.isConnected);
+  }
+
+  static getInstance() {
+    if (!window.firebaseConnectionManager) {
+      window.firebaseConnectionManager = new FirebaseConnectionManager();
     }
+    return window.firebaseConnectionManager;
+  }
 }
 
-// دالة لاستعادة البيانات من Local Storage
-function restoreFromLocalStorage(key) {
+// =====================================================
+// Request Manager - إدارة الطلبات
+// =====================================================
+
+class RequestManager {
+  constructor() {
+    this.requestsRef = dbRef.requests;
+    this.statisticsRef = dbRef.statistics;
+  }
+
+  // Add new request
+  async addRequest(requestData) {
     try {
-        const data = localStorage.getItem(`backup_${key}`);
-        const timestamp = localStorage.getItem(`backup_${key}_timestamp`);
-        if (data && timestamp) {
-            return {
-                data: JSON.parse(data),
-                timestamp: new Date(timestamp)
-            };
-        }
+      const newRequestRef = this.requestsRef.push();
+      const requestId = newRequestRef.key;
+      
+      const completeRequest = {
+        ...requestData,
+        id: requestId,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        status: requestData.status || 'pending',
+        priority: requestData.priority || 'normal'
+      };
+
+      await newRequestRef.set(completeRequest);
+      await this.updateStatistics();
+      
+      console.log(`✓ Request added: ${requestId}`);
+      return { success: true, requestId };
     } catch (error) {
-        console.error('خطأ في استعادة النسخة الاحتياطية:', error);
+      console.error('Error adding request:', error);
+      return { success: false, error: error.message };
     }
-    return null;
-}
+  }
 
-// كائن لإدارة الطلبات
-const RequestManager = {
-    // إضافة طلب جديد
-    async addRequest(requestData) {
-        try {
-            // إنشاء معرف فريد للطلب إذا لم يكن هناك رقم يدوي
-            let requestId;
-            if (requestData.manualRequestNumber) {
-                // استخدام الرقم اليدوي كمعرف إذا تم توفيره
-                requestId = requestData.manualRequestNumber;
-            } else {
-                // توليد رقم تلقائي
-                requestId = 'REQ-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-            }
-            
-            requestData.id = requestId;
-            requestData.createdAt = new Date().toISOString();
-            requestData.updatedAt = new Date().toISOString();
+  // Get all requests
+  async getAllRequests() {
+    try {
+      const snapshot = await this.requestsRef.once('value');
+      return snapshot.val() || {};
+    } catch (error) {
+      console.error('Error fetching requests:', error);
+      return {};
+    }
+  }
 
-            // تعيين القيم الافتراضية
-            requestData.status = requestData.status || 'pending';
-            requestData.responseStatus = requestData.responseStatus || false;
+  // Get single request
+  async getRequest(requestId) {
+    try {
+      const snapshot = await this.requestsRef.child(requestId).once('value');
+      return snapshot.val();
+    } catch (error) {
+      console.error(`Error fetching request ${requestId}:`, error);
+      return null;
+    }
+  }
 
-            // حفظ في Firebase
-            await dbRef.requests.child(requestId).set(requestData);
+  // Update request
+  async updateRequest(requestId, updateData) {
+    try {
+      const updatedData = {
+        ...updateData,
+        updatedAt: new Date().toISOString()
+      };
+      await this.requestsRef.child(requestId).update(updatedData);
+      await this.updateStatistics();
+      
+      console.log(`✓ Request updated: ${requestId}`);
+      return { success: true };
+    } catch (error) {
+      console.error(`Error updating request ${requestId}:`, error);
+      return { success: false, error: error.message };
+    }
+  }
 
-            // حفظ نسخة احتياطية محلية
-            backupToLocalStorage(requestData, requestId);
+  // Delete request
+  async deleteRequest(requestId) {
+    try {
+      await this.requestsRef.child(requestId).remove();
+      await this.updateStatistics();
+      
+      console.log(`✓ Request deleted: ${requestId}`);
+      return { success: true };
+    } catch (error) {
+      console.error(`Error deleting request ${requestId}:`, error);
+      return { success: false, error: error.message };
+    }
+  }
 
-            console.log('تم إضافة الطلب بنجاح:', requestId);
-            return { success: true, id: requestId };
-        } catch (error) {
-            console.error('خطأ في إضافة الطلب:', error);
-            return { success: false, error: error.message };
-        }
-    },
+  // Filter requests with advanced filters
+  async filterRequests(filters) {
+    try {
+      const allRequests = await this.getAllRequests();
+      let results = Object.values(allRequests);
 
-    // تحديث طلب موجود
-    async updateRequest(requestId, updates) {
-        try {
-            updates.updatedAt = new Date().toISOString();
-            await dbRef.requests.child(requestId).update(updates);
+      // Apply filters
+      if (filters.status && filters.status !== 'all') {
+        results = results.filter(req => req.status === filters.status);
+      }
 
-            // تحديث النسخة الاحتياطية
-            const currentData = await this.getRequest(requestId);
-            const updatedData = { ...currentData, ...updates };
-            backupToLocalStorage(updatedData, requestId);
+      if (filters.authority && filters.authority !== 'all') {
+        results = results.filter(req => req.receivingAuthority === filters.authority);
+      }
 
-            console.log('تم تحديث الطلب:', requestId);
-            return { success: true };
-        } catch (error) {
-            console.error('خطأ في تحديث الطلب:', error);
-            return { success: false, error: error.message };
-        }
-    },
+      if (filters.startDate) {
+        const startDate = new Date(filters.startDate);
+        results = results.filter(req => new Date(req.submissionDate) >= startDate);
+      }
 
-    // حذف طلب
-    async deleteRequest(requestId) {
-        try {
-            await dbRef.requests.child(requestId).remove();
-
-            // حذف النسخة الاحتياطية
-            localStorage.removeItem(`backup_${requestId}`);
-            localStorage.removeItem(`backup_${requestId}_timestamp`);
-
-            console.log('تم حذف الطلب:', requestId);
-            return { success: true };
-        } catch (error) {
-            console.error('خطأ في حذف الطلب:', error);
-            return { success: false, error: error.message };
-        }
-    },
-
-    // الحصول على طلب محدد
-    async getRequest(requestId) {
-        try {
-            const snapshot = await dbRef.requests.child(requestId).once('value');
-            return snapshot.val();
-        } catch (error) {
-            console.error('خطأ في الحصول على الطلب:', error);
-            // محاولة الاستعادة من النسخة الاحتياطية
-            const backup = restoreFromLocalStorage(requestId);
-            if (backup) {
-                console.log('تم استعادة الطلب من النسخة الاحتياطية');
-                return backup.data;
-            }
-            return null;
-        }
-    },
-
-    // الحصول على جميع الطلبات
-    async getAllRequests() {
-        try {
-            const snapshot = await dbRef.requests.once('value');
-            const requests = snapshot.val() || {};
-
-            // حفظ نسخة احتياطية
-            backupToLocalStorage(requests, 'all_requests');
-
-            return requests;
-        } catch (error) {
-            console.error('خطأ في الحصول على الطلبات:', error);
-            // محاولة الاستعادة من النسخة الاحتياطية
-            const backup = restoreFromLocalStorage('all_requests');
-            if (backup) {
-                console.log('تم استعادة الطلبات من النسخة الاحتياطية');
-                return backup.data;
-            }
-            return {};
-        }
-    },
-
-    // تصفية الطلبات حسب المعايير
-    async filterRequests(filters = {}) {
-        try {
-            const allRequests = await this.getAllRequests();
-            let filteredRequests = Object.values(allRequests);
-
-            // تطبيق الفلاتر
-            if (filters.status && filters.status !== 'all') {
-                filteredRequests = filteredRequests.filter(req => req.status === filters.status);
-            }
-
-            if (filters.authority && filters.authority !== 'all') {
-                filteredRequests = filteredRequests.filter(req => req.receivingAuthority === filters.authority);
-            }
-
-            if (filters.startDate) {
-                filteredRequests = filteredRequests.filter(req =>
-                    new Date(req.submissionDate) >= new Date(filters.startDate)
-                );
-            }
-
-            if (filters.endDate) {
-                filteredRequests = filteredRequests.filter(req =>
-                    new Date(req.submissionDate) <= new Date(filters.endDate)
-                );
-            }
-
-            if (filters.searchText) {
-                const searchText = filters.searchText.toLowerCase();
-                filteredRequests = filteredRequests.filter(req =>
-                    (req.id && req.id.toLowerCase().includes(searchText)) ||
-                    (req.manualRequestNumber && req.manualRequestNumber.toLowerCase().includes(searchText)) ||
-                    (req.requestTitle && req.requestTitle.toLowerCase().includes(searchText)) ||
-                    (req.requestDetails && req.requestDetails.toLowerCase().includes(searchText)) ||
-                    (req.receivingAuthority && req.receivingAuthority.toLowerCase().includes(searchText))
-                );
-            }
-
-            // الفرز حسب التاريخ (الأحدث أولاً)
-            filteredRequests.sort((a, b) =>
-                new Date(b.createdAt) - new Date(a.createdAt)
-            );
-
-            return filteredRequests;
-        } catch (error) {
-            console.error('خطأ في تصفية الطلبات:', error);
-            return [];
-        }
-    },
-
-    // الحصول على إحصائيات الطلبات
-    async getStatistics() {
-        try {
-            const allRequests = await this.getAllRequests();
-            const requestsArray = Object.values(allRequests);
-
-            const stats = {
-                total: requestsArray.length,
-                completed: requestsArray.filter(req => req.status === 'completed').length,
-                inProgress: requestsArray.filter(req => req.status === 'in-progress').length,
-                pending: requestsArray.filter(req => req.status === 'pending').length,
-                rejected: requestsArray.filter(req => req.status === 'rejected').length,
-
-                // حساب معدل الإنجاز
-                completionRate: requestsArray.length > 0
-                    ? Math.round((requestsArray.filter(req => req.status === 'completed').length / requestsArray.length) * 100)
-                    : 0,
-
-                // حساب متوسط وقت الاستجابة
-                avgResponseTime: this.calculateAverageResponseTime(requestsArray),
-
-                // الحصول على الجهات الفريدة
-                authorities: [...new Set(requestsArray.map(req => req.receivingAuthority))],
-
-                // الطلبات الأخيرة (آخر 5)
-                recentRequests: requestsArray
-                    .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-                    .slice(0, 5)
-            };
-
-            return stats;
-        } catch (error) {
-            console.error('خطأ في حساب الإحصائيات:', error);
-            return {
-                total: 0,
-                completed: 0,
-                inProgress: 0,
-                pending: 0,
-                rejected: 0,
-                completionRate: 0,
-                avgResponseTime: 0,
-                authorities: [],
-                recentRequests: []
-            };
-        }
-    },
-
-    // حساب متوسط وقت الاستجابة
-    calculateAverageResponseTime(requests) {
-        const respondedRequests = requests.filter(req =>
-            req.responseStatus && req.responseDate && req.submissionDate
+      if (filters.searchText) {
+        const search = filters.searchText.toLowerCase();
+        results = results.filter(req => 
+          req.requestTitle.toLowerCase().includes(search) ||
+          req.requestDetails.toLowerCase().includes(search) ||
+          req.id.includes(search)
         );
+      }
 
-        if (respondedRequests.length === 0) return 0;
-
-        const totalDays = respondedRequests.reduce((sum, req) => {
-            const submissionDate = new Date(req.submissionDate);
-            const responseDate = new Date(req.responseDate);
-            const diffTime = Math.abs(responseDate - submissionDate);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            return sum + diffDays;
-        }, 0);
-
-        return Math.round(totalDays / respondedRequests.length);
-    },
-
-    // تحديث حالة الطلب
-    async updateRequestStatus(requestId, newStatus, additionalData = {}) {
-        const updates = {
-            status: newStatus,
-            updatedAt: new Date().toISOString(),
-            ...additionalData
-        };
-
-        // تحديث تاريخ الخطوة حسب الحالة
-        const dateFields = {
-            'pending': 'submittedDate',
-            'under-review': 'reviewDate',
-            'in-progress': 'implementationDate',
-            'completed': 'completedDate'
-        };
-
-        if (dateFields[newStatus]) {
-            updates[dateFields[newStatus]] = new Date().toISOString();
-        }
-
-        return await this.updateRequest(requestId, updates);
-    },
-
-    // البحث عن طلبات تحتاج متابعة
-    async getFollowupNeeded() {
-        try {
-            const allRequests = await this.getAllRequests();
-            const requestsArray = Object.values(allRequests);
-            const now = new Date();
-            const followupRequests = [];
-
-            requestsArray.forEach(request => {
-                // الطلبات التي لم يتم الرد عليها لأكثر من 7 أيام
-                if (!request.responseStatus && request.submissionDate) {
-                    const submissionDate = new Date(request.submissionDate);
-                    const diffDays = Math.ceil((now - submissionDate) / (1000 * 60 * 60 * 24));
-
-                    if (diffDays > 7 && request.status !== 'completed') {
-                        followupRequests.push({
-                            ...request,
-                            daysOverdue: diffDays - 7
-                        });
-                    }
-                }
-
-                // الطلبات قيد التنفيذ لأكثر من 30 يوم
-                if (request.status === 'in-progress' && request.implementationDate) {
-                    const implementationDate = new Date(request.implementationDate);
-                    const diffDays = Math.ceil((now - implementationDate) / (1000 * 60 * 60 * 24));
-
-                    if (diffDays > 30) {
-                        followupRequests.push({
-                            ...request,
-                            daysInProgress: diffDays
-                        });
-                    }
-                }
-            });
-
-            return followupRequests;
-        } catch (error) {
-            console.error('خطأ في الحصول على الطلبات التي تحتاج متابعة:', error);
-            return [];
-        }
+      return results;
+    } catch (error) {
+      console.error('Error filtering requests:', error);
+      return [];
     }
-};
+  }
 
-// تصدير الكائنات للاستخدام في ملفات أخرى
+  // Get statistics
+  async getStatistics() {
+    try {
+      const allRequests = await this.getAllRequests();
+      const requests = Object.values(allRequests);
+
+      const stats = {
+        total: requests.length,
+        pending: requests.filter(r => r.status === 'pending').length,
+        inProgress: requests.filter(r => r.status === 'in-progress').length,
+        completed: requests.filter(r => r.status === 'completed').length,
+        rejected: requests.filter(r => r.status === 'rejected').length,
+        completionRate: requests.length > 0 ? Math.round((requests.filter(r => r.status === 'completed').length / requests.length) * 100) : 0,
+        avgResponseTime: this.calculateAvgResponseTime(requests),
+        authorities: [...new Set(requests.map(r => r.receivingAuthority))].filter(Boolean),
+        recentRequests: requests.sort((a, b) => new Date(b.submissionDate) - new Date(a.submissionDate)).slice(0, 5)
+      };
+
+      return stats;
+    } catch (error) {
+      console.error('Error calculating statistics:', error);
+      return {
+        total: 0,
+        pending: 0,
+        inProgress: 0,
+        completed: 0,
+        rejected: 0,
+        completionRate: 0,
+        avgResponseTime: 0,
+        authorities: [],
+        recentRequests: []
+      };
+    }
+  }
+
+  calculateAvgResponseTime(requests) {
+    const completedRequests = requests.filter(r => r.responseDate && r.submissionDate);
+    if (completedRequests.length === 0) return 0;
+
+    const totalDays = completedRequests.reduce((sum, req) => {
+      const submitted = new Date(req.submissionDate);
+      const responded = new Date(req.responseDate);
+      const days = Math.floor((responded - submitted) / (1000 * 60 * 60 * 24));
+      return sum + days;
+    }, 0);
+
+    return Math.round(totalDays / completedRequests.length);
+  }
+
+  async updateStatistics() {
+    try {
+      const stats = await this.getStatistics();
+      await this.statisticsRef.set({
+        ...stats,
+        lastUpdated: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error updating statistics:', error);
+    }
+  }
+
+  // Real-time listener for requests
+  onRequestsChange(callback) {
+    this.requestsRef.on('value', (snapshot) => {
+      callback(snapshot.val() || {});
+    });
+  }
+
+  // Remove real-time listener
+  offRequestsChange() {
+    this.requestsRef.off('value');
+  }
+}
+
+// =====================================================
+// Notifications Manager
+// =====================================================
+
+class NotificationsManager {
+  constructor() {
+    this.notificationsRef = dbRef.notifications;
+  }
+
+  async createNotification(notification) {
+    try {
+      const newNotificationRef = this.notificationsRef.push();
+      const notificationId = newNotificationRef.key;
+
+      const completeNotification = {
+        ...notification,
+        id: notificationId,
+        createdAt: new Date().toISOString(),
+        read: false
+      };
+
+      await newNotificationRef.set(completeNotification);
+      console.log(`✓ Notification created: ${notificationId}`);
+      return { success: true, notificationId };
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      return { success: false, error: error.message };
+    }
+  }
+
+  async getNotifications() {
+    try {
+      const snapshot = await this.notificationsRef.once('value');
+      return snapshot.val() || {};
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+      return {};
+    }
+  }
+}
+
+// =====================================================
+// Global Exports & Initialization
+// =====================================================
+
+// Create global app object
 window.firebaseApp = {
-    database,
-    dbRef,
-    RequestManager,
-    checkFirebaseConnection
+  firebase,
+  database,
+  dbRef,
+  RequestManager: new RequestManager(),
+  NotificationsManager: new NotificationsManager(),
+  ConnectionManager: FirebaseConnectionManager.getInstance()
 };
 
-// التحقق من الاتصال عند التحميل
-document.addEventListener('DOMContentLoaded', function() {
-    checkFirebaseConnection();
-});
+// Initialize connection manager
+FirebaseConnectionManager.getInstance();
+
+console.log('✓ Firebase configuration loaded successfully');
