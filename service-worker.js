@@ -86,7 +86,7 @@ self.addEventListener('fetch', (event) => {
   // Strategy 1: Firebase requests - Network first with aggressive caching
   if (url.hostname.includes('firebase') || url.hostname.includes('firebaseio')) {
     event.respondWith(
-      this.firebaseStrategy(request)
+      firebaseStrategy(request)
     );
     return;
   }
@@ -94,7 +94,7 @@ self.addEventListener('fetch', (event) => {
   // Strategy 2: Local assets - Cache first, then network
   if (url.origin === location.origin || STATIC_ASSETS.some(asset => request.url.includes(asset))) {
     event.respondWith(
-      this.cacheFirstStrategy(request)
+      cacheFirstStrategy(request)
     );
     return;
   }
@@ -102,19 +102,19 @@ self.addEventListener('fetch', (event) => {
   // Strategy 3: External resources - Stale-while-revalidate
   if (EXTERNAL_RESOURCES.some(resource => request.url.startsWith(resource))) {
     event.respondWith(
-      this.staleWhileRevalidateStrategy(request)
+      staleWhileRevalidateStrategy(request)
     );
     return;
   }
 
   // Strategy 4: Default - Network first with cache fallback
   event.respondWith(
-    this.networkFirstStrategy(request)
+    networkFirstStrategy(request)
   );
 });
 
 // Firebase Strategy - Network first with aggressive caching
-firebaseStrategy(request) {
+function firebaseStrategy(request) {
   return fetch(request)
     .then((response) => {
       if (response.ok) {
@@ -135,7 +135,7 @@ firebaseStrategy(request) {
           
           // Return offline data if available
           if (request.url.includes('parliament-requests')) {
-            return this.getOfflineRequests();
+            return getOfflineRequests();
           }
           
           return new Response(JSON.stringify({ error: 'Offline mode' }), {
@@ -146,12 +146,12 @@ firebaseStrategy(request) {
 }
 
 // Cache First Strategy - For static assets
-cacheFirstStrategy(request) {
+function cacheFirstStrategy(request) {
   return caches.match(request)
     .then((response) => {
       if (response) {
         // Update cache in background
-        this.updateCache(request);
+        updateCache(request);
         return response;
       }
       
@@ -176,7 +176,7 @@ cacheFirstStrategy(request) {
 }
 
 // Stale While Revalidate Strategy - For external resources
-staleWhileRevalidateStrategy(request) {
+function staleWhileRevalidateStrategy(request) {
   return caches.match(request)
     .then((cachedResponse) => {
       const fetchPromise = fetch(request)
@@ -198,7 +198,7 @@ staleWhileRevalidateStrategy(request) {
 }
 
 // Network First Strategy - Default strategy
-networkFirstStrategy(request) {
+function networkFirstStrategy(request) {
   return fetch(request)
     .then((response) => {
       if (response.ok && request.method === 'GET') {
@@ -215,7 +215,7 @@ networkFirstStrategy(request) {
 }
 
 // Update cache in background
-updateCache(request) {
+function updateCache(request) {
   fetch(request)
     .then((response) => {
       if (response.ok) {
@@ -231,7 +231,7 @@ updateCache(request) {
 }
 
 // Get offline requests data
-getOfflineRequests() {
+function getOfflineRequests() {
   return new Response(JSON.stringify({
     offline: true,
     timestamp: new Date().toISOString(),
@@ -244,15 +244,15 @@ getOfflineRequests() {
 // Background sync for failed requests
 self.addEventListener('sync', (event) => {
   if (event.tag === 'sync-requests') {
-    event.waitUntil(this.syncFailedRequests());
+    event.waitUntil(syncFailedRequests());
   }
   
   if (event.tag === 'sync-notifications') {
-    event.waitUntil(this.syncNotifications());
+    event.waitUntil(syncNotifications());
   }
 });
 
-async syncFailedRequests() {
+async function syncFailedRequests() {
   console.log('[Service Worker] 🔄 Syncing failed requests...');
   
   try {
@@ -280,7 +280,7 @@ async syncFailedRequests() {
   }
 }
 
-async syncNotifications() {
+async function syncNotifications() {
   console.log('[Service Worker] 🔔 Syncing notifications...');
   
   try {
@@ -305,15 +305,15 @@ self.addEventListener('message', (event) => {
   
   switch (type) {
     case 'CLEAR_CACHE':
-      this.clearCache(event);
+      clearCache(event);
       break;
       
     case 'GET_CACHE_INFO':
-      this.getCacheInfo(event);
+      getCacheInfo(event);
       break;
       
     case 'UPDATE_CACHE':
-      this.updateSpecificCache(data, event);
+      updateSpecificCache(data, event);
       break;
       
     case 'SKIP_WAITING':
@@ -322,12 +322,12 @@ self.addEventListener('message', (event) => {
       break;
       
     case 'CHECK_UPDATES':
-      this.checkForUpdates(event);
+      checkForUpdates(event);
       break;
   }
 });
 
-async clearCache(event) {
+async function clearCache(event) {
   try {
     await caches.delete(CACHE_NAME);
     event.ports[0].postMessage({ 
@@ -342,7 +342,7 @@ async clearCache(event) {
   }
 }
 
-async getCacheInfo(event) {
+async function getCacheInfo(event) {
   try {
     const cache = await caches.open(CACHE_NAME);
     const requests = await cache.keys();
@@ -350,7 +350,7 @@ async getCacheInfo(event) {
     const info = {
       cacheName: CACHE_NAME,
       totalItems: requests.length,
-      size: await this.calculateCacheSize(cache),
+      size: await calculateCacheSize(cache),
       items: requests.map(req => ({
         url: req.url,
         method: req.method
@@ -366,7 +366,7 @@ async getCacheInfo(event) {
   }
 }
 
-async calculateCacheSize(cache) {
+async function calculateCacheSize(cache) {
   const requests = await cache.keys();
   let totalSize = 0;
   
@@ -391,7 +391,7 @@ async calculateCacheSize(cache) {
   return `${size.toFixed(2)} ${units[unitIndex]}`;
 }
 
-async updateSpecificCache(urls, event) {
+async function updateSpecificCache(urls, event) {
   try {
     const cache = await caches.open(CACHE_NAME);
     
@@ -418,9 +418,8 @@ async updateSpecificCache(urls, event) {
   }
 }
 
-async checkForUpdates(event) {
+async function checkForUpdates(event) {
   try {
-    const cache = await caches.open(CACHE_NAME);
     const cacheVersion = CACHE_NAME.split('-v')[1];
     
     // Check for new version
@@ -498,11 +497,11 @@ self.addEventListener('notificationclick', (event) => {
 self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'update-cache') {
     console.log('[Service Worker] 🔄 Periodic sync triggered');
-    event.waitUntil(this.periodicCacheUpdate());
+    event.waitUntil(periodicCacheUpdate());
   }
 });
 
-async periodicCacheUpdate() {
+async function periodicCacheUpdate() {
   try {
     const cache = await caches.open(CACHE_NAME);
     
@@ -526,3 +525,11 @@ async periodicCacheUpdate() {
 
 // Log service worker lifecycle
 console.log('[Service Worker] ✅ Loaded and ready for offline support');
+
+// Add version.json for update checking
+// Create version.json file with the following content:
+// {
+//   "version": "3.0.0",
+//   "lastUpdate": "2024-01-01T00:00:00Z",
+//   "changelog": "Enhanced caching strategy and offline support"
+// }
