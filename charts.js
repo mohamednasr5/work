@@ -1,103 +1,61 @@
-// assets/js/charts.js
+/* Charts Logic */
+let statusChartInstance = null;
+let ministryChartInstance = null;
 
-class ChartsManager {
-    constructor() {
-        this.charts = {};
-        this.colors = {
-            primary: '#3498db',
-            success: '#27ae60',
-            warning: '#f39c12',
-            danger: '#e74c3c'
-        };
-    }
+window.updateCharts = function(requests) {
+    // 1. Prepare Data for Status Chart
+    const statusCounts = { pending: 0, inprogress: 0, completed: 0, rejected: 0 };
+    requests.forEach(r => {
+        if (statusCounts[r.status] !== undefined) statusCounts[r.status]++;
+    });
 
-    initAllCharts() {
-        this.createStatusChart();
-        this.createMonthlyChart();
-        this.createAuthorityChart();
-    }
-
-    createStatusChart() {
-        const ctx = document.getElementById('statusChart');
-        if(!ctx) return;
-
-        this.charts.status = new Chart(ctx, {
-            type: 'doughnut',
-            data: {
-                labels: ['مكتمل', 'قيد التنفيذ', 'قيد المراجعة', 'مرفوض'],
-                datasets: [{
-                    data: [12, 19, 3, 5], // بيانات تجريبية
-                    backgroundColor: [
-                        this.colors.success,
-                        this.colors.primary,
-                        this.colors.warning,
-                        this.colors.danger
-                    ],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom', labels: { font: { family: 'Tajawal' } } }
-                }
+    const ctxStatus = document.getElementById('statusChart').getContext('2d');
+    
+    if (statusChartInstance) statusChartInstance.destroy();
+    
+    statusChartInstance = new Chart(ctxStatus, {
+        type: 'doughnut',
+        data: {
+            labels: ['قيد الانتظار', 'قيد التنفيذ', 'مكتمل', 'مرفوض'],
+            datasets: [{
+                data: [statusCounts.pending, statusCounts.inprogress, statusCounts.completed, statusCounts.rejected],
+                backgroundColor: ['#f59e0b', '#3b82f6', '#10b981', '#ef4444'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { font: { family: 'Tajawal' } } }
             }
-        });
-    }
+        }
+    });
 
-    createMonthlyChart() {
-        const ctx = document.getElementById('monthlyChart');
-        if(!ctx) return;
+    // 2. Prepare Data for Ministry Chart
+    const ministryCounts = {};
+    requests.forEach(r => {
+        ministryCounts[r.ministry] = (ministryCounts[r.ministry] || 0) + 1;
+    });
 
-        this.charts.monthly = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
-                datasets: [{
-                    label: 'عدد الطلبات',
-                    data: [65, 59, 80, 81, 56, 55],
-                    borderColor: this.colors.primary,
-                    tension: 0.4,
-                    fill: true,
-                    backgroundColor: 'rgba(52, 152, 219, 0.1)'
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                scales: {
-                    y: { beginAtZero: true }
-                }
-            }
-        });
-    }
+    const ctxMinistry = document.getElementById('ministryChart').getContext('2d');
+    if (ministryChartInstance) ministryChartInstance.destroy();
 
-    createAuthorityChart() {
-        const ctx = document.getElementById('authorityChart');
-        if(!ctx) return;
-
-        this.charts.authority = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['الصحة', 'التعليم', 'الكهرباء', 'الإسكان', 'أخرى'],
-                datasets: [{
-                    label: 'الطلبات حسب الجهة',
-                    data: [12, 19, 3, 5, 2],
-                    backgroundColor: this.colors.primary,
-                    borderRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                indexAxis: 'y' // شريطي أفقي
-            }
-        });
-    }
-}
-
-// تهيئة تلقائية
-
-window.chartsManager = new ChartsManager();
+    ministryChartInstance = new Chart(ctxMinistry, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(ministryCounts),
+            datasets: [{
+                label: 'عدد الطلبات',
+                data: Object.values(ministryCounts),
+                backgroundColor: '#2563eb',
+                borderRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            indexAxis: 'y',
+            scales: { x: { beginAtZero: true } },
+            plugins: { legend: { display: false } }
+        }
+    });
+};
