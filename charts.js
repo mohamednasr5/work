@@ -1,128 +1,173 @@
 // =====================================================
-// إدارة الرسوم البيانية المحسنة
-// Enhanced Charts Manager
+// Advanced Charts Manager for Parliamentary Requests System
+// مدير الرسوم البيانية المتقدم لنظام إدارة الطلبات البرلمانية
 // =====================================================
 
-class EnhancedChartsManager {
+class ChartsManager {
     constructor() {
         this.charts = {};
-        this.chartColors = {
-            primary: '#3498db',
-            secondary: '#2ecc71',
-            accent: '#e74c3c',
-            warning: '#f39c12',
-            info: '#9b59b6',
-            dark: '#2c3e50',
-            light: '#ecf0f1'
-        };
         this.theme = 'light';
+        this.animationDuration = 1000;
         this.init();
     }
 
-    async init() {
-        console.log('📊 جاري تهيئة الرسوم البيانية المتقدمة...');
+    init() {
+        console.log('📊 جاري تهيئة مدير الرسوم البيانية المتقدم...');
         
-        // اكتشاف الوضع الليلي/النهاري
-        this.detectTheme();
+        // تحميل تفضيلات الموضوع
+        this.loadTheme();
         
-        // تهيئة الرسوم البيانية
-        this.initCharts();
+        // إعداد ألوان الرسوم البيانية حسب الموضوع
+        this.setupColors();
         
-        // تحديث الرسوم البيانية تلقائياً
-        this.setupAutoUpdate();
+        // تهيئة جميع الرسوم البيانية
+        this.initAllCharts();
         
-        console.log('✅ تم تهيئة الرسوم البيانية بنجاح');
+        // الاستماع لتغيرات السمة
+        this.setupThemeListener();
+        
+        console.log('✅ مدير الرسوم البيانية المتقدم جاهز للاستخدام');
     }
 
-    detectTheme() {
-        const theme = document.body.getAttribute('data-theme');
-        this.theme = theme === 'dark' ? 'dark' : 'light';
-        
-        // تحديث الألوان حسب الوضع
-        if (this.theme === 'dark') {
-            this.chartColors = {
-                primary: '#2980b9',
-                secondary: '#27ae60',
-                accent: '#c0392b',
-                warning: '#d35400',
-                info: '#8e44ad',
-                dark: '#34495e',
-                light: '#bdc3c7'
-            };
+    loadTheme() {
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            this.theme = savedTheme;
+        } else {
+            this.theme = document.body.getAttribute('data-theme') || 'light';
         }
     }
 
-    initCharts() {
-        // 1. مخطط حالة الطلبات (دونات)
-        this.initStatusChart();
-        
-        // 2. مخطط النشاط الشهري (خطي)
-        this.initMonthlyChart();
-        
-        // 3. مخطط توزيع الجهات (قطاعي)
-        this.initAuthorityChart();
-        
-        // 4. مخطط أداء الجهات (أعمدة)
-        this.initPerformanceChart();
-        
-        // 5. مخطط وقت الاستجابة (منطقة)
-        this.initResponseTimeChart();
+    setupColors() {
+        // ألوان حسب السمة
+        this.colors = {
+            light: {
+                primary: '#3498db',
+                success: '#27ae60',
+                warning: '#f39c12',
+                danger: '#e74c3c',
+                info: '#9b59b6',
+                dark: '#2c3e50',
+                light: '#ecf0f1',
+                border: '#bdc3c7',
+                background: '#ffffff',
+                text: '#2c3e50',
+                textLight: '#7f8c8d'
+            },
+            dark: {
+                primary: '#2980b9',
+                success: '#219a52',
+                warning: '#e67e22',
+                danger: '#c0392b',
+                info: '#8e44ad',
+                dark: '#34495e',
+                light: '#2c3e50',
+                border: '#34495e',
+                background: '#1a1a2e',
+                text: '#ecf0f1',
+                textLight: '#95a5a6'
+            }
+        };
+
+        this.currentColors = this.colors[this.theme];
     }
 
-    initStatusChart() {
-        const canvas = document.getElementById('statusChart');
-        if (!canvas) return;
+    setupThemeListener() {
+        // مراقبة تغيير السمة
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.attributeName === 'data-theme') {
+                    this.theme = document.body.getAttribute('data-theme');
+                    this.setupColors();
+                    this.updateAllCharts();
+                }
+            });
+        });
 
-        const ctx = canvas.getContext('2d');
-        
-        this.charts.statusChart = new Chart(ctx, {
+        observer.observe(document.body, { attributes: true });
+    }
+
+    initAllCharts() {
+        // تهيئة جميع الرسوم البيانية بعد تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(() => {
+                this.createStatusChart();
+                this.createMonthlyChart();
+                this.createAuthorityChart();
+                console.log('📈 جميع الرسوم البيانية مهيأة');
+            }, 1000);
+        });
+    }
+
+    // =====================================================
+    // STATUS CHART - حالة الطلبات
+    // =====================================================
+
+    createStatusChart() {
+        const ctx = document.getElementById('statusChart');
+        if (!ctx) {
+            console.log('⚠️ لم يتم العثور على عنصر حالة الطلبات');
+            return;
+        }
+
+        // تدمير الرسم البياني القديم إذا كان موجوداً
+        if (this.charts.status) {
+            this.charts.status.destroy();
+        }
+
+        // بيانات افتراضية
+        const defaultData = {
+            labels: ['قيد المراجعة', 'قيد الدراسة', 'قيد التنفيذ', 'مكتمل', 'مرفوض'],
+            datasets: [{
+                data: [5, 3, 7, 12, 2],
+                backgroundColor: [
+                    this.currentColors.primary,
+                    this.currentColors.info,
+                    this.currentColors.warning,
+                    this.currentColors.success,
+                    this.currentColors.danger
+                ],
+                borderColor: this.currentColors.background,
+                borderWidth: 2,
+                hoverOffset: 15,
+                borderRadius: 10
+            }]
+        };
+
+        this.charts.status = new Chart(ctx, {
             type: 'doughnut',
-            data: {
-                labels: ['قيد المراجعة', 'قيد الدراسة', 'قيد التنفيذ', 'مكتمل', 'مرفوض'],
-                datasets: [{
-                    data: [0, 0, 0, 0, 0],
-                    backgroundColor: [
-                        this.chartColors.primary,
-                        this.chartColors.info,
-                        this.chartColors.warning,
-                        this.chartColors.secondary,
-                        this.chartColors.accent
-                    ],
-                    borderWidth: 2,
-                    borderColor: this.theme === 'dark' ? '#2c3e50' : '#ffffff',
-                    hoverOffset: 15
-                }]
-            },
+            data: defaultData,
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '65%',
                 plugins: {
                     legend: {
                         position: 'bottom',
                         rtl: true,
                         labels: {
-                            padding: 15,
+                            padding: 20,
                             font: {
-                                family: 'Tajawal, sans-serif',
+                                family: "'Tajawal', sans-serif",
                                 size: 12
                             },
-                            color: this.theme === 'dark' ? '#ecf0f1' : '#2c3e50'
+                            color: this.currentColors.text
                         }
                     },
                     tooltip: {
                         rtl: true,
-                        backgroundColor: this.theme === 'dark' ? '#2c3e50' : '#ffffff',
-                        titleColor: this.theme === 'dark' ? '#ecf0f1' : '#2c3e50',
-                        bodyColor: this.theme === 'dark' ? '#bdc3c7' : '#7f8c8d',
-                        borderColor: this.chartColors.primary,
+                        backgroundColor: this.currentColors.dark,
+                        titleColor: this.currentColors.light,
+                        bodyColor: this.currentColors.light,
+                        borderColor: this.currentColors.border,
                         borderWidth: 1,
+                        padding: 10,
+                        displayColors: true,
                         callbacks: {
-                            label: (context) => {
+                            label: function(context) {
                                 const label = context.label || '';
-                                const value = context.parsed || 0;
+                                const value = context.raw || 0;
                                 const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
+                                const percentage = Math.round((value / total) * 100);
                                 return `${label}: ${value} (${percentage}%)`;
                             }
                         }
@@ -131,679 +176,555 @@ class EnhancedChartsManager {
                 animation: {
                     animateScale: true,
                     animateRotate: true,
-                    duration: 1000
-                }
+                    duration: this.animationDuration
+                },
+                cutout: '65%'
             }
         });
+
+        console.log('✅ تم إنشاء رسم حالة الطلبات');
     }
 
-    initMonthlyChart() {
-        const canvas = document.getElementById('monthlyChart');
-        if (!canvas) return;
+    // =====================================================
+    // MONTHLY ACTIVITY CHART - النشاط الشهري
+    // =====================================================
 
-        const ctx = canvas.getContext('2d');
-        const months = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 
-                      'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+    createMonthlyChart() {
+        const ctx = document.getElementById('monthlyChart');
+        if (!ctx) {
+            console.log('⚠️ لم يتم العثور على عنصر النشاط الشهري');
+            return;
+        }
 
-        this.charts.monthlyChart = new Chart(ctx, {
+        // تدمير الرسم البياني القديم إذا كان موجوداً
+        if (this.charts.monthly) {
+            this.charts.monthly.destroy();
+        }
+
+        // بيانات افتراضية للشهور العربية
+        const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+        const currentMonth = new Date().getMonth();
+        const labels = arabicMonths.slice(Math.max(0, currentMonth - 5), currentMonth + 1);
+
+        const defaultData = {
+            labels: labels,
+            datasets: [{
+                label: 'عدد الطلبات',
+                data: [12, 19, 15, 25, 22, 30],
+                backgroundColor: this.createGradient(ctx, this.currentColors.primary),
+                borderColor: this.currentColors.primary,
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4,
+                pointBackgroundColor: this.currentColors.background,
+                pointBorderColor: this.currentColors.primary,
+                pointBorderWidth: 3,
+                pointRadius: 6,
+                pointHoverRadius: 8
+            }]
+        };
+
+        this.charts.monthly = new Chart(ctx, {
             type: 'line',
-            data: {
-                labels: months.slice(0, 6),
-                datasets: [{
-                    label: 'الطلبات الشهرية',
-                    data: [0, 0, 0, 0, 0, 0],
-                    borderColor: this.chartColors.primary,
-                    backgroundColor: this.hexToRgba(this.chartColors.primary, 0.1),
-                    tension: 0.4,
-                    fill: true,
-                    borderWidth: 3,
-                    pointBackgroundColor: this.chartColors.primary,
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 5,
-                    pointHoverRadius: 7
-                }]
-            },
+            data: defaultData,
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        rtl: true,
-                        backgroundColor: this.theme === 'dark' ? '#2c3e50' : '#ffffff',
-                        titleColor: this.theme === 'dark' ? '#ecf0f1' : '#2c3e50',
-                        bodyColor: this.theme === 'dark' ? '#bdc3c7' : '#7f8c8d',
-                        borderColor: this.chartColors.primary,
-                        borderWidth: 1,
-                        callbacks: {
-                            label: (context) => {
-                                return `الطلبات: ${context.parsed.y}`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            color: this.theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-                        },
-                        ticks: {
-                            color: this.theme === 'dark' ? '#bdc3c7' : '#7f8c8d',
-                            font: {
-                                family: 'Tajawal, sans-serif'
-                            }
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: this.theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-                        },
-                        ticks: {
-                            color: this.theme === 'dark' ? '#bdc3c7' : '#7f8c8d',
-                            font: {
-                                family: 'Tajawal, sans-serif'
-                            },
-                            stepSize: 1
-                        }
-                    }
-                },
-                interaction: {
-                    intersect: false,
-                    mode: 'index'
-                },
-                animation: {
-                    duration: 1000
-                }
-            }
-        });
-    }
-
-    initAuthorityChart() {
-        const canvas = document.getElementById('authorityChart');
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-
-        this.charts.authorityChart = new Chart(ctx, {
-            type: 'pie',
-            data: {
-                labels: [],
-                datasets: [{
-                    data: [],
-                    backgroundColor: [
-                        '#3498db', '#2ecc71', '#e74c3c', '#f39c12', '#9b59b6',
-                        '#1abc9c', '#d35400', '#34495e', '#7f8c8d', '#16a085'
-                    ],
-                    borderWidth: 2,
-                    borderColor: this.theme === 'dark' ? '#2c3e50' : '#ffffff',
-                    hoverOffset: 10
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'right',
-                        rtl: true,
-                        labels: {
-                            padding: 10,
-                            font: {
-                                family: 'Tajawal, sans-serif',
-                                size: 11
-                            },
-                            color: this.theme === 'dark' ? '#ecf0f1' : '#2c3e50',
-                            usePointStyle: true
-                        }
-                    },
-                    tooltip: {
-                        rtl: true,
-                        backgroundColor: this.theme === 'dark' ? '#2c3e50' : '#ffffff',
-                        titleColor: this.theme === 'dark' ? '#ecf0f1' : '#2c3e50',
-                        bodyColor: this.theme === 'dark' ? '#bdc3c7' : '#7f8c8d',
-                        borderColor: this.chartColors.primary,
-                        borderWidth: 1,
-                        callbacks: {
-                            label: (context) => {
-                                const label = context.label || '';
-                                const value = context.parsed || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = total > 0 ? ((value / total) * 100).toFixed(1) : 0;
-                                return `${label}: ${value} طلب (${percentage}%)`;
-                            }
-                        }
-                    }
-                },
-                animation: {
-                    animateScale: true,
-                    animateRotate: true,
-                    duration: 1000
-                }
-            }
-        });
-    }
-
-    initPerformanceChart() {
-        const canvas = document.getElementById('performanceChart');
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-
-        this.charts.performanceChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: [],
-                datasets: [{
-                    label: 'معدل الإنجاز %',
-                    data: [],
-                    backgroundColor: this.chartColors.secondary,
-                    borderColor: this.chartColors.secondary,
-                    borderWidth: 1,
-                    borderRadius: 5,
-                    borderSkipped: false
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        rtl: true,
-                        callbacks: {
-                            label: (context) => {
-                                return `معدل الإنجاز: ${context.parsed.y}%`;
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        },
-                        ticks: {
-                            color: this.theme === 'dark' ? '#bdc3c7' : '#7f8c8d',
-                            font: {
-                                family: 'Tajawal, sans-serif'
-                            }
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        max: 100,
-                        grid: {
-                            color: this.theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
-                        },
-                        ticks: {
-                            color: this.theme === 'dark' ? '#bdc3c7' : '#7f8c8d',
-                            font: {
-                                family: 'Tajawal, sans-serif'
-                            },
-                            callback: (value) => `${value}%`
-                        }
-                    }
-                },
-                animation: {
-                    duration: 1000
-                }
-            }
-        });
-    }
-
-    initResponseTimeChart() {
-        const canvas = document.getElementById('responseTimeChart');
-        if (!canvas) return;
-
-        const ctx = canvas.getContext('2d');
-
-        this.charts.responseTimeChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'],
-                datasets: [{
-                    label: 'متوسط وقت الرد (يوم)',
-                    data: [0, 0, 0, 0, 0, 0],
-                    borderColor: this.chartColors.accent,
-                    backgroundColor: this.hexToRgba(this.chartColors.accent, 0.1),
-                    tension: 0.4,
-                    fill: true,
-                    borderWidth: 2,
-                    pointBackgroundColor: this.chartColors.accent,
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 2,
-                    pointRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
+                        display: true,
                         position: 'top',
                         rtl: true,
                         labels: {
-                            color: this.theme === 'dark' ? '#ecf0f1' : '#2c3e50',
                             font: {
-                                family: 'Tajawal, sans-serif'
+                                family: "'Tajawal', sans-serif",
+                                size: 12,
+                                weight: 'bold'
+                            },
+                            color: this.currentColors.text
+                        }
+                    },
+                    tooltip: {
+                        rtl: true,
+                        backgroundColor: this.currentColors.dark,
+                        titleColor: this.currentColors.light,
+                        bodyColor: this.currentColors.light,
+                        borderColor: this.currentColors.border,
+                        borderWidth: 1,
+                        padding: 10
+                    }
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            color: this.currentColors.border + '30'
+                        },
+                        ticks: {
+                            color: this.currentColors.text,
+                            font: {
+                                family: "'Tajawal', sans-serif"
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: this.currentColors.border + '30'
+                        },
+                        ticks: {
+                            color: this.currentColors.text,
+                            font: {
+                                family: "'Tajawal', sans-serif"
+                            },
+                            precision: 0
+                        }
+                    }
+                },
+                animation: {
+                    duration: this.animationDuration
+                }
+            }
+        });
+
+        console.log('✅ تم إنشاء رسم النشاط الشهري');
+    }
+
+    // =====================================================
+    // AUTHORITY DISTRIBUTION CHART - توزيع الجهات
+    // =====================================================
+
+    createAuthorityChart() {
+        const ctx = document.getElementById('authorityChart');
+        if (!ctx) {
+            console.log('⚠️ لم يتم العثور على عنصر توزيع الجهات');
+            return;
+        }
+
+        // تدمير الرسم البياني القديم إذا كان موجوداً
+        if (this.charts.authority) {
+            this.charts.authority.destroy();
+        }
+
+        // بيانات افتراضية للجهات
+        const defaultData = {
+            labels: ['وزارة الصحة', 'وزارة التعليم', 'وزارة النقل', 'المحافظة', 'البرلمان', 'وجهات أخرى'],
+            datasets: [{
+                label: 'عدد الطلبات',
+                data: [15, 12, 8, 10, 6, 4],
+                backgroundColor: [
+                    this.createColor(52, 152, 219),
+                    this.createColor(46, 204, 113),
+                    this.createColor(155, 89, 182),
+                    this.createColor(241, 196, 15),
+                    this.createColor(230, 126, 34),
+                    this.createColor(149, 165, 166)
+                ],
+                borderColor: this.currentColors.background,
+                borderWidth: 2,
+                borderRadius: 8
+            }]
+        };
+
+        this.charts.authority = new Chart(ctx, {
+            type: 'bar',
+            data: defaultData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                indexAxis: 'y', // شريطي أفقي
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        rtl: true,
+                        backgroundColor: this.currentColors.dark,
+                        titleColor: this.currentColors.light,
+                        bodyColor: this.currentColors.light,
+                        borderColor: this.currentColors.border,
+                        borderWidth: 1,
+                        padding: 10,
+                        callbacks: {
+                            label: function(context) {
+                                return `الطلبات: ${context.raw}`;
                             }
                         }
                     }
                 },
                 scales: {
                     x: {
+                        beginAtZero: true,
                         grid: {
-                            color: this.theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+                            color: this.currentColors.border + '30'
+                        },
+                        ticks: {
+                            color: this.currentColors.text,
+                            font: {
+                                family: "'Tajawal', sans-serif"
+                            },
+                            precision: 0
                         }
                     },
                     y: {
-                        beginAtZero: true,
                         grid: {
-                            color: this.theme === 'dark' ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.1)'
+                            color: this.currentColors.border + '30'
                         },
                         ticks: {
-                            callback: (value) => `${value} يوم`
+                            color: this.currentColors.text,
+                            font: {
+                                family: "'Tajawal', sans-serif"
+                            }
                         }
                     }
+                },
+                animation: {
+                    duration: this.animationDuration
                 }
             }
         });
+
+        console.log('✅ تم إنشاء رسم توزيع الجهات');
     }
 
     // =====================================================
-    // DATA UPDATES
+    // UPDATE FUNCTIONS - وظائف التحديث
     // =====================================================
-
-    async updateAllCharts() {
-        try {
-            const stats = await this.getStatistics();
-            this.updateDashboardCharts(stats);
-            await this.updateAuthorityChart();
-            await this.updateMonthlyChart();
-            await this.updatePerformanceChart();
-            await this.updateResponseTimeChart();
-        } catch (error) {
-            console.error('❌ خطأ في تحديث الرسوم البيانية:', error);
-        }
-    }
-
-    async getStatistics() {
-        try {
-            const requestManager = window.firebaseApp?.RequestManager;
-            
-            if (requestManager) {
-                return await requestManager.getStatistics();
-            }
-            
-            return this.getDefaultStats();
-        } catch (error) {
-            console.error('❌ خطأ في جلب الإحصائيات:', error);
-            return this.getDefaultStats();
-        }
-    }
-
-    getDefaultStats() {
-        return {
-            total: 0,
-            pending: 0,
-            'under-review': 0,
-            'in-progress': 0,
-            completed: 0,
-            rejected: 0,
-            completionRate: 0,
-            avgResponseTime: 0,
-            authorities: [],
-            recentRequests: []
-        };
-    }
 
     updateDashboardCharts(stats) {
-        // تحديث مخطط حالة الطلبات
-        if (this.charts.statusChart) {
-            this.charts.statusChart.data.datasets[0].data = [
+        if (!stats) return;
+
+        // تحديث رسم حالة الطلبات
+        if (this.charts.status && stats.statusDistribution) {
+            this.charts.status.data.datasets[0].data = [
                 stats.pending || 0,
                 stats['under-review'] || 0,
                 stats['in-progress'] || 0,
                 stats.completed || 0,
                 stats.rejected || 0
             ];
-            this.charts.statusChart.update();
+            this.charts.status.update();
         }
+
+        // تحديث رسم النشاط الشهري
+        if (this.charts.monthly && stats.monthlyDistribution) {
+            const monthlyData = stats.monthlyDistribution.map(item => item.count);
+            const monthlyLabels = stats.monthlyDistribution.map(item => this.formatMonthLabel(item.month));
+            
+            this.charts.monthly.data.labels = monthlyLabels;
+            this.charts.monthly.data.datasets[0].data = monthlyData;
+            this.charts.monthly.update();
+        }
+
+        // تحديث رسم توزيع الجهات
+        if (this.charts.authority && stats.authorityDistribution) {
+            const authorityData = Object.values(stats.authorityDistribution);
+            const authorityLabels = Object.keys(stats.authorityDistribution);
+            
+            this.charts.authority.data.labels = authorityLabels;
+            this.charts.authority.data.datasets[0].data = authorityData;
+            this.charts.authority.update();
+        }
+
+        console.log('🔄 تم تحديث الرسوم البيانية');
     }
 
-    async updateAuthorityChart() {
-        if (!this.charts.authorityChart) return;
-
-        try {
-            const requestManager = window.firebaseApp?.RequestManager;
-            let allRequests;
-            
-            if (requestManager) {
-                allRequests = await requestManager.getAllRequests();
-            } else {
-                allRequests = {};
-            }
-
-            const requestsArray = Object.values(allRequests).filter(req => !req.deleted);
-
-            // حساب عدد الطلبات لكل جهة
-            const authorityCounts = {};
-            requestsArray.forEach(request => {
-                const authority = request.receivingAuthority || 'غير محدد';
-                authorityCounts[authority] = (authorityCounts[authority] || 0) + 1;
-            });
-
-            // تحويل إلى مصفوفات وترتيب تنازلياً
-            const sortedAuthorities = Object.entries(authorityCounts)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 8); // عرض أعلى 8 جهات فقط
-
-            const labels = sortedAuthorities.map(item => item[0]);
-            const data = sortedAuthorities.map(item => item[1]);
-
-            this.charts.authorityChart.data.labels = labels;
-            this.charts.authorityChart.data.datasets[0].data = data;
-            this.charts.authorityChart.update();
-        } catch (error) {
-            console.error('❌ خطأ في تحديث مخطط الجهات:', error);
+    updateAllCharts() {
+        // إعادة إنشاء جميع الرسوم البيانية مع الألوان الجديدة
+        this.setupColors();
+        
+        if (this.charts.status) {
+            this.charts.status.destroy();
+            this.createStatusChart();
         }
+        
+        if (this.charts.monthly) {
+            this.charts.monthly.destroy();
+            this.createMonthlyChart();
+        }
+        
+        if (this.charts.authority) {
+            this.charts.authority.destroy();
+            this.createAuthorityChart();
+        }
+
+        console.log('🎨 تم تحديث ألوان الرسوم البيانية حسب السمة');
     }
 
-    async updateMonthlyChart() {
-        if (!this.charts.monthlyChart) return;
+    // =====================================================
+    // HELPER FUNCTIONS - وظائف مساعدة
+    // =====================================================
 
-        try {
-            const requestManager = window.firebaseApp?.RequestManager;
-            let allRequests;
-            
-            if (requestManager) {
-                allRequests = await requestManager.getAllRequests();
-            } else {
-                allRequests = {};
-            }
+    createGradient(ctx, color) {
+        const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 400);
+        
+        if (this.theme === 'dark') {
+            gradient.addColorStop(0, color + '80');
+            gradient.addColorStop(1, color + '20');
+        } else {
+            gradient.addColorStop(0, color + '60');
+            gradient.addColorStop(1, color + '10');
+        }
+        
+        return gradient;
+    }
 
-            const requestsArray = Object.values(allRequests).filter(req => !req.deleted);
-            
-            const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 
-                              'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
-            
-            const now = new Date();
-            const monthlyData = [];
-            const labels = [];
+    createColor(r, g, b) {
+        return `rgba(${r}, ${g}, ${b}, ${this.theme === 'dark' ? '0.8' : '0.7'})`;
+    }
 
-            // آخر 6 أشهر
-            for (let i = 5; i >= 0; i--) {
-                const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                const monthIndex = targetDate.getMonth();
-                const year = targetDate.getFullYear();
+    formatMonthLabel(monthKey) {
+        // تحويل 2024-01 إلى يناير 2024
+        const [year, month] = monthKey.split('-');
+        const arabicMonths = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+        const monthName = arabicMonths[parseInt(month) - 1] || month;
+        
+        return `${monthName} ${year}`;
+    }
 
-                labels.push(monthNames[monthIndex]);
+    // =====================================================
+    // CUSTOM CHARTS - رسوم بيانية مخصصة
+    // =====================================================
 
-                const count = requestsArray.filter(req => {
-                    if (!req.submissionDate) return false;
-                    
-                    try {
-                        const reqDate = new Date(req.submissionDate);
-                        return reqDate.getMonth() === monthIndex && 
-                               reqDate.getFullYear() === year;
-                    } catch {
-                        return false;
+    createCustomChart(canvasId, type, data, options = {}) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) {
+            console.error(`❌ لم يتم العثور على العنصر: ${canvasId}`);
+            return null;
+        }
+
+        // تدمير الرسم البياني القديم إذا كان موجوداً
+        if (this.charts[canvasId]) {
+            this.charts[canvasId].destroy();
+        }
+
+        // تعيين الخيارات الافتراضية
+        const defaultOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    rtl: true,
+                    labels: {
+                        font: {
+                            family: "'Tajawal', sans-serif"
+                        },
+                        color: this.currentColors.text
                     }
-                }).length;
-
-                monthlyData.push(count);
+                },
+                tooltip: {
+                    rtl: true,
+                    backgroundColor: this.currentColors.dark,
+                    titleColor: this.currentColors.light,
+                    bodyColor: this.currentColors.light
+                }
             }
+        };
 
-            this.charts.monthlyChart.data.labels = labels;
-            this.charts.monthlyChart.data.datasets[0].data = monthlyData;
-            this.charts.monthlyChart.update();
-        } catch (error) {
-            console.error('❌ خطأ في تحديث المخطط الشهري:', error);
-        }
+        // دمج الخيارات
+        const mergedOptions = this.mergeOptions(defaultOptions, options);
+
+        // إنشاء الرسم البياني
+        this.charts[canvasId] = new Chart(ctx, {
+            type: type,
+            data: data,
+            options: mergedOptions
+        });
+
+        console.log(`✅ تم إنشاء الرسم البياني المخصص: ${canvasId}`);
+        return this.charts[canvasId];
     }
 
-    async updatePerformanceChart() {
-        if (!this.charts.performanceChart) return;
-
-        try {
-            const requestManager = window.firebaseApp?.RequestManager;
-            let allRequests;
-            
-            if (requestManager) {
-                allRequests = await requestManager.getAllRequests();
-            } else {
-                allRequests = {};
-            }
-
-            const requestsArray = Object.values(allRequests).filter(req => !req.deleted);
-
-            // حساب معدل الإنجاز لكل جهة (عرض أعلى 6 جهات)
-            const authorityStats = {};
-            
-            requestsArray.forEach(request => {
-                const authority = request.receivingAuthority || 'غير محدد';
-                
-                if (!authorityStats[authority]) {
-                    authorityStats[authority] = {
-                        total: 0,
-                        completed: 0
-                    };
-                }
-                
-                authorityStats[authority].total++;
-                if (request.status === 'completed') {
-                    authorityStats[authority].completed++;
-                }
-            });
-
-            // تحويل إلى مصفوفات وترتيب حسب العدد
-            const sortedStats = Object.entries(authorityStats)
-                .sort((a, b) => b[1].total - a[1].total)
-                .slice(0, 6);
-
-            const labels = sortedStats.map(item => item[0]);
-            const data = sortedStats.map(item => {
-                const stats = item[1];
-                return stats.total > 0 ? 
-                    Math.round((stats.completed / stats.total) * 100) : 0;
-            });
-
-            this.charts.performanceChart.data.labels = labels;
-            this.charts.performanceChart.data.datasets[0].data = data;
-            this.charts.performanceChart.update();
-        } catch (error) {
-            console.error('❌ خطأ في تحديث مخطط الأداء:', error);
-        }
-    }
-
-    async updateResponseTimeChart() {
-        if (!this.charts.responseTimeChart) return;
-
-        try {
-            const requestManager = window.firebaseApp?.RequestManager;
-            let allRequests;
-            
-            if (requestManager) {
-                allRequests = await requestManager.getAllRequests();
-            } else {
-                allRequests = {};
-            }
-
-            const requestsArray = Object.values(allRequests).filter(req => 
-                !req.deleted && 
-                req.status === 'completed' &&
-                req.submissionDate && 
-                req.responseDate
-            );
-
-            const monthNames = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو'];
-            const now = new Date();
-            const monthlyResponseTimes = [];
-
-            // حساب متوسط وقت الرد لآخر 6 أشهر
-            for (let i = 5; i >= 0; i--) {
-                const targetDate = new Date(now.getFullYear(), now.getMonth() - i, 1);
-                const monthIndex = targetDate.getMonth();
-                const year = targetDate.getFullYear();
-
-                const monthRequests = requestsArray.filter(req => {
-                    try {
-                        const reqDate = new Date(req.submissionDate);
-                        return reqDate.getMonth() === monthIndex && 
-                               reqDate.getFullYear() === year;
-                    } catch {
-                        return false;
-                    }
-                });
-
-                if (monthRequests.length > 0) {
-                    const totalDays = monthRequests.reduce((sum, req) => {
-                        try {
-                            const submitted = new Date(req.submissionDate);
-                            const responded = new Date(req.responseDate);
-                            const days = Math.floor((responded - submitted) / (1000 * 60 * 60 * 24));
-                            return sum + (days > 0 ? days : 0);
-                        } catch {
-                            return sum;
-                        }
-                    }, 0);
-
-                    monthlyResponseTimes.push(Math.round(totalDays / monthRequests.length));
+    mergeOptions(defaultOpts, customOpts) {
+        // دمج عميق للخيارات
+        const result = { ...defaultOpts };
+        
+        for (const key in customOpts) {
+            if (customOpts.hasOwnProperty(key)) {
+                if (typeof customOpts[key] === 'object' && !Array.isArray(customOpts[key])) {
+                    result[key] = this.mergeOptions(defaultOpts[key] || {}, customOpts[key]);
                 } else {
-                    monthlyResponseTimes.push(0);
+                    result[key] = customOpts[key];
                 }
             }
-
-            this.charts.responseTimeChart.data.labels = monthNames.slice(0, 6);
-            this.charts.responseTimeChart.data.datasets[0].data = monthlyResponseTimes;
-            this.charts.responseTimeChart.update();
-        } catch (error) {
-            console.error('❌ خطأ في تحديث مخطط وقت الرد:', error);
         }
+        
+        return result;
     }
 
     // =====================================================
-    // UTILITIES
-    // =====================================================
-
-    hexToRgba(hex, alpha) {
-        const r = parseInt(hex.slice(1, 3), 16);
-        const g = parseInt(hex.slice(3, 5), 16);
-        const b = parseInt(hex.slice(5, 7), 16);
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-
-    setupAutoUpdate() {
-        // تحديث الرسوم البيانية كل دقيقة
-        setInterval(async () => {
-            await this.updateAllCharts();
-        }, 60000);
-
-        // تحديث عند تغيير الوضع الليلي/النهاري
-        const observer = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.attributeName === 'data-theme') {
-                    this.detectTheme();
-                    this.updateAllCharts();
-                }
-            });
-        });
-
-        observer.observe(document.body, { attributes: true });
-
-        // تحديث عند تغيير الصفحة إلى لوحة التحكم
-        window.addEventListener('pageChanged', (event) => {
-            if (event.detail.page === 'dashboard-section') {
-                this.updateAllCharts();
-            }
-        });
-    }
-
-    // =====================================================
-    // EXPORT & PRINT
+    // EXPORT FUNCTIONS - وظائف التصدير
     // =====================================================
 
     exportChartAsImage(chartId, fileName = 'chart') {
-        const canvas = document.getElementById(chartId);
-        if (!canvas) {
-            console.error('❌ لم يتم العثور على الرسم البياني:', chartId);
+        const chart = this.charts[chartId];
+        if (!chart) {
+            console.error(`❌ لم يتم العثور على الرسم البياني: ${chartId}`);
             return;
         }
 
         const link = document.createElement('a');
-        link.download = `${fileName}_${new Date().getTime()}.png`;
-        link.href = canvas.toDataURL('image/png');
+        link.download = `${fileName}_${new Date().toISOString().split('T')[0]}.png`;
+        link.href = chart.toBase64Image();
         link.click();
+
+        console.log(`📷 تم تصدير الرسم البياني: ${chartId}`);
     }
 
     exportAllCharts() {
-        const charts = ['statusChart', 'monthlyChart', 'authorityChart', 'performanceChart', 'responseTimeChart'];
-        
-        charts.forEach((chartId, index) => {
-            setTimeout(() => {
-                this.exportChartAsImage(chartId, `chart_${index + 1}`);
-            }, index * 500);
+        const zip = new JSZip();
+        const date = new Date().toISOString().split('T')[0];
+
+        Object.keys(this.charts).forEach((chartId, index) => {
+            const chart = this.charts[chartId];
+            if (chart) {
+                const imageData = chart.toBase64Image().split(',')[1];
+                zip.file(`chart_${index + 1}_${date}.png`, imageData, { base64: true });
+            }
         });
+
+        zip.generateAsync({ type: 'blob' }).then((content) => {
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(content);
+            link.download = `charts_export_${date}.zip`;
+            link.click();
+            URL.revokeObjectURL(link.href);
+        });
+
+        console.log('📦 تم تصدير جميع الرسوم البيانية');
     }
 
-    printChart(chartId) {
-        const canvas = document.getElementById(chartId);
-        if (!canvas) {
-            console.error('❌ لم يتم العثور على الرسم البياني:', chartId);
-            return;
+    // =====================================================
+    // ANIMATION FUNCTIONS - وظائف الرسوم المتحركة
+    // =====================================================
+
+    animateChart(chartId, animationType = 'progress') {
+        const chart = this.charts[chartId];
+        if (!chart) return;
+
+        const animation = {
+            progress: {
+                x: {
+                    type: 'number',
+                    duration: 1000,
+                    from: 0,
+                    to: 1,
+                    onUpdate: (ctx) => {
+                        chart.options.animation = { duration: ctx.current * 1000 };
+                        chart.update('none');
+                    }
+                }
+            },
+            fade: {
+                opacity: {
+                    type: 'number',
+                    duration: 1000,
+                    from: 0,
+                    to: 1,
+                    onUpdate: (ctx) => {
+                        chart.canvas.style.opacity = ctx.current;
+                    }
+                }
+            }
+        };
+
+        if (animation[animationType]) {
+            console.log(`🎬 تشغيل رسوم متحركة: ${animationType} للرسم البياني ${chartId}`);
+            // يمكن إضافة مكتبة الرسوم المتحركة هنا
+        }
+    }
+
+    // =====================================================
+    // DESTROY & CLEANUP - التدمير والتنظيف
+    // =====================================================
+
+    destroyChart(chartId) {
+        if (this.charts[chartId]) {
+            this.charts[chartId].destroy();
+            delete this.charts[chartId];
+            console.log(`🗑️ تم تدمير الرسم البياني: ${chartId}`);
+        }
+    }
+
+    destroyAllCharts() {
+        Object.keys(this.charts).forEach(chartId => {
+            this.destroyChart(chartId);
+        });
+        console.log('🧹 تم تدمير جميع الرسوم البيانية');
+    }
+
+    // =====================================================
+    // PERFORMANCE OPTIMIZATION - تحسين الأداء
+    // =====================================================
+
+    optimizePerformance() {
+        // تقليل دقة الرسوم المتحركة عند الحاجة
+        this.animationDuration = 500;
+        
+        Object.values(this.charts).forEach(chart => {
+            if (chart.options) {
+                chart.options.animation = {
+                    ...chart.options.animation,
+                    duration: this.animationDuration
+                };
+                chart.update();
+            }
+        });
+
+        console.log('⚡ تم تحسين أداء الرسوم البيانية');
+    }
+
+    // =====================================================
+    // DEBUG & MONITORING - التصحيح والمراقبة
+    // =====================================================
+
+    getChartInfo(chartId) {
+        const chart = this.charts[chartId];
+        if (!chart) {
+            return { error: 'الرسم البياني غير موجود' };
         }
 
-        const printWindow = window.open('', '_blank');
-        printWindow.document.write(`
-            <!DOCTYPE html>
-            <html dir="rtl">
-            <head>
-                <title>طباعة الرسم البياني</title>
-                <style>
-                    body {
-                        font-family: 'Tajawal', sans-serif;
-                        text-align: center;
-                        padding: 20px;
-                    }
-                    img {
-                        max-width: 100%;
-                        height: auto;
-                        margin: 20px 0;
-                    }
-                    .chart-info {
-                        margin: 20px 0;
-                        color: #7f8c8d;
-                    }
-                </style>
-            </head>
-            <body>
-                <h1>نظام إدارة الطلبات البرلمانية</h1>
-                <div class="chart-info">
-                    <p>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG')}</p>
-                </div>
-                <img src="${canvas.toDataURL('image/png')}" alt="الرسم البياني">
-                <script>
-                    window.onload = function() {
-                        window.print();
-                    };
-                </script>
-            </body>
-            </html>
-        `);
-        printWindow.document.close();
+        return {
+            type: chart.config.type,
+            dataPoints: chart.data.datasets[0].data.length,
+            labels: chart.data.labels,
+            options: chart.options,
+            createdAt: chart.created
+        };
+    }
+
+    getAllChartsInfo() {
+        return Object.keys(this.charts).reduce((info, chartId) => {
+            info[chartId] = this.getChartInfo(chartId);
+            return info;
+        }, {});
+    }
+
+    // =====================================================
+    // GLOBAL EXPORT - التصدير للنطاق العام
+    // =====================================================
+
+    static getInstance() {
+        if (!window.chartsManager) {
+            window.chartsManager = new ChartsManager();
+        }
+        return window.chartsManager;
     }
 }
 
-// =====================================================
-// GLOBAL EXPORT
-// =====================================================
-
-window.EnhancedChartsManager = EnhancedChartsManager;
+// التصدير للنطاق العام
+if (typeof window !== 'undefined') {
+    window.ChartsManager = ChartsManager;
+    
+    // التهيئة التلقائية عند تحميل الصفحة
+    document.addEventListener('DOMContentLoaded', function() {
+        // انتظر قليلاً قبل التهيئة
+        setTimeout(() => {
+            if (!window.chartsManager && typeof ChartsManager !== 'undefined') {
+                window.chartsManager = new ChartsManager();
+                console.log('📊 ChartsManager auto-initialized successfully');
+            }
+        }, 1000);
+    });
+}
 
 console.log('📊 مدير الرسوم البيانية المتقدم جاهز للاستخدام');
