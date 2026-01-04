@@ -9,6 +9,7 @@
     <meta name="theme-color" content="#3498db">
     
     <!-- PWA Meta Tags -->
+    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="عرض الطلبات">
@@ -65,7 +66,7 @@
     </div>
 
     <!-- PWA Install Button -->
-    <button id="pwa-install-button" onclick="window.pwaInstallPrompt.installApp()">
+    <button id="pwa-install-button" onclick="window.pwaInstallPrompt?.installApp()">
         <span>تثبيت التطبيق</span>
     </button>
 
@@ -306,6 +307,12 @@
                 <button id="exportAllBtn" class="filter-btn">
                     <i class="fas fa-file-excel"></i> تصدير إلى Excel
                 </button>
+                <button id="importDataBtn" class="filter-btn">
+                    <i class="fas fa-file-import"></i> استيراد بيانات
+                </button>
+                <button id="backupBtn" class="filter-btn">
+                    <i class="fas fa-save"></i> نسخة احتياطية
+                </button>
             </div>
 
             <!-- Requests Grid -->
@@ -399,7 +406,8 @@
 
                         <div id="documentsSection" class="documents-container" style="display: none;">
                             <div class="document-input-group">
-                                <input type="text" id="documentName" placeholder="اسم المستند">
+                                <input type="text" id="documentName" placeholder="اسم المستند" class="document-field">
+                                <input type="text" id="documentDescription" placeholder="وصف المستند" class="document-field">
                                 <button type="button" id="addDocument" class="add-doc-btn">
                                     <i class="fas fa-plus"></i> إضافة
                                 </button>
@@ -570,11 +578,14 @@
                 <div class="export-card fade-in-up delay-1">
                     <h3><i class="fas fa-file-export"></i> تصدير البيانات</h3>
                     <div class="export-options">
-                        <button class="export-btn pdf-btn" onclick="window.parliamentSystem.printAllRequests()">
+                        <button class="export-btn pdf-btn" id="exportPdfBtn">
                             <i class="fas fa-file-pdf"></i> تصدير PDF
                         </button>
-                        <button class="export-btn excel-btn" onclick="window.parliamentSystem.exportAllToExcel()">
+                        <button class="export-btn excel-btn" id="exportExcelBtn">
                             <i class="fas fa-file-excel"></i> تصدير Excel
+                        </button>
+                        <button class="export-btn json-btn" id="exportJsonBtn">
+                            <i class="fas fa-file-code"></i> تصدير JSON
                         </button>
                     </div>
                     
@@ -585,6 +596,14 @@
                             <canvas id="authorityChart"></canvas>
                         </div>
                     </div>
+                </div>
+            </div>
+            
+            <!-- System Health -->
+            <div class="system-health-card fade-in-up" style="margin-top: 2rem;">
+                <h3><i class="fas fa-heartbeat"></i> صحة النظام</h3>
+                <div class="health-stats" id="systemHealthStats">
+                    <!-- Will be populated by JavaScript -->
                 </div>
             </div>
         </section>
@@ -631,7 +650,7 @@
 
         <div class="footer-bottom">
             <div>
-                <strong>نظام إدارة الطلبات البرلمانية</strong> - النسخة 2.0.0
+                <strong>نظام إدارة الطلبات البرلمانية</strong> - النسخة 3.0.0
             </div>
             <div>
                 © 2026 جميع الحقوق محفوظة - النائب أحمد الحديدي
@@ -683,6 +702,24 @@
         </div>
     </div>
 
+    <!-- Modal - Document Details -->
+    <div id="documentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2><i class="fas fa-file-alt"></i> تفاصيل المستند</h2>
+                <button class="close-modal">&times;</button>
+            </div>
+            <div class="modal-body" id="documentModalBody">
+                <!-- Will be populated by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button class="modal-btn close-btn">
+                    <i class="fas fa-times"></i> إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Scripts -->
     <script src="firebase-config.js"></script>
     <script src="charts.js"></script>
@@ -691,10 +728,130 @@
     <script src="app.js"></script>
 
     <script>
+        // Wait for all libraries to load before initializing
+        function waitForLibrary(name, checkFn, timeout = 10000) {
+            return new Promise((resolve, reject) => {
+                const startTime = Date.now();
+                
+                function check() {
+                    if (checkFn()) {
+                        resolve();
+                    } else if (Date.now() - startTime > timeout) {
+                        reject(new Error(`Timeout waiting for ${name}`));
+                    } else {
+                        setTimeout(check, 100);
+                    }
+                }
+                
+                check();
+            });
+        }
+
         // Initialize the system when the page loads
+        document.addEventListener('DOMContentLoaded', async function() {
+            try {
+                console.log('🚀 جاري تحميل النظام...');
+                
+                // Wait for Chart.js to load
+                await waitForLibrary('Chart.js', () => window.Chart);
+                console.log('✅ Chart.js loaded');
+                
+                // Wait for Firebase to load
+                await waitForLibrary('Firebase', () => window.firebase);
+                console.log('✅ Firebase loaded');
+                
+                // Wait a bit more for all scripts to load
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Check if ChartsManager is defined
+                if (typeof ChartsManager === 'undefined') {
+                    console.warn('⚠️ ChartsManager not defined, loading charts.js');
+                    // ChartsManager should be defined in charts.js
+                }
+                
+                // Initialize the main system
+                window.parliamentSystem = new ParliamentRequestsSystem();
+                console.log('✅ ParliamentRequestsSystem initialized');
+                
+                // Initialize ChartsManager if available
+                if (typeof ChartsManager !== 'undefined') {
+                    window.chartsManager = new ChartsManager();
+                    console.log('✅ ChartsManager initialized');
+                } else {
+                    console.warn('⚠️ ChartsManager not available, charts will be initialized later');
+                }
+                
+                // Update service worker if available
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.getRegistration().then(reg => {
+                        if (reg) {
+                            console.log('✅ Service Worker registered:', reg.scope);
+                        }
+                    });
+                }
+                
+            } catch (error) {
+                console.error('❌ خطأ في تحميل النظام:', error);
+                
+                // Show error message to user
+                setTimeout(() => {
+                    const loadingScreen = document.getElementById('loadingScreen');
+                    if (loadingScreen) {
+                        loadingScreen.innerHTML = `
+                            <div class="loading-content">
+                                <div class="loading-logo">
+                                    <i class="fas fa-exclamation-triangle" style="font-size: 4rem; color: #e74c3c;"></i>
+                                </div>
+                                <div class="loading-text">
+                                    <h2>خطأ في تحميل النظام</h2>
+                                    <p>${error.message}</p>
+                                    <button onclick="window.location.reload()" style="
+                                        margin-top: 20px;
+                                        padding: 10px 20px;
+                                        background: #3498db;
+                                        color: white;
+                                        border: none;
+                                        border-radius: 4px;
+                                        cursor: pointer;
+                                    ">
+                                        <i class="fas fa-redo"></i> إعادة تحميل
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }
+                }, 1000);
+            }
+        });
+
+        // Handle checkbox for documents
         document.addEventListener('DOMContentLoaded', function() {
-            window.parliamentSystem = new ParliamentRequestsSystem();
-            window.chartsManager = new ChartsManager();
+            const hasDocumentsCheckbox = document.getElementById('hasDocuments');
+            const documentsSection = document.getElementById('documentsSection');
+            
+            if (hasDocumentsCheckbox && documentsSection) {
+                hasDocumentsCheckbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        documentsSection.style.display = 'block';
+                    } else {
+                        documentsSection.style.display = 'none';
+                    }
+                });
+            }
+            
+            // Handle checkbox for response
+            const hasResponseCheckbox = document.getElementById('hasResponse');
+            const responseSection = document.getElementById('responseSection');
+            
+            if (hasResponseCheckbox && responseSection) {
+                hasResponseCheckbox.addEventListener('change', function() {
+                    if (this.checked) {
+                        responseSection.style.display = 'block';
+                    } else {
+                        responseSection.style.display = 'none';
+                    }
+                });
+            }
         });
     </script>
 
@@ -702,12 +859,34 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', function() {
+                // Create version.json if not exists
+                if (!window.versionJson) {
+                    window.versionJson = {
+                        version: '3.0.0',
+                        lastUpdate: new Date().toISOString(),
+                        changelog: 'Enhanced caching strategy and offline support'
+                    };
+                }
+                
                 navigator.serviceWorker.register('service-worker.js')
                     .then(function(registration) {
-                        console.log('Service Worker registered successfully', registration);
+                        console.log('✅ Service Worker registered successfully', registration.scope);
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            console.log('🔄 Service Worker update found');
+                        });
+                        
+                        // Send version info to service worker
+                        if (registration.active) {
+                            registration.active.postMessage({
+                                type: 'VERSION_INFO',
+                                data: window.versionJson
+                            });
+                        }
                     })
                     .catch(function(error) {
-                        console.log('Service Worker registration failed', error);
+                        console.log('❌ Service Worker registration failed', error);
                     });
             });
         }
