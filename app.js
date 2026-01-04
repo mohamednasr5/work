@@ -1213,80 +1213,113 @@ class ParliamentRequestsSystem {
     }
 
    validateRequestData(data) {
-    console.log('🔍 التحقق من صحة البيانات:', data);
-    
-    // التحقق من عنوان الطلب
-    if (!data.requestTitle) {
-        this.showAlert('خطأ', 'عنوان الطلب مطلوب');
-        return false;
-    }
-    
-    const title = data.requestTitle.trim();
-    if (title.length < 3) {
-        this.showAlert('خطأ', 'يرجى إدخال عنوان صحيح للطلب (3 أحرف على الأقل)');
-        return false;
-    }
-    
-    if (title.length > 200) {
-        this.showAlert('خطأ', 'عنوان الطلب طويل جداً (الحد الأقصى 200 حرف)');
-        return false;
-    }
-    
-    // التحقق من الجهة المستقبلة
-    if (!data.receivingAuthority || data.receivingAuthority.trim() === '' || data.receivingAuthority === 'اختر الجهة') {
-        this.showAlert('خطأ', 'يرجى اختيار الجهة المستقبلة');
-        return false;
-    }
-    
-    // التحقق من تاريخ التقديم
-    if (!data.submissionDate || data.submissionDate.trim() === '') {
-        this.showAlert('خطأ', 'يرجى اختيار تاريخ التقديم');
-        return false;
-    }
-    
-    // التحقق من صحة التاريخ
-    const submissionDate = new Date(data.submissionDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    if (isNaN(submissionDate.getTime())) {
-        this.showAlert('خطأ', 'تاريخ التقديم غير صالح');
-        return false;
-    }
-    
-    if (submissionDate > today) {
-        this.showAlert('خطأ', 'تاريخ التقديم لا يمكن أن يكون في المستقبل');
-        return false;
-    }
-    
-    // التحقق من تفاصيل الطلب (اختياري ولكن مفضل)
-    if (!data.requestDetails || data.requestDetails.trim() === '') {
-        const confirmed = confirm('لم تقم بإدخال تفاصيل الطلب. هل تريد المتابعة بدون تفاصيل؟');
-        if (!confirmed) {
+        console.log('🔍 بدء التحقق من صحة البيانات:', data);
+
+        // 1. التحقق من وجود كائن البيانات نفسه
+        if (!data) {
+            console.error('❌ كائن البيانات غير موجود');
+            this.showAlert('خطأ', 'حدث خطأ في قراءة بيانات النموذج');
             return false;
         }
-    } else if (data.requestDetails.trim().length < 10) {
-        this.showAlert('تحذير', 'تفاصيل الطلب قصيرة جداً. يرجى إدخال تفاصيل أكثر وضوحاً');
-        // لا نمنع الإرسال ولكن ننبه فقط
-    }
-    
-    // التحقق من تاريخ الرد إذا تم إدخاله
-    if (data.responseDate && data.responseDate.trim() !== '') {
-        const responseDate = new Date(data.responseDate);
-        if (isNaN(responseDate.getTime())) {
-            this.showAlert('خطأ', 'تاريخ الرد غير صالح');
+
+        // 2. التحقق من وجود عنوان الطلب
+        if (!data.requestTitle || typeof data.requestTitle !== 'string') {
+            console.error('❌ عنوان الطلب غير موجود أو ليس نصاً');
+            this.showAlert('خطأ', 'عنوان الطلب مطلوب');
+            if (this.elements.requestTitle) {
+                this.elements.requestTitle.focus();
+            }
             return false;
         }
-        
-        if (data.submissionDate && responseDate < new Date(data.submissionDate)) {
-            this.showAlert('خطأ', 'تاريخ الرد لا يمكن أن يكون قبل تاريخ التقديم');
+
+        const title = data.requestTitle.trim();
+        console.log('📝 عنوان الطلب بعد التنظيف:', title, '- الطول:', title.length);
+
+        // التحقق من طول العنوان
+        if (title.length < 3) {
+            console.warn('⚠️ عنوان الطلب قصير جداً (الطول:', title.length, ')');
+            this.showAlert('تنبيه', 'يرجى إدخال عنوان صحيح للطلب (3 أحرف على الأقل)');
+            if (this.elements.requestTitle) {
+                this.elements.requestTitle.focus();
+                this.elements.requestTitle.style.borderColor = '#e74c3c';
+            }
             return false;
         }
+
+        if (title.length > 200) {
+            this.showAlert('تنبيه', 'عنوان الطلب طويل جداً (الحد الأقصى 200 حرف)');
+            return false;
+        }
+
+        // إزالة التنسيق الخاطئ من حقل العنوان
+        if (this.elements.requestTitle) {
+            this.elements.requestTitle.style.borderColor = '';
+        }
+
+        // 3. التحقق من الجهة المستقبلة
+        if (!data.receivingAuthority || data.receivingAuthority.trim() === '' || 
+            data.receivingAuthority === 'اختر الجهة') {
+            this.showAlert('تنبيه', 'يرجى اختيار الجهة المستقبلة للطلب');
+            if (this.elements.receivingAuthority) {
+                this.elements.receivingAuthority.focus();
+            }
+            return false;
+        }
+
+        // 4. التحقق من تاريخ التقديم
+        if (!data.submissionDate || data.submissionDate.trim() === '') {
+            this.showAlert('تنبيه', 'يرجى تحديد تاريخ تقديم الطلب');
+            if (this.elements.submissionDate) {
+                this.elements.submissionDate.focus();
+            }
+            return false;
+        }
+
+        const submissionDate = new Date(data.submissionDate);
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        if (isNaN(submissionDate.getTime())) {
+            this.showAlert('خطأ', 'تاريخ التقديم غير صحيح');
+            return false;
+        }
+
+        if (submissionDate > today) {
+            this.showAlert('تنبيه', 'لا يمكن أن يكون تاريخ التقديم في المستقبل');
+            return false;
+        }
+
+        // 5. التحقق من تفاصيل الطلب (اختياري مع تحذير)
+        if (!data.requestDetails || data.requestDetails.trim() === '') {
+            const confirmed = confirm('لم تقم بإدخال تفاصيل الطلب. هل تريد المتابعة بدون تفاصيل؟');
+            if (!confirmed) {
+                if (this.elements.requestDetails) {
+                    this.elements.requestDetails.focus();
+                }
+                return false;
+            }
+        } else if (data.requestDetails.trim().length < 10) {
+            this.showAlert('تنبيه', 'تفاصيل الطلب يجب أن تكون أكثر وضوحاً (10 أحرف على الأقل).');
+        }
+
+        // 6. التحقق من تاريخ الرد (إذا كان موجوداً)
+        if (data.responseDate && data.responseDate.trim() !== '') {
+            const responseDate = new Date(data.responseDate);
+
+            if (isNaN(responseDate.getTime())) {
+                this.showAlert('خطأ', 'تاريخ الرد غير صحيح');
+                return false;
+            }
+
+            if (data.submissionDate && responseDate < new Date(data.submissionDate)) {
+                this.showAlert('خطأ', 'تاريخ الرد لا يمكن أن يكون قبل تاريخ التقديم');
+                return false;
+            }
+        }
+
+        console.log('✅ البيانات صحيحة - اجتازت جميع الفحوصات');
+        return true;
     }
-    
-    console.log('✅ البيانات صالحة');
-    return true;
-}
 
     resetForm() {
         if (this.elements.newRequestForm) {
