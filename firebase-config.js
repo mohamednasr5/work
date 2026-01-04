@@ -29,4 +29,3 @@ window.firebaseApp.RequestManager = {
     // يمكن إضافة دوال addRequest, updateRequest هنا
 
 };
-//
