@@ -3,177 +3,172 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <meta name="theme-color" content="#1e3c72">
-    <meta name="description" content="نظام إدارة طلبات البرلمان - نسخة PWA">
-    <title>مكتب النائب | نظام المتابعة الذكي</title>
+    <title>مكتب النائب | نظام المتابعة</title>
     
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icons/icon-192.png">
+    <meta name="theme-color" content="#1e3c72">
 
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="app-background">
-        <div class="blob blob-1"></div>
-        <div class="blob blob-2"></div>
-    </div>
-
-    <div class="app-container">
-        <nav class="sidebar glass">
-            <header class="logo-area">
-                <div class="logo-icon">
-                    <i class="fa-solid fa-landmark"></i>
-                </div>
-                <div class="logo-text">
-                    <h1>مكتب النائب</h1>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <i class="fa-solid fa-landmark logo-icon"></i>
+                <div>
+                    <h2>مكتب النائب</h2>
                     <p>أحمد الحديدي</p>
                 </div>
-            </header>
-
-            <ul class="nav-menu">
-                <li class="nav-item active" data-target="dashboard">
-                    <i class="fa-solid fa-chart-pie"></i> <span>لوحة التحكم</span>
-                </li>
-                <li class="nav-item" data-target="add-request">
-                    <i class="fa-solid fa-plus-circle"></i> <span>إضافة طلب</span>
-                </li>
-                <li class="nav-item" data-target="view-requests">
-                    <i class="fa-solid fa-folder-open"></i> <span>سجل الطلبات</span>
-                </li>
-            </ul>
-
-            <div class="theme-switch-wrapper">
-                <label class="theme-switch" for="checkbox">
-                    <input type="checkbox" id="theme-toggle" />
-                    <div class="slider round">
-                        <i class="fa-solid fa-sun sun-icon"></i>
-                        <i class="fa-solid fa-moon moon-icon"></i>
-                    </div>
-                </label>
             </div>
-        </nav>
 
-        <main class="content-area">
+            <nav class="nav-menu">
+                <button class="nav-btn active" onclick="switchTab('dashboard')">
+                    <i class="fa-solid fa-chart-pie"></i> لوحة التحكم
+                </button>
+                <button class="nav-btn" onclick="switchTab('add-request')">
+                    <i class="fa-solid fa-plus-circle"></i> إضافة طلب
+                </button>
+                <button class="nav-btn" onclick="switchTab('view-requests')">
+                    <i class="fa-solid fa-folder-open"></i> سجل الطلبات
+                </button>
+            </nav>
+
+            <div class="sidebar-footer">
+                <button id="themeToggle" class="icon-btn"><i class="fa-solid fa-moon"></i></button>
+                <p>الإصدار 2026.1</p>
+            </div>
+        </aside>
+
+        <main class="main-content">
             
-            <section id="dashboard" class="page-section active">
-                <header class="section-header">
-                    <h2>نظرة عامة</h2>
-                    <p class="date-display" id="currentDate"></p>
+            <section id="dashboard" class="view-section active">
+                <header class="top-header">
+                    <h1>لوحة المعلومات</h1>
+                    <span id="currentDate" class="date-badge"></span>
                 </header>
 
-                <div class="stats-container">
-                    <div class="stat-card glass animate-up" style="--delay: 0.1s">
-                        <div class="icon bg-gradient-1"><i class="fa-solid fa-clipboard-list"></i></div>
-                        <div class="info">
+                <div class="stats-grid">
+                    <div class="stat-card total">
+                        <div class="icon-box"><i class="fa-solid fa-layer-group"></i></div>
+                        <div class="stat-info">
                             <h3>إجمالي الطلبات</h3>
-                            <span class="number" id="total-count">0</span>
+                            <strong id="total-count">0</strong>
                         </div>
                     </div>
-                    <div class="stat-card glass animate-up" style="--delay: 0.2s">
-                        <div class="icon bg-success"><i class="fa-solid fa-check"></i></div>
-                        <div class="info">
+                    <div class="stat-card success">
+                        <div class="icon-box"><i class="fa-solid fa-check-circle"></i></div>
+                        <div class="stat-info">
                             <h3>مكتملة</h3>
-                            <span class="number" id="completed-count">0</span>
+                            <strong id="completed-count">0</strong>
                         </div>
                     </div>
-                    <div class="stat-card glass animate-up" style="--delay: 0.3s">
-                        <div class="icon bg-warning"><i class="fa-solid fa-hourglass-half"></i></div>
-                        <div class="info">
+                    <div class="stat-card warning">
+                        <div class="icon-box"><i class="fa-solid fa-clock"></i></div>
+                        <div class="stat-info">
                             <h3>قيد التنفيذ</h3>
-                            <span class="number" id="pending-count">0</span>
+                            <strong id="pending-count">0</strong>
+                        </div>
+                    </div>
+                    <div class="stat-card danger">
+                        <div class="icon-box"><i class="fa-solid fa-ban"></i></div>
+                        <div class="stat-info">
+                            <h3>مرفوضة</h3>
+                            <strong id="rejected-count">0</strong>
                         </div>
                     </div>
                 </div>
 
-                <div class="chart-wrapper glass animate-up" style="--delay: 0.4s">
+                <div class="chart-container">
                     <canvas id="requestsChart"></canvas>
                 </div>
             </section>
 
-            <section id="add-request" class="page-section">
-                <header class="section-header">
-                    <h2>تسجيل طلب جديد</h2>
+            <section id="add-request" class="view-section">
+                <header class="top-header">
+                    <h1>تسجيل طلب جديد</h1>
                 </header>
 
-                <form id="requestForm" class="glass-form glass animate-up">
-                    <input type="hidden" id="firebaseKey">
-                    
-                    <div class="form-grid">
-                        <div class="input-wrapper">
-                            <label for="reqId">رقم الطلب</label>
-                            <input type="text" id="reqId" required placeholder="مثال: 2026/001">
+                <div class="form-card">
+                    <form id="requestForm">
+                        <input type="hidden" id="firebaseKey">
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>رقم الطلب</label>
+                                <input type="text" id="reqId" placeholder="مثال: 2026/001" required>
+                            </div>
+                            <div class="form-group">
+                                <label>الجهة المختصة</label>
+                                <input type="text" id="reqAuthority" placeholder="مثال: وزارة الكهرباء" required>
+                            </div>
                         </div>
 
-                        <div class="input-wrapper">
-                            <label for="reqTitle">عنوان الطلب</label>
-                            <input type="text" id="reqTitle" required placeholder="الموضوع باختصار">
+                        <div class="form-group">
+                            <label>عنوان الطلب</label>
+                            <input type="text" id="reqTitle" placeholder="أدخل عنواناً مختصراً" required>
                         </div>
 
-                        <div class="input-wrapper full">
-                            <label for="reqDetails">التفاصيل الكاملة</label>
-                            <textarea id="reqDetails" rows="4" required placeholder="شرح تفصيلي للطلب..."></textarea>
+                        <div class="form-group">
+                            <label>التفاصيل</label>
+                            <textarea id="reqDetails" rows="5" placeholder="شرح تفصيلي للطلب..." required></textarea>
                         </div>
 
-                        <div class="input-wrapper">
-                            <label for="reqAuthority">الجهة المختصة</label>
-                            <input type="text" id="reqAuthority" required placeholder="مثال: وزارة الكهرباء">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>تاريخ التقديم</label>
+                                <input type="date" id="reqDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label>الحالة</label>
+                                <select id="reqStatus">
+                                    <option value="review">قيد المراجعة</option>
+                                    <option value="execution">تحت التنفيذ</option>
+                                    <option value="completed">مكتمل</option>
+                                    <option value="rejected">مرفوض</option>
+                                </select>
+                            </div>
                         </div>
 
-                        <div class="input-wrapper">
-                            <label for="reqDate">تاريخ التقديم</label>
-                            <input type="date" id="reqDate" required>
-                        </div>
-
-                        <div class="input-wrapper">
-                            <label for="reqStatus">الحالة</label>
-                            <select id="reqStatus">
-                                <option value="review">قيد المراجعة</option>
-                                <option value="execution">تحت التنفيذ</option>
-                                <option value="completed">مكتمل</option>
-                                <option value="rejected">مرفوض</option>
-                            </select>
-                        </div>
-
-                        <div class="input-wrapper full checkbox-wrapper">
-                            <label class="custom-checkbox">
-                                <input type="checkbox" id="hasDocumentsToggle">
+                        <div class="documents-wrapper">
+                            <label class="toggle-checkbox">
+                                <input type="checkbox" id="hasDocumentsBtn">
                                 <span class="checkmark"></span>
-                                <span>يوجد مستندات مرفقة مع هذا الطلب</span>
+                                <span>هل يوجد مستندات مرفقة؟</span>
                             </label>
+
+                            <div id="documentsContainer" class="docs-area hidden">
+                                <h4 class="docs-title">قائمة المستندات</h4>
+                                <div id="docsList">
+                                    </div>
+                                <button type="button" class="btn-add-doc" onclick="addNewDocumentField()">
+                                    <i class="fa-solid fa-plus"></i> إضافة مستند
+                                </button>
+                            </div>
                         </div>
 
-                        <div id="documentsArea" class="documents-area full hidden">
-                            <h3>المستندات المرفقة</h3>
-                            <div id="docsContainer">
-                                </div>
-                            <button type="button" class="btn-secondary" id="addDocBtn">
-                                <i class="fa-solid fa-plus"></i> إضافة مستند آخر
-                            </button>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary" id="saveBtn">حفظ البيانات</button>
+                            <button type="button" class="btn-secondary hidden" id="cancelEditBtn" onclick="resetForm()">إلغاء</button>
                         </div>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="submit" class="btn-primary" id="saveBtn">حفظ الطلب</button>
-                        <button type="button" class="btn-danger hidden" id="cancelEditBtn">إلغاء</button>
-                    </div>
-                </form>
+                    </form>
+                </div>
             </section>
 
-            <section id="view-requests" class="page-section">
-                <header class="section-header">
-                    <h2>الأرشيف والسجلات</h2>
-                    <div class="search-bar">
+            <section id="view-requests" class="view-section">
+                <header class="top-header">
+                    <h1>الأرشيف</h1>
+                    <div class="search-box">
                         <i class="fa-solid fa-search"></i>
-                        <input type="text" id="searchInput" placeholder="بحث ذكي...">
+                        <input type="text" id="searchInput" placeholder="بحث..." onkeyup="filterRequests()">
                     </div>
                 </header>
 
-                <div class="table-container glass animate-up">
-                    <table id="requestsTable">
+                <div class="table-card">
+                    <table class="data-table">
                         <thead>
                             <tr>
                                 <th>الرقم</th>
@@ -184,17 +179,17 @@
                                 <th>الحالة</th>
                             </tr>
                         </thead>
-                        <tbody id="tableBody">
-                            </tbody>
+                        <tbody id="tableBody"></tbody>
                     </table>
                 </div>
             </section>
+
         </main>
     </div>
 
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="script.js"></script>
+    <script src="firebase-config.js"></script> <script src="script.js"></script>
 </body>
 </html>
