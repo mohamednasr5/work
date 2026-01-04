@@ -672,19 +672,6 @@
         });
     </script>
     
-// Register Service Worker for PWA support
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', function() {
-        navigator.serviceWorker.register('service-worker.js')
-            .then(function(registration) {
-                console.log('Service Worker registered successfully:', registration);
-            })
-            .catch(function(error) {
-                console.log('Service Worker registration failed:', error);
-            });
-    });
-}
-    
     <!-- PWA Install Button -->
     <button id="pwa-install-button" onclick="window.pwaInstallPrompt.installApp()" title="تثبيت التطبيق على الجهاز">
         <span>تثبيت التطبيق</span>
@@ -692,5 +679,19 @@ if ('serviceWorker' in navigator) {
 
     <!-- PWA Install Prompt Handler Scripts -->
     <script src="install-prompt.js"></script>
+    
+    // Register Service Worker for PWA support
+    if ('serviceWorker' in navigator) {
+        window.addEventListener('load', function() {
+            navigator.serviceWorker.register('service-worker.js')
+                .then(function(registration) {
+                    console.log('Service Worker registered successfully:', registration);
+                })
+                .catch(function(error) {
+                    console.log('Service Worker registration failed:', error);
+                });
+        });
+    }
+</script>
 </body>
 </html>
