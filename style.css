@@ -1146,3 +1146,34 @@ tbody tr:hover {
 .sidebar::-webkit-scrollbar {
   width: 4px;
 }
+/* Fix for tab navigation */
+.tab-content {
+    display: none;
+    animation: fadeInUp 0.5s ease;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Ensure nav links are clickable */
+.nav-links li {
+    cursor: pointer;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.nav-links li:active {
+    transform: scale(0.98);
+}
