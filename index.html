@@ -13,6 +13,7 @@
     <!-- الأنماط -->
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="animations.css">
+        <link rel="stylesheet" href="install-button.css">
     
     <!-- Firebase -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -683,5 +684,13 @@ if ('serviceWorker' in navigator) {
             });
     });
 }
+    
+    <!-- PWA Install Button -->
+    <button id="pwa-install-button" onclick="window.pwaInstallPrompt.installApp()" title="تثبيت التطبيق على الجهاز">
+        <span>تثبيت التطبيق</span>
+    </button>
+
+    <!-- PWA Install Prompt Handler Scripts -->
+    <script src="install-prompt.js"></script>
 </body>
 </html>
