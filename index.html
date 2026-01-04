@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام متابعة طلبات النائب أحمد الحديدي</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+        <nav class="sidebar glass-panel">
+            <div class="logo">
+                <i class="fa-solid fa-landmark fa-2x"></i>
+                <h2>مكتب النائب<br>أحمد الحديدي</h2>
+            </div>
+            <ul class="nav-links">
+                <li class="active" onclick="switchTab('dashboard')"><i class="fa-solid fa-chart-pie"></i> لوحة التحكم</li>
+                <li onclick="switchTab('add-request')"><i class="fa-solid fa-plus-circle"></i> إضافة طلب جديد</li>
+                <li onclick="switchTab('view-requests')"><i class="fa-solid fa-list-check"></i> سجل الطلبات</li>
+            </ul>
+            <div class="theme-toggle">
+                <i class="fa-solid fa-moon" id="theme-icon"></i>
+            </div>
+        </nav>
+
+        <main class="main-content">
+            
+            <section id="dashboard" class="tab-content active">
+                <div class="header-3d">
+                    <h1>لوحة المعلومات والتحليلات</h1>
+                    <p>نظرة شاملة على أداء الطلبات خلال الدورة البرلمانية</p>
+                </div>
+
+                <div id="alerts-container"></div>
+
+                <div class="stats-grid">
+                    <div class="stat-card glass-panel tilt-effect" data-type="total">
+                        <div class="icon"><i class="fa-solid fa-folder-open"></i></div>
+                        <h3>إجمالي الطلبات</h3>
+                        <span class="number" id="total-count">0</span>
+                    </div>
+                    <div class="stat-card glass-panel tilt-effect success" data-type="completed">
+                        <div class="icon"><i class="fa-solid fa-check-double"></i></div>
+                        <h3>مكتملة</h3>
+                        <span class="number" id="completed-count">0</span>
+                    </div>
+                    <div class="stat-card glass-panel tilt-effect warning" data-type="pending">
+                        <div class="icon"><i class="fa-solid fa-clock"></i></div>
+                        <h3>قيد التنفيذ</h3>
+                        <span class="number" id="pending-count">0</span>
+                    </div>
+                    <div class="stat-card glass-panel tilt-effect danger" data-type="rejected">
+                        <div class="icon"><i class="fa-solid fa-ban"></i></div>
+                        <h3>مرفوضة</h3>
+                        <span class="number" id="rejected-count">0</span>
+                    </div>
+                </div>
+
+                <div class="charts-container glass-panel">
+                    <canvas id="requestsChart"></canvas>
+                </div>
+            </section>
+
+            <section id="add-request" class="tab-content">
+                <div class="header-3d">
+                    <h1>تسجيل طلب جديد</h1>
+                </div>
+                <div class="form-container glass-panel">
+                    <form id="requestForm">
+                        <div class="form-grid">
+                            <div class="input-group">
+                                <label>رقم الطلب (ID)</label>
+                                <input type="text" id="reqId" required placeholder="مثال: REQ-2024-001">
+                            </div>
+                            <div class="input-group">
+                                <label>عنوان الطلب</label>
+                                <input type="text" id="reqTitle" required>
+                            </div>
+                            <div class="input-group full-width">
+                                <label>تفاصيل الطلب</label>
+                                <textarea id="reqDetails" rows="3" required></textarea>
+                            </div>
+                            <div class="input-group">
+                                <label>الجهة المقدم إليها</label>
+                                <input type="text" id="reqAuthority" required>
+                            </div>
+                            <div class="input-group">
+                                <label>تاريخ التقديم</label>
+                                <input type="date" id="reqDate" required>
+                            </div>
+                            
+                            <div class="input-group">
+                                <label>يوجد مستندات؟</label>
+                                <select id="hasDocs" onchange="toggleDocsInput()">
+                                    <option value="no">لا</option>
+                                    <option value="yes">نعم</option>
+                                </select>
+                            </div>
+                            <div class="input-group" id="docsListGroup" style="display:none;">
+                                <label>قائمة المستندات (افصل بفاصلة)</label>
+                                <input type="text" id="docsList" placeholder="صورة بطاقة, طلب رسمي...">
+                            </div>
+
+                            <div class="input-group">
+                                <label>الحالة الحالية</label>
+                                <select id="reqStatus">
+                                    <option value="review">قيد المراجعة</option>
+                                    <option value="execution">تحت التنفيذ</option>
+                                    <option value="completed">مكتمل</option>
+                                    <option value="rejected">مرفوض</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn-3d">حفظ الطلب في النظام <i class="fa-solid fa-save"></i></button>
+                    </form>
+                </div>
+            </section>
+
+            <section id="view-requests" class="tab-content">
+                <div class="header-3d">
+                    <h1>سجل الطلبات والأرشيف</h1>
+                </div>
+                
+                <div class="controls-bar glass-panel">
+                    <input type="text" id="searchInput" placeholder="بحث باسم المواطن، رقم الطلب..." onkeyup="filterRequests()">
+                    <select id="filterStatus" onchange="filterRequests()">
+                        <option value="all">كل الحالات</option>
+                        <option value="review">قيد المراجعة</option>
+                        <option value="execution">تحت التنفيذ</option>
+                        <option value="completed">مكتمل</option>
+                        <option value="rejected">مرفوض</option>
+                    </select>
+                </div>
+
+                <div class="table-responsive glass-panel">
+                    <table id="requestsTable">
+                        <thead>
+                            <tr>
+                                <th>رقم الطلب</th>
+                                <th>العنوان</th>
+                                <th>الجهة</th>
+                                <th>التاريخ</th>
+                                <th>الحالة</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            </tbody>
+                    </table>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script src="firebase-config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
