@@ -8,58 +8,18 @@
     <title>نظام إدارة طلبات البرلمان</title>
     <meta name="title" content="نظام إدارة طلبات البرلمان">
     <meta name="description" content="نظام احترافي متكامل لإدارة ومتابعة طلبات وأسئلة أعضاء البرلمان المصري">
-    <meta name="keywords" content="برلمان, طلبات, إدارة, نواب, مصر, parliament, requests">
-    <meta name="author" content="Parliament Management System">
     
     <!-- Mobile Optimization -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="طلبات البرلمان">
-    <meta name="format-detection" content="telephone=no">
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="/manifest.json">
+    <link rel="manifest" href="manifest.json">
     
     <!-- Theme Colors -->
     <meta name="theme-color" content="#1e3c72">
-    <meta name="msapplication-TileColor" content="#1e3c72">
-    <meta name="msapplication-navbutton-color" content="#1e3c72">
-    
-    <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-72x72.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-72x72.png">
-    <link rel="shortcut icon" href="/icons/icon-72x72.png">
-    
-    <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" sizes="72x72" href="/icons/icon-72x72.png">
-    <link rel="apple-touch-icon" sizes="96x96" href="/icons/icon-96x96.png">
-    <link rel="apple-touch-icon" sizes="128x128" href="/icons/icon-128x128.png">
-    <link rel="apple-touch-icon" sizes="144x144" href="/icons/icon-144x144.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png">
-    <link rel="apple-touch-icon" sizes="192x192" href="/icons/icon-192x192.png">
-    <link rel="apple-touch-icon" sizes="384x384" href="/icons/icon-384x384.png">
-    <link rel="apple-touch-icon" sizes="512x512" href="/icons/icon-512x512.png">
-    
-    <!-- Splash Screens for iOS -->
-    <link rel="apple-touch-startup-image" href="/icons/icon-512x512.png">
-    
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <meta property="og:title" content="نظام إدارة طلبات البرلمان">
-    <meta property="og:description" content="نظام احترافي متكامل لإدارة ومتابعة طلبات وأسئلة أعضاء البرلمان">
-    <meta property="og:image" content="/icons/icon-512x512.png">
-    
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <meta property="twitter:title" content="نظام إدارة طلبات البرلمان">
-    <meta property="twitter:description" content="نظام احترافي متكامل لإدارة ومتابعة طلبات وأسئلة أعضاء البرلمان">
-    <meta property="twitter:image" content="/icons/icon-512x512.png">
-    
-    <!-- External Resources -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" crossorigin>
-    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
-    <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
     
     <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
@@ -69,13 +29,6 @@
     
     <!-- Main Stylesheet -->
     <link rel="stylesheet" href="style.css">
-    
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js" defer></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js" defer></script>
-    
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js" defer></script>
 </head>
 <body>
     <div class="app-container">
@@ -285,9 +238,21 @@
         </div>
     </div>
 
-    <!-- JavaScript Files -->
+    <!-- Load Scripts in Correct Order -->
+    <!-- 1. Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    
+    <!-- 2. Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
+    
+    <!-- 3. Firebase Config (after Firebase SDK loads) -->
     <script src="firebase-config.js"></script>
+    
+    <!-- 4. Main Script (after Firebase Config) -->
     <script src="script.js"></script>
+    
+    <!-- 5. PWA Install Handler (last) -->
     <script src="install.js"></script>
 </body>
 </html>
