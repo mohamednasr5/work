@@ -1,0 +1,222 @@
+/* ================================================
+   PWA Install Button Styles
+   زر تثبيت التطبيق مع رسوم متحركة وتأثيرات
+   ================================================ */
+
+/* Container for install button */
+#pwa-install-button {
+    display: none;
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 12px;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 8px;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    z-index: 9999;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 160px;
+    justify-content: center;
+}
+
+/* Hover state */
+#pwa-install-button:hover {
+    transform: translateY(-2px) scale(1.02);
+    box-shadow: 0 12px 32px rgba(102, 126, 234, 0.5);
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+/* Active state */
+#pwa-install-button:active {
+    transform: translateY(0) scale(0.98);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+/* Icon styling */
+#pwa-install-button::before {
+    content: '\2B07';
+    font-size: 18px;
+    display: inline-block;
+    animation: downloadPulse 2s ease-in-out infinite;
+}
+
+/* Download pulse animation */
+@keyframes downloadPulse {
+    0%, 100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    50% {
+        opacity: 0.7;
+        transform: translateY(4px);
+    }
+}
+
+/* Button text */
+#pwa-install-button span {
+    white-space: nowrap;
+}
+
+/* Responsive for tablets */
+@media (max-width: 768px) {
+    #pwa-install-button {
+        top: 12px;
+        right: 12px;
+        padding: 10px 16px;
+        font-size: 14px;
+        min-width: 140px;
+    }
+
+    #pwa-install-button::before {
+        font-size: 16px;
+    }
+}
+
+/* Responsive for mobile phones */
+@media (max-width: 480px) {
+    #pwa-install-button {
+        top: 8px;
+        right: 8px;
+        left: auto;
+        padding: 8px 12px;
+        font-size: 13px;
+        min-width: auto;
+        width: calc(100% - 16px);
+    }
+
+    #pwa-install-button::before {
+        font-size: 14px;
+    }
+
+    #pwa-install-button span {
+        display: none;
+    }
+}
+
+/* Slide in animation */
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Slide out animation */
+@keyframes slideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+}
+
+/* Success message styling */
+.pwa-success-message {
+    position: fixed;
+    bottom: 20px;
+    left: 20px;
+    background: linear-gradient(135deg, #00c896 0%, #00a876 100%);
+    color: white;
+    padding: 15px 25px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 200, 150, 0.3);
+    font-weight: 500;
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    animation: slideInUp 0.5s ease-out, slideOutDown 0.5s ease-out 2.5s forwards;
+}
+
+/* Slide in from bottom animation */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Slide out to bottom animation */
+@keyframes slideOutDown {
+    from {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateY(100%);
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    #pwa-install-button {
+        background: linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%);
+        box-shadow: 0 8px 24px rgba(90, 103, 216, 0.5);
+    }
+
+    #pwa-install-button:hover {
+        box-shadow: 0 12px 32px rgba(90, 103, 216, 0.6);
+    }
+
+    .pwa-success-message {
+        background: linear-gradient(135deg, #00b088 0%, #008866 100%);
+        box-shadow: 0 4px 12px rgba(0, 176, 136, 0.4);
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    #pwa-install-button,
+    #pwa-install-button::before,
+    .pwa-success-message {
+        animation: none !important;
+        transition: none !important;
+    }
+}
+
+/* High DPI screens (Retina) */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    #pwa-install-button {
+        box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+    }
+}
+
+/* Print styles */
+@media print {
+    #pwa-install-button {
+        display: none !important;
+    }
+}
+
+/* Landscape orientation on mobile */
+@media (max-height: 500px) and (orientation: landscape) {
+    #pwa-install-button {
+        top: 8px;
+        right: 8px;
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+
+    #pwa-install-button::before {
+        font-size: 12px;
+    }
+}
