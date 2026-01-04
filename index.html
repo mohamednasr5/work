@@ -41,7 +41,7 @@
     <link rel="stylesheet" href="install-button.css">
 </head>
 <body>
-    <!-- شاشة التحميل -->
+    <!-- Loading Screen -->
     <div id="loadingScreen" class="loading-screen">
         <div class="loading-content">
             <div class="loading-spinner"></div>
@@ -49,7 +49,7 @@
             <p>جاري التحميل...</p>
         </div>
     </div>
-
+    
     <!-- Header -->
     <header class="main-header">
         <div class="header-container">
@@ -62,7 +62,7 @@
             </div>
             
             <div class="header-actions">
-                <!-- زر التثبيت -->
+                <!-- Install Button -->
                 <div id="installPrompt" class="install-prompt" style="display: none;">
                     <button id="installButton" class="install-btn">
                         <i class="fas fa-download"></i>
@@ -70,7 +70,7 @@
                     </button>
                 </div>
                 
-                <!-- الإشعارات -->
+                <!-- Notifications -->
                 <div class="notifications-icon">
                     <button class="icon-btn" id="notificationsBtn">
                         <i class="fas fa-bell"></i>
@@ -78,560 +78,117 @@
                     </button>
                 </div>
                 
-                <!-- الوضع الليلي -->
+                <!-- Theme Toggle -->
                 <button class="icon-btn" id="themeToggle" title="تبديل الوضع الليلي/النهاري">
                     <i class="fas fa-moon"></i>
                 </button>
             </div>
         </div>
     </header>
-
-    <!-- Navigation -->
-    <nav class="main-nav">
-        <ul class="nav-list">
-            <li>
-                <a href="#" class="nav-link active" data-page="dashboard">
-                    <i class="fas fa-chart-line"></i>
-                    <span>لوحة التحكم</span>
-                </a>
-            </li>
-            <li>
-                <a href="#" class="nav-link" data-page="requests">
-                    <i class="fas fa-tasks"></i>
-                    <span>إدارة الطلبات</span>
-                </a>
-            </li>
-            <li>
-                <a href="#" class="nav-link" data-page="add-request">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>إضافة طلب جديد</span>
-                </a>
-            </li>
-            <li>
-                <a href="#" class="nav-link" data-page="notifications">
-                    <i class="fas fa-bell"></i>
-                    <span>التنبيهات</span>
-                </a>
-            </li>
-            <li>
-                <a href="#" class="nav-link" data-page="settings">
-                    <i class="fas fa-cog"></i>
-                    <span>الإعدادات</span>
-                </a>
-            </li>
-        </ul>
+    
+    <!-- Navigation Tabs - Professional Active Tabs -->
+    <nav class="main-nav nav-tabs-modern">
+        <div class="nav-container">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-page="dashboard">
+                        <i class="fas fa-chart-line"></i>
+                        <span>لوحة التحكم</span>
+                        <div class="nav-indicator"></div>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="requests">
+                        <i class="fas fa-tasks"></i>
+                        <span>إدارة الطلبات</span>
+                        <div class="nav-indicator"></div>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="add-request">
+                        <i class="fas fa-plus-circle"></i>
+                        <span>إضافة طلب جديد</span>
+                        <div class="nav-indicator"></div>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="notifications">
+                        <i class="fas fa-bell"></i>
+                        <span>التنبيهات</span>
+                        <div class="nav-indicator"></div>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="settings">
+                        <i class="fas fa-cog"></i>
+                        <span>الإعدادات</span>
+                        <div class="nav-indicator"></div>
+                    </a>
+                </li>
+            </ul>
+        </div>
     </nav>
-
-    <!-- Main Content -->
+    
+    <!-- Main Content - Sections will load here -->
     <main class="main-content">
-        <!-- لوحة التحكم -->
+        <!-- Dashboard Section (Default Active) -->
         <section id="dashboard" class="page-section active">
-            <div class="section-header">
-                <h2><i class="fas fa-chart-line"></i> لوحة التحكم</h2>
-                <p>نظرة شاملة على جميع الطلبات والإحصائيات</p>
-            </div>
-
-            <!-- إحصائيات سريعة -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon total">
-                        <i class="fas fa-file-alt"></i>
-                    </div>
-                    <div class="stat-details">
-                        <h3>إجمالي الطلبات</h3>
-                        <p class="stat-number" id="total-requests">0</p>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon completed">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <div class="stat-details">
-                        <h3>الطلبات المكتملة</h3>
-                        <p class="stat-number" id="completed-requests">0</p>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon inprogress">
-                        <i class="fas fa-spinner"></i>
-                    </div>
-                    <div class="stat-details">
-                        <h3>قيد التنفيذ</h3>
-                        <p class="stat-number" id="inprogress-requests">0</p>
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <div class="stat-icon pending">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="stat-details">
-                        <h3>قيد المراجعة</h3>
-                        <p class="stat-number" id="pending-requests">0</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- الرسوم البيانية -->
-            <div class="charts-grid">
-                <div class="chart-container">
-                    <h3><i class="fas fa-chart-pie"></i> توزيع الطلبات حسب الحالة</h3>
-                    <canvas id="statusChart"></canvas>
-                </div>
-
-                <div class="chart-container">
-                    <h3><i class="fas fa-chart-bar"></i> توزيع الطلبات حسب الجهات</h3>
-                    <canvas id="authoritiesChart"></canvas>
-                </div>
-
-                <div class="chart-container full-width">
-                    <h3><i class="fas fa-chart-line"></i> تطور الطلبات خلال الأشهر الأخيرة</h3>
-                    <canvas id="timelineChart"></canvas>
-                </div>
-            </div>
-
-            <!-- مؤشرات الأداء -->
-            <div class="kpi-grid">
-                <div class="kpi-card">
-                    <i class="fas fa-percentage"></i>
-                    <h4>معدل الإنجاز</h4>
-                    <p class="kpi-value" id="completion-rate">0%</p>
-                </div>
-
-                <div class="kpi-card">
-                    <i class="fas fa-hourglass-half"></i>
-                    <h4>متوسط وقت الاستجابة</h4>
-                    <p class="kpi-value" id="avg-response-time">0 يوم</p>
-                </div>
-
-                <div class="kpi-card">
-                    <i class="fas fa-trophy"></i>
-                    <h4>معدل النجاح</h4>
-                    <p class="kpi-value" id="success-rate">0%</p>
-                </div>
-            </div>
-
-            <!-- الطلبات الحديثة -->
-            <div class="recent-requests">
-                <div class="section-header">
-                    <h3><i class="fas fa-history"></i> آخر الطلبات</h3>
-                    <a href="#" class="view-all-link" data-page="requests">عرض الكل <i class="fas fa-arrow-left"></i></a>
-                </div>
-                <div id="recent-requests" class="recent-requests-list">
-                    <!-- سيتم ملئها ديناميكياً -->
-                </div>
-            </div>
+            <!-- Dashboard content here -->
         </section>
-
-        <!-- إدارة الطلبات -->
+        
+        <!-- Requests Section -->
         <section id="requests" class="page-section">
-            <div class="section-header">
-                <h2><i class="fas fa-tasks"></i> إدارة الطلبات</h2>
-                <p>عرض وإدارة جميع الطلبات البرلمانية</p>
-            </div>
-
-            <!-- أدوات التصفية والبحث -->
-            <div class="filters-section">
-                <div class="search-box">
-                    <i class="fas fa-search"></i>
-                    <input type="text" id="searchBox" placeholder="ابحث في جميع الطلبات (الرقم، العنوان، التفاصيل، الجهة...)">
-                </div>
-
-                <div class="filters-grid">
-                    <div class="filter-group">
-                        <label><i class="fas fa-filter"></i> تصفية حسب الحالة</label>
-                        <select id="statusFilter">
-                            <option value="all">جميع الحالات</option>
-                            <option value="pending">قيد المراجعة</option>
-                            <option value="under-review">قيد الدراسة</option>
-                            <option value="in-progress">قيد التنفيذ</option>
-                            <option value="completed">مكتمل</option>
-                            <option value="rejected">مرفوض</option>
-                        </select>
-                    </div>
-
-                    <div class="filter-group">
-                        <label><i class="fas fa-building"></i> تصفية حسب الجهة</label>
-                        <select id="authorityFilter">
-                            <option value="all">جميع الجهات</option>
-                            <!-- سيتم ملؤها ديناميكياً -->
-                        </select>
-                    </div>
-
-                    <div class="filter-group">
-                        <label><i class="fas fa-calendar"></i> من تاريخ</label>
-                        <input type="date" id="dateFilter">
-                    </div>
-
-                    <div class="filter-actions">
-                        <button id="resetFilters" class="btn btn-secondary">
-                            <i class="fas fa-redo"></i> إعادة تعيين
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- أزرار الإجراءات -->
-            <div class="actions-bar">
-                <button id="printAllBtn" class="btn btn-outline">
-                    <i class="fas fa-print"></i> طباعة الكل
-                </button>
-                <button id="exportAllBtn" class="btn btn-outline">
-                    <i class="fas fa-file-excel"></i> تصدير إلى Excel
-                </button>
-            </div>
-
-            <!-- قائمة الطلبات -->
-            <div id="requestsContainer" class="requests-container">
-                <!-- سيتم ملؤها ديناميكياً -->
-            </div>
-
-            <!-- Pagination -->
-            <div id="requestsPagination" class="pagination">
-                <!-- سيتم ملؤها ديناميكياً -->
-            </div>
+            <!-- Requests management content here -->
         </section>
-
-        <!-- إضافة طلب جديد -->
+        
+        <!-- Add Request Section -->
         <section id="add-request" class="page-section">
-            <div class="section-header">
-                <h2><i class="fas fa-plus-circle"></i> إضافة طلب جديد</h2>
-                <p>أدخل تفاصيل الطلب البرلماني الجديد</p>
-            </div>
-
-            <form id="newRequestForm" class="request-form">
-                <div class="form-grid">
-                    <div class="form-group">
-                        <label for="manualRequestNumber">
-                            <i class="fas fa-hashtag"></i> رقم الطلب (اختياري)
-                        </label>
-                        <input type="text" id="manualRequestNumber" placeholder="سيتم التوليد تلقائياً إذا ترك فارغاً">
-                        <small>يمكنك إدخال رقم مخصص أو ترك الحقل فارغاً للترقيم التلقائي</small>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="receivingAuthority">
-                            <i class="fas fa-building"></i> الجهة المستقبلة *
-                        </label>
-                        <select id="receivingAuthority" required>
-                            <option value="">اختر الجهة</option>
-                            <option value="وزارة الصحة">وزارة الصحة</option>
-                            <option value="وزارة التعليم">وزارة التعليم</option>
-                            <option value="وزارة النقل">وزارة النقل</option>
-                            <option value="وزارة الإسكان">وزارة الإسكان</option>
-                            <option value="وزارة الكهرباء">وزارة الكهرباء</option>
-                            <option value="وزارة التموين">وزارة التموين</option>
-                            <option value="وزارة الداخلية">وزارة الداخلية</option>
-                            <option value="وزارة العدل">وزارة العدل</option>
-                            <option value="وزارة المالية">وزارة المالية</option>
-                            <option value="المحافظة">المحافظة</option>
-                            <option value="البرلمان">البرلمان</option>
-                            <option value="أخرى">أخرى</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label for="requestTitle">
-                            <i class="fas fa-heading"></i> عنوان الطلب *
-                        </label>
-                        <input type="text" id="requestTitle" required placeholder="أدخل عنواناً مختصراً للطلب">
-                    </div>
-
-                    <div class="form-group full-width">
-                        <label for="requestDetails">
-                            <i class="fas fa-file-alt"></i> تفاصيل الطلب *
-                        </label>
-                        <textarea id="requestDetails" rows="5" required placeholder="اشرح تفاصيل الطلب بدقة"></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="submissionDate">
-                            <i class="fas fa-calendar"></i> تاريخ التقديم *
-                        </label>
-                        <input type="date" id="submissionDate" required>
-                    </div>
-
-                    <div class="form-group checkbox-group">
-                        <label>
-                            <input type="checkbox" id="hasDocuments">
-                            <span><i class="fas fa-paperclip"></i> يوجد مستندات مرفقة</span>
-                        </label>
-                    </div>
-
-                    <div id="documentsSection" class="form-group full-width" style="display: none;">
-                        <label><i class="fas fa-file-alt"></i> المستندات المرفقة</label>
-                        <div class="documents-input">
-                            <input type="text" id="documentName" placeholder="اسم المستند">
-                            <button type="button" id="addDocument" class="btn btn-secondary">
-                                <i class="fas fa-plus"></i> إضافة
-                            </button>
-                        </div>
-                        <ul id="documentsList" class="documents-list"></ul>
-                    </div>
-
-                    <div class="form-group checkbox-group">
-                        <label>
-                            <input type="checkbox" id="hasResponse">
-                            <span><i class="fas fa-reply"></i> تم استلام رد</span>
-                        </label>
-                    </div>
-
-                    <div id="responseSection" class="response-section" style="display: none;">
-                        <div class="form-group full-width">
-                            <label for="responseDetails">
-                                <i class="fas fa-comment-dots"></i> تفاصيل الرد
-                            </label>
-                            <textarea id="responseDetails" rows="4" placeholder="أدخل تفاصيل الرد المستلم"></textarea>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="responseDate">
-                                <i class="fas fa-calendar-check"></i> تاريخ الرد
-                            </label>
-                            <input type="date" id="responseDate">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> حفظ الطلب
-                    </button>
-                    <button type="button" id="cancelForm" class="btn btn-secondary">
-                        <i class="fas fa-times"></i> إلغاء
-                    </button>
-                </div>
-            </form>
+            <!-- Add request form content here -->
         </section>
-
-        <!-- التنبيهات -->
+        
+        <!-- Notifications Section -->
         <section id="notifications" class="page-section">
-            <div class="section-header">
-                <h2><i class="fas fa-bell"></i> التنبيهات والإشعارات</h2>
-                <p>تابع جميع التنبيهات والتحديثات المهمة</p>
-            </div>
-
-            <div class="notifications-actions">
-                <button id="markAllRead" class="btn btn-outline">
-                    <i class="fas fa-check-double"></i> تعليم الكل كمقروء
-                </button>
-            </div>
-
-            <div class="notifications-filter">
-                <button class="filter-btn active" data-filter="all">
-                    <i class="fas fa-list"></i> الكل
-                </button>
-                <button class="filter-btn" data-filter="upcoming">
-                    <i class="fas fa-clock"></i> المواعيد القريبة
-                </button>
-                <button class="filter-btn" data-filter="delayed">
-                    <i class="fas fa-exclamation-triangle"></i> متأخرة
-                </button>
-                <button class="filter-btn" data-filter="followup">
-                    <i class="fas fa-redo"></i> تحتاج متابعة
-                </button>
-            </div>
-
-            <div id="notificationsList" class="notifications-list">
-                <!-- سيتم ملؤها ديناميكياً -->
-            </div>
+            <!-- Notifications content here -->
         </section>
-
-        <!-- الإعدادات -->
+        
+        <!-- Settings Section -->
         <section id="settings" class="page-section">
-            <div class="section-header">
-                <h2><i class="fas fa-cog"></i> الإعدادات</h2>
-                <p>تخصيص النظام حسب تفضيلاتك</p>
-            </div>
-
-            <div class="settings-container">
-                <div class="settings-card">
-                    <h3><i class="fas fa-bell"></i> إعدادات التنبيهات</h3>
-                    <div class="settings-group">
-                        <label class="switch-label">
-                            <span>تنبيهات المواعيد القريبة</span>
-                            <label class="switch">
-                                <input type="checkbox" id="upcomingAlerts" checked>
-                                <span class="slider"></span>
-                            </label>
-                        </label>
-
-                        <label class="switch-label">
-                            <span>تنبيهات الطلبات المتأخرة</span>
-                            <label class="switch">
-                                <input type="checkbox" id="delayedAlerts" checked>
-                                <span class="slider"></span>
-                            </label>
-                        </label>
-
-                        <label class="switch-label">
-                            <span>تنبيهات المتابعة</span>
-                            <label class="switch">
-                                <input type="checkbox" id="followupAlerts" checked>
-                                <span class="slider"></span>
-                            </label>
-                        </label>
-
-                        <label class="switch-label">
-                            <span>تنبيهات البريد الإلكتروني</span>
-                            <label class="switch">
-                                <input type="checkbox" id="emailAlerts">
-                                <span class="slider"></span>
-                            </label>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="settings-card">
-                    <h3><i class="fas fa-palette"></i> المظهر</h3>
-                    <div class="settings-group">
-                        <button id="toggleThemeBtn" class="btn btn-outline">
-                            <i class="fas fa-adjust"></i> تبديل الوضع الليلي/النهاري
-                        </button>
-                    </div>
-                </div>
-
-                <div class="settings-card">
-                    <h3><i class="fas fa-info-circle"></i> معلومات النظام</h3>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <strong>الإصدار:</strong>
-                            <span>2.0.0</span>
-                        </div>
-                        <div class="info-item">
-                            <strong>المطور:</strong>
-                            <span>مهندس محمد حماد</span>
-                        </div>
-                        <div class="info-item">
-                            <strong>آخر تحديث:</strong>
-                            <span>يناير 2026</span>
-                        </div>
-                        <div class="info-item">
-                            <strong>الرخصة:</strong>
-                            <span>MIT License</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="settings-card">
-                    <h3><i class="fas fa-link"></i> روابط مفيدة</h3>
-                    <div class="links-grid">
-                        <a href="https://github.com/mohamednasr5/work" target="_blank" class="link-btn">
-                            <i class="fab fa-github"></i> GitHub Repository
-                        </a>
-                        <a href="https://www.facebook.com/en.mohamed.nasr" target="_blank" class="link-btn">
-                            <i class="fab fa-facebook"></i> تواصل معنا
-                        </a>
-                    </div>
-                </div>
-            </div>
+            <!-- Settings content here -->
         </section>
     </main>
-
+    
     <!-- Footer -->
     <footer class="main-footer">
         <div class="footer-content">
-            <div class="footer-section">
-                <h4><i class="fas fa-chart-line"></i> إحصائيات سريعة</h4>
-                <p>الطلبات النشطة: <strong id="footer-active">0</strong></p>
-                <p>المكتملة هذا الشهر: <strong id="footer-completed-month">0</strong></p>
-                <p>تحتاج متابعة: <strong id="footer-followup">0</strong></p>
-            </div>
-
-            <div class="footer-section">
-                <h4><i class="fas fa-info-circle"></i> عن النظام</h4>
-                <p>نظام متطور لإدارة الطلبات البرلمانية</p>
-                <p>للنائب أحمد الحديدي</p>
-                <p id="currentDate"></p>
-            </div>
-
-            <div class="footer-section">
-                <h4><i class="fas fa-code"></i> المطور</h4>
-                <p>مهندس محمد حماد</p>
-                <p>
-                    <a href="https://www.facebook.com/en.mohamed.nasr" target="_blank">
-                        <i class="fab fa-facebook"></i> تواصل معنا
-                    </a>
-                </p>
-                <p class="version">الإصدار 2.0.0</p>
-            </div>
-        </div>
-
-        <div class="footer-bottom">
-            <p>© 2026 جميع الحقوق محفوظة - نظام إدارة الطلبات البرلمانية</p>
+            <p>&copy; 2026 جميع الحقوق محفوظة - نظام إدارة الطلبات البرلمانية</p>
             <p>تم التطوير بواسطة <strong>مهندس محمد حماد</strong></p>
         </div>
     </footer>
-
-    <!-- Modal لعرض تفاصيل الطلب -->
-    <div id="requestModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2><i class="fas fa-file-alt"></i> تفاصيل الطلب</h2>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div id="requestModalBody" class="modal-body">
-                <!-- سيتم ملؤها ديناميكياً -->
-            </div>
-            <div class="modal-footer">
-                <button id="printRequestBtn" class="btn btn-primary">
-                    <i class="fas fa-print"></i> طباعة
-                </button>
-                <button class="close-btn btn btn-secondary">
-                    <i class="fas fa-times"></i> إغلاق
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal للتنبيهات -->
-    <div id="alertModal" class="modal alert-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3 id="alertTitle"></h3>
-                <button class="close-modal">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p id="alertMessage"></p>
-            </div>
-            <div class="modal-footer">
-                <button class="close-btn btn btn-primary">حسناً</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Firebase -->
+    
+    <!-- Firebase Configuration -->
     <script type="module">
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js';
         import { getDatabase } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js';
         import { getAuth } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-auth.js';
         import { getStorage } from 'https://www.gstatic.com/firebasejs/9.22.0/firebase-storage.js';
-
-        // تهيئة Firebase
-        window.firebaseModules = {
-            initializeApp,
-            getDatabase,
-            getAuth,
-            getStorage
-        };
+        
+        window.firebaseModules = { initializeApp, getDatabase, getAuth, getStorage };
     </script>
-
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
-
-    <!-- SheetJS (XLSX) -->
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-    <!-- Application Scripts -->
-    <script src="firebase-config.js"></script>
-    <script src="charts.js"></script>
-    <script src="notifications.js"></script>
-    <script src="install-prompt.js"></script>
+    
+    <!-- Main App Script -->
     <script src="app.js"></script>
-
-    <!-- Service Worker Registration -->
+    
+    <!-- Charts Configuration -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.min.js"></script>
+    <script src="charts.js"></script>
+    
+    <!-- Notifications System -->
+    <script src="notifications.js"></script>
+    
+    <!-- Excel Export Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    
+    <!-- PWA Service Worker Registration -->
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
@@ -644,14 +201,16 @@
                     });
             });
         }
-    </script>
-
-    <!-- Initialize Application -->
-    <script>
-        // تهيئة التطبيق عند تحميل الصفحة
+        
+        // Initialize App
         window.addEventListener('DOMContentLoaded', () => {
-            window.parliamentSystem = new ParliamentRequestsSystem();
+            if (window.ParliamentRequestsSystem) {
+                window.parliamentSystem = new ParliamentRequestsSystem();
+            }
         });
     </script>
+    
+    <!-- Install Prompt Handler -->
+    <script src="install-prompt.js"></script>
 </body>
 </html>
