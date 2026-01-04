@@ -278,3 +278,22 @@ function groupByMonth(requests) {
         return acc;
     }, {});
 }
+
+/**
+ * Calculate deadline status for a request
+ */
+function getDeadlineStatus(submissionDate) {
+    const submissionDateObj = new Date(submissionDate);
+    submissionDateObj.setDate(submissionDateObj.getDate() + 90);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const timeDiff = submissionDateObj - today;
+    const daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+    
+    if (daysLeft < 0) return 'overdue';
+    if (daysLeft <= 30) return 'urgent';
+    if (daysLeft <= 60) return 'warning';
+    return 'normal';
+}
