@@ -18,6 +18,7 @@ class ParliamentRequestsSystem {
         this.pendingOperations = [];
         this.offlineMode = false;
         this.syncStatus = 'connected';
+        this.isSubmitting = false; // لمنع الإرسال المزدوج
         
         // تهيئة النظام
         this.init();
@@ -65,6 +66,9 @@ class ParliamentRequestsSystem {
         
         console.log('✅ تم تهيئة النظام بنجاح');
         this.showSuccessToast('النظام جاهز للاستخدام');
+        
+        // تصدير الدوال إلى النطاق العام
+        this.exportFunctionsToGlobal();
     }
 
     async waitForDependencies() {
@@ -674,6 +678,21 @@ class ParliamentRequestsSystem {
         }
     }
 
+    showSyncStatus() {
+        const pendingOps = this.pendingOperations.length;
+        const requestManager = window.firebaseApp?.RequestManager;
+        const managerPendingOps = requestManager ? requestManager.pendingOperations || [] : [];
+        
+        const totalPending = pendingOps + managerPendingOps.length;
+        
+        if (totalPending > 0) {
+            console.log(`📊 هناك ${totalPending} عملية معلقة للمزامنة`);
+            this.updateSyncStatus(totalPending);
+        } else {
+            this.hideSyncStatus();
+        }
+    }
+
     updateSyncStatus(pendingCount) {
         const syncElement = document.getElementById('syncStatus');
         
@@ -697,15 +716,22 @@ class ParliamentRequestsSystem {
                 gap: 6px;
                 animation: pulse 2s infinite;
             `;
-            syncDiv.innerHTML = `<i class="fas fa-sync-alt"></i> ${pendingCount} معلق`;
+            syncDiv.innerHTML = `<i class="fas fa-sync-alt fa-spin"></i> ${pendingCount} معلق`;
             document.body.appendChild(syncDiv);
         } else if (syncElement) {
             if (pendingCount > 0) {
-                syncElement.innerHTML = `<i class="fas fa-sync-alt"></i> ${pendingCount} معلق`;
+                syncDiv.innerHTML = `<i class="fas fa-sync-alt fa-spin"></i> ${pendingCount} معلق`;
                 syncElement.style.display = 'flex';
             } else {
                 syncElement.style.display = 'none';
             }
+        }
+    }
+
+    hideSyncStatus() {
+        const syncElement = document.getElementById('syncStatus');
+        if (syncElement) {
+            syncElement.style.display = 'none';
         }
     }
 
@@ -830,16 +856,16 @@ class ParliamentRequestsSystem {
                 </span>
             </div>
             <div class="request-actions">
-                <button class="action-btn view-btn" onclick="window.parliamentSystem.showRequestDetails('${request.id}')">
+                <button class="action-btn view-btn" onclick="window.parliamentSystem.showRequestDetails('${request.id || request.localId}')">
                     <i class="fas fa-eye"></i> عرض
                 </button>
-                <button class="action-btn edit-btn" onclick="window.parliamentSystem.editRequest('${request.id}')">
+                <button class="action-btn edit-btn" onclick="window.parliamentSystem.editRequest('${request.id || request.localId}')">
                     <i class="fas fa-edit"></i> تعديل
                 </button>
-                <button class="action-btn delete-btn" onclick="window.parliamentSystem.deleteRequest('${request.id}')">
+                <button class="action-btn delete-btn" onclick="window.parliamentSystem.deleteRequest('${request.id || request.localId}')">
                     <i class="fas fa-trash"></i> حذف
                 </button>
-                <button class="action-btn print-btn" onclick="window.parliamentSystem.printRequest('${request.id}')">
+                <button class="action-btn print-btn" onclick="window.parliamentSystem.printRequest('${request.id || request.localId}')">
                     <i class="fas fa-print"></i> طباعة
                 </button>
             </div>
@@ -1049,12 +1075,23 @@ class ParliamentRequestsSystem {
     }
 
     // =====================================================
-    // FORM MANAGEMENT
+    // FORM MANAGEMENT - FIXED DUPLICATION ISSUE
     // =====================================================
 
     async submitNewRequest(e) {
-        e.preventDefault();
-
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+        
+        // منع الإرسال المزدوج
+        if (this.isSubmitting) {
+            console.log('⏳ جارٍ معالجة طلب سابق...');
+            return;
+        }
+        
+        this.isSubmitting = true;
+        
         try {
             const requestData = {
                 manualRequestNumber: this.elements.manualRequestNumber?.value.trim() || null,
@@ -1071,6 +1108,7 @@ class ParliamentRequestsSystem {
 
             // التحقق من صحة البيانات
             if (!this.validateRequestData(requestData)) {
+                this.isSubmitting = false;
                 return;
             }
 
@@ -1119,14 +1157,16 @@ class ParliamentRequestsSystem {
                 let manualRequestNumber = requestData.manualRequestNumber;
                 
                 if (manualRequestNumber) {
-                    const allRequests = Object.values(this.allRequests || {});
-                    const isDuplicate = allRequests.some(req => 
+                    const allRequests = await this.getAllRequests();
+                    const isDuplicate = Object.values(allRequests).some(req => 
+                        !req.deleted && 
                         (req.manualRequestNumber && req.manualRequestNumber === manualRequestNumber) ||
                         req.id === manualRequestNumber
                     );
                     
                     if (isDuplicate) {
                         this.showAlert('خطأ', 'رقم الطلب موجود مسبقاً. يرجى اختيار رقم آخر');
+                        this.isSubmitting = false;
                         return;
                     }
                 }
@@ -1163,7 +1203,12 @@ class ParliamentRequestsSystem {
             }
         } catch (error) {
             console.error('❌ خطأ في إرسال الطلب:', error);
-            this.showAlert('خطأ', 'حدث خطأ في حفظ الطلب');
+            this.showAlert('خطأ', 'حدث خطأ في حفظ الطلب: ' + error.message);
+        } finally {
+            // إعادة تعيين حالة الإرسال بعد تأخير
+            setTimeout(() => {
+                this.isSubmitting = false;
+            }, 1000);
         }
     }
 
@@ -1228,6 +1273,537 @@ class ParliamentRequestsSystem {
         const submitBtn = this.elements.newRequestForm?.querySelector('.submit-btn');
         if (submitBtn) {
             submitBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الطلب';
+            submitBtn.disabled = false;
+        }
+    }
+
+    // =====================================================
+    // BUTTON FUNCTIONS - FIXED
+    // =====================================================
+
+    async showRequestDetails(requestId) {
+        try {
+            console.log('🔍 جاري جلب تفاصيل الطلب:', requestId);
+            
+            const requestManager = window.firebaseApp?.RequestManager;
+            let request;
+            
+            if (requestManager) {
+                request = await requestManager.getRequest(requestId);
+            } else {
+                request = this.allRequests[requestId];
+            }
+            
+            if (!request) {
+                console.error('❌ الطلب غير موجود:', requestId);
+                this.showAlert('خطأ', 'الطلب غير موجود');
+                return;
+            }
+            
+            console.log('✅ تم جلب تفاصيل الطلب:', request);
+            
+            // ملء النافذة المنبثقة
+            this.currentRequestId = requestId;
+            this.elements.requestModalBody.innerHTML = this.createRequestDetailsHTML(request);
+            this.elements.requestModal.style.display = 'flex';
+            this.elements.requestModal.classList.add('fade-in');
+            
+            // إعداد معالجات الأحداث للأزرار في النافذة المنبثقة
+            this.setupModalButtons(requestId);
+            
+        } catch (error) {
+            console.error('❌ خطأ في عرض تفاصيل الطلب:', error);
+            this.showAlert('خطأ', 'حدث خطأ في عرض تفاصيل الطلب: ' + error.message);
+        }
+    }
+
+    setupModalButtons(requestId) {
+        // إعداد أزرار النافذة المنبثقة
+        const modalFooter = this.elements.requestModal.querySelector('.modal-footer');
+        
+        // زر الطباعة
+        const printBtn = modalFooter.querySelector('.print-btn');
+        if (printBtn) {
+            printBtn.onclick = () => this.printRequest(requestId);
+        }
+        
+        // زر التعديل
+        const editBtn = modalFooter.querySelector('.edit-btn');
+        if (editBtn) {
+            editBtn.onclick = () => this.editRequest(requestId);
+        }
+        
+        // زر الحذف
+        const deleteBtn = modalFooter.querySelector('.delete-btn');
+        if (deleteBtn) {
+            deleteBtn.onclick = () => this.deleteRequest(requestId);
+        }
+        
+        // زر الإغلاق
+        const closeBtn = modalFooter.querySelector('.close-btn');
+        if (closeBtn) {
+            closeBtn.onclick = () => this.closeModal();
+        }
+    }
+
+    createRequestDetailsHTML(request) {
+        const statusText = this.getStatusText(request.status);
+        const statusClass = request.status || 'pending';
+        const syncStatus = request.syncStatus || 'synced';
+        const syncText = syncStatus === 'pending' ? 'في انتظار المزامنة' : 'تمت المزامنة';
+        const syncIcon = syncStatus === 'pending' ? 'fa-clock' : 'fa-check';
+        const syncColor = syncStatus === 'pending' ? '#f39c12' : '#27ae60';
+        
+        // تنسيق التواريخ
+        const submissionDate = request.submissionDate ? 
+            new Date(request.submissionDate).toLocaleDateString('ar-EG', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }) : 'غير محدد';
+            
+        const responseDate = request.responseDate ? 
+            new Date(request.responseDate).toLocaleDateString('ar-EG', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            }) : 'غير محدد';
+            
+        const createdAt = request.createdAt ? 
+            new Date(request.createdAt).toLocaleDateString('ar-EG', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }) : 'غير محدد';
+        
+        // التحقق من المستندات
+        const hasDocuments = request.documents && request.documents.length > 0;
+        const documentsHTML = hasDocuments ? 
+            request.documents.map(doc => `
+                <div class="document-item">
+                    <i class="fas fa-file"></i>
+                    <div>
+                        <strong>${doc.name || 'مستند'}</strong>
+                        <p>${doc.description || 'لا يوجد وصف'}</p>
+                    </div>
+                </div>
+            `).join('') : '<p class="no-data">لا توجد مستندات مرفقة</p>';
+        
+        // التحقق من الرد
+        const hasResponse = request.responseStatus && request.responseDetails;
+        const responseHTML = hasResponse ? `
+            <div class="response-section">
+                <h4><i class="fas fa-reply"></i> تفاصيل الرد</h4>
+                <p>${request.responseDetails}</p>
+                <div class="response-date">
+                    <i class="fas fa-calendar-check"></i>
+                    تاريخ الرد: ${responseDate}
+                </div>
+            </div>
+        ` : '<p class="no-data">لم يتم الرد على الطلب بعد</p>';
+        
+        return `
+            <div class="request-details-container">
+                <div class="detail-header ${statusClass}">
+                    <h3>${request.requestTitle || 'بلا عنوان'}</h3>
+                    <div class="request-meta">
+                        <span class="request-id">
+                            <i class="fas fa-hashtag"></i>
+                            ${request.manualRequestNumber || request.id || 'N/A'}
+                        </span>
+                        <span class="sync-status" style="color: ${syncColor};">
+                            <i class="fas ${syncIcon}"></i> ${syncText}
+                        </span>
+                    </div>
+                </div>
+                
+                <div class="detail-grid">
+                    <div class="detail-section">
+                        <h4><i class="fas fa-info-circle"></i> معلومات أساسية</h4>
+                        <div class="detail-item">
+                            <label>الحالة:</label>
+                            <span class="status-badge ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>الجهة المستقبلة:</label>
+                            <span>${request.receivingAuthority || 'غير محدد'}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>تاريخ التقديم:</label>
+                            <span>${submissionDate}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>تاريخ الإنشاء:</label>
+                            <span>${createdAt}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-section">
+                        <h4><i class="fas fa-align-left"></i> تفاصيل الطلب</h4>
+                        <div class="detail-content">
+                            ${request.requestDetails || 'لا توجد تفاصيل'}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <h4><i class="fas fa-paperclip"></i> المستندات المرفقة</h4>
+                    <div class="documents-list">
+                        ${documentsHTML}
+                    </div>
+                </div>
+                
+                ${responseHTML}
+            </div>
+        `;
+    }
+
+    async editRequest(requestId) {
+        try {
+            console.log('✏️ جاري تحميل الطلب للتعديل:', requestId);
+            
+            const requestManager = window.firebaseApp?.RequestManager;
+            let request;
+            
+            if (requestManager) {
+                request = await requestManager.getRequest(requestId);
+            } else {
+                request = this.allRequests[requestId];
+            }
+            
+            if (!request) {
+                this.showAlert('خطأ', 'الطلب غير موجود');
+                return;
+            }
+            
+            // تعبئة النموذج
+            if (this.elements.manualRequestNumber) {
+                this.elements.manualRequestNumber.value = request.manualRequestNumber || '';
+                this.elements.manualRequestNumber.disabled = true; // منع تعديل رقم الطلب
+            }
+            
+            if (this.elements.requestTitle) {
+                this.elements.requestTitle.value = request.requestTitle || '';
+            }
+            
+            if (this.elements.requestDetails) {
+                this.elements.requestDetails.value = request.requestDetails || '';
+            }
+            
+            if (this.elements.receivingAuthority) {
+                this.elements.receivingAuthority.value = request.receivingAuthority || '';
+            }
+            
+            if (this.elements.submissionDate) {
+                this.elements.submissionDate.value = request.submissionDate || '';
+            }
+            
+            // تعبئة المستندات
+            this.documents = request.documents || [];
+            if (this.elements.hasDocuments) {
+                this.elements.hasDocuments.checked = this.documents.length > 0;
+                this.elements.documentsSection.style.display = 
+                    this.documents.length > 0 ? 'block' : 'none';
+            }
+            this.displayDocuments();
+            
+            // تعبئة الرد
+            if (this.elements.hasResponse) {
+                this.elements.hasResponse.checked = request.responseStatus || false;
+                this.elements.responseSection.style.display = 
+                    (request.responseStatus) ? 'block' : 'none';
+            }
+            
+            if (this.elements.responseDetails) {
+                this.elements.responseDetails.value = request.responseDetails || '';
+            }
+            
+            if (this.elements.responseDate) {
+                this.elements.responseDate.value = request.responseDate || '';
+            }
+            
+            // تعيين معرف الطلب للتعديل
+            this.currentEditingRequestId = requestId;
+            
+            // تغيير عنوان الصفحة
+            const sectionHeader = document.querySelector('#add-request-section .section-header');
+            if (sectionHeader) {
+                sectionHeader.querySelector('h2').innerHTML = '<i class="fas fa-edit"></i> تعديل الطلب';
+                sectionHeader.querySelector('p').textContent = 'جاري تعديل الطلب المحدد';
+            }
+            
+            // تغيير نص زر الحفظ
+            const submitBtn = this.elements.newRequestForm?.querySelector('.submit-btn');
+            if (submitBtn) {
+                submitBtn.innerHTML = '<i class="fas fa-save"></i> حفظ التعديلات';
+            }
+            
+            // الانتقال إلى صفحة التعديل
+            this.switchPage('add-request-section');
+            
+            // إغلاق النافذة المنبثقة
+            this.closeModal();
+            
+        } catch (error) {
+            console.error('❌ خطأ في تحميل الطلب للتعديل:', error);
+            this.showAlert('خطأ', 'حدث خطأ في تحميل الطلب للتعديل');
+        }
+    }
+
+    async deleteRequest(requestId) {
+        const confirmed = await this.showConfirmDialog(
+            'تأكيد الحذف',
+            'هل أنت متأكد من حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.'
+        );
+        
+        if (!confirmed) return;
+        
+        try {
+            const requestManager = window.firebaseApp?.RequestManager;
+            let result;
+            
+            if (requestManager) {
+                result = await requestManager.deleteRequest(requestId);
+            } else {
+                // حذف محلي
+                if (this.allRequests[requestId]) {
+                    this.allRequests[requestId].deleted = true;
+                    this.allRequests[requestId].deletedAt = new Date().toISOString();
+                    result = { success: true, synced: false };
+                } else {
+                    result = { success: false, error: 'الطلب غير موجود' };
+                }
+            }
+            
+            if (result.success) {
+                const message = result.synced ? 
+                    'تم حذف الطلب بنجاح' : 
+                    'تم وضع الطلب في قائمة الحذف المعلقة، سيتم المزامنة عند الاتصال';
+                this.showAlert('نجاح', message);
+                
+                // إغلاق النافذة المنبثقة
+                this.closeModal();
+                
+                // تحديث البيانات
+                await this.loadData();
+            } else {
+                this.showAlert('خطأ', 'فشل في حذف الطلب: ' + result.error);
+            }
+        } catch (error) {
+            console.error('❌ خطأ في حذف الطلب:', error);
+            this.showAlert('خطأ', 'حدث خطأ في حذف الطلب');
+        }
+    }
+
+    async printRequest(requestId) {
+        try {
+            const requestManager = window.firebaseApp?.RequestManager;
+            let request;
+            
+            if (requestManager) {
+                request = await requestManager.getRequest(requestId);
+            } else {
+                request = this.allRequests[requestId];
+            }
+            
+            if (!request) {
+                this.showAlert('خطأ', 'الطلب غير موجود');
+                return;
+            }
+            
+            // إنشاء نافذة طباعة
+            const printWindow = window.open('', '_blank');
+            
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html lang="ar" dir="rtl">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>طباعة الطلب - ${request.manualRequestNumber || request.id}</title>
+                    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+                    <style>
+                        body {
+                            font-family: 'Tajawal', sans-serif;
+                            line-height: 1.6;
+                            color: #333;
+                            margin: 0;
+                            padding: 20px;
+                        }
+                        .print-container {
+                            max-width: 800px;
+                            margin: 0 auto;
+                        }
+                        .print-header {
+                            text-align: center;
+                            border-bottom: 3px solid #3498db;
+                            padding-bottom: 20px;
+                            margin-bottom: 30px;
+                        }
+                        .print-header h1 {
+                            color: #2c3e50;
+                            margin-bottom: 10px;
+                        }
+                        .print-header .subtitle {
+                            color: #7f8c8d;
+                            font-size: 18px;
+                        }
+                        .request-info {
+                            margin-bottom: 30px;
+                        }
+                        .info-grid {
+                            display: grid;
+                            grid-template-columns: repeat(2, 1fr);
+                            gap: 20px;
+                            margin-bottom: 20px;
+                        }
+                        .info-item {
+                            padding: 15px;
+                            background: #f8f9fa;
+                            border-radius: 8px;
+                        }
+                        .info-item label {
+                            display: block;
+                            color: #7f8c8d;
+                            margin-bottom: 5px;
+                            font-weight: 600;
+                        }
+                        .info-item span {
+                            color: #2c3e50;
+                            font-size: 16px;
+                        }
+                        .status-badge {
+                            display: inline-block;
+                            padding: 5px 15px;
+                            border-radius: 20px;
+                            color: white;
+                            font-weight: 600;
+                        }
+                        .pending { background: #f39c12; }
+                        .in-progress { background: #3498db; }
+                        .completed { background: #27ae60; }
+                        .rejected { background: #e74c3c; }
+                        .content-section {
+                            margin-bottom: 30px;
+                        }
+                        .content-section h3 {
+                            color: #2c3e50;
+                            border-bottom: 2px solid #ecf0f1;
+                            padding-bottom: 10px;
+                            margin-bottom: 15px;
+                        }
+                        .footer {
+                            text-align: center;
+                            margin-top: 50px;
+                            padding-top: 20px;
+                            border-top: 1px solid #ecf0f1;
+                            color: #7f8c8d;
+                            font-size: 14px;
+                        }
+                        @media print {
+                            body {
+                                padding: 0;
+                            }
+                            .no-print {
+                                display: none !important;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="print-container">
+                        <div class="print-header">
+                            <h1>نظام إدارة الطلبات البرلمانية</h1>
+                            <p class="subtitle">النائب أحمد الحديدي</p>
+                            <h2>تفاصيل الطلب</h2>
+                        </div>
+                        
+                        <div class="request-info">
+                            <div class="info-grid">
+                                <div class="info-item">
+                                    <label>رقم الطلب:</label>
+                                    <span>${request.manualRequestNumber || request.id || 'N/A'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>العنوان:</label>
+                                    <span>${request.requestTitle || 'بلا عنوان'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>الجهة المستقبلة:</label>
+                                    <span>${request.receivingAuthority || 'غير محدد'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>الحالة:</label>
+                                    <span class="status-badge ${request.status || 'pending'}">
+                                        ${this.getStatusText(request.status)}
+                                    </span>
+                                </div>
+                                <div class="info-item">
+                                    <label>تاريخ التقديم:</label>
+                                    <span>${request.submissionDate ? 
+                                        new Date(request.submissionDate).toLocaleDateString('ar-EG') : 
+                                        'غير محدد'}</span>
+                                </div>
+                                <div class="info-item">
+                                    <label>تاريخ الإنشاء:</label>
+                                    <span>${request.createdAt ? 
+                                        new Date(request.createdAt).toLocaleDateString('ar-EG') : 
+                                        'غير محدد'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="content-section">
+                            <h3>تفاصيل الطلب</h3>
+                            <p style="white-space: pre-line;">${request.requestDetails || 'لا توجد تفاصيل'}</p>
+                        </div>
+                        
+                        ${request.responseStatus ? `
+                            <div class="content-section">
+                                <h3>تفاصيل الرد</h3>
+                                <p style="white-space: pre-line;">${request.responseDetails || 'لا توجد تفاصيل للرد'}</p>
+                                <p><strong>تاريخ الرد:</strong> ${request.responseDate ? 
+                                    new Date(request.responseDate).toLocaleDateString('ar-EG') : 
+                                    'غير محدد'}</p>
+                            </div>
+                        ` : ''}
+                        
+                        ${request.documents && request.documents.length > 0 ? `
+                            <div class="content-section">
+                                <h3>المستندات المرفقة</h3>
+                                <ul>
+                                    ${request.documents.map(doc => `
+                                        <li><strong>${doc.name}:</strong> ${doc.description || 'لا يوجد وصف'}</li>
+                                    `).join('')}
+                                </ul>
+                            </div>
+                        ` : ''}
+                        
+                        <div class="footer">
+                            <p>تم الطباعة بتاريخ: ${new Date().toLocaleDateString('ar-EG')}</p>
+                            <p>© 2026 نظام إدارة الطلبات البرلمانية - جميع الحقوق محفوظة</p>
+                        </div>
+                    </div>
+                    
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                            setTimeout(function() {
+                                window.close();
+                            }, 1000);
+                        }
+                    </script>
+                </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+            
+        } catch (error) {
+            console.error('❌ خطأ في طباعة الطلب:', error);
+            this.showAlert('خطأ', 'حدث خطأ في طباعة الطلب');
         }
     }
 
@@ -1415,6 +1991,10 @@ class ParliamentRequestsSystem {
             this.elements.alertModal.style.display = 'none';
             this.elements.alertModal.classList.remove('fade-in');
         }
+        if (this.elements.documentModal) {
+            this.elements.documentModal.style.display = 'none';
+            this.elements.documentModal.classList.remove('fade-in');
+        }
         this.currentRequestId = null;
     }
 
@@ -1520,6 +2100,166 @@ class ParliamentRequestsSystem {
     }
 
     // =====================================================
+    // NOTIFICATIONS
+    // =====================================================
+
+    displayNotifications() {
+        const container = this.elements.notificationsList;
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (!this.notifications || this.notifications.length === 0) {
+            container.innerHTML = `
+                <div class="empty-state" style="text-align: center; padding: 2rem; color: var(--text-light);">
+                    <i class="fas fa-bell-slash" style="font-size: 2rem; margin-bottom: 0.5rem;"></i>
+                    <p>لا توجد تنبيهات</p>
+                </div>
+            `;
+            return;
+        }
+
+        this.notifications.forEach(notification => {
+            if (!notification) return;
+            
+            const item = document.createElement('div');
+            item.className = `notification-item ${notification.read ? 'read' : 'unread'} ${notification.type || 'info'}`;
+            
+            const icon = this.getNotificationIcon(notification.type);
+            const time = notification.timestamp ? 
+                new Date(notification.timestamp).toLocaleDateString('ar-EG', { 
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : 
+                'الآن';
+            
+            item.innerHTML = `
+                <div class="notification-icon">
+                    <i class="fas ${icon}"></i>
+                </div>
+                <div class="notification-content">
+                    <h4>${notification.title || 'تنبيه'}</h4>
+                    <p>${notification.message || 'لا توجد تفاصيل'}</p>
+                    <span class="notification-time">${time}</span>
+                </div>
+                ${!notification.read ? '<span class="notification-dot"></span>' : ''}
+            `;
+            
+            container.appendChild(item);
+        });
+    }
+
+    getNotificationIcon(type) {
+        const iconMap = {
+            'success': 'fa-check-circle',
+            'error': 'fa-times-circle',
+            'warning': 'fa-exclamation-triangle',
+            'info': 'fa-info-circle',
+            'upcoming': 'fa-clock',
+            'delayed': 'fa-exclamation-circle',
+            'followup': 'fa-bullhorn'
+        };
+        return iconMap[type] || 'fa-bell';
+    }
+
+    updateNotificationBadges() {
+        const badge = document.getElementById('notificationBadge');
+        if (!badge) return;
+
+        const unreadCount = this.notifications.filter(n => !n.read).length;
+        badge.textContent = unreadCount;
+        badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+    }
+
+    // =====================================================
+    // EXPORT & IMPORT
+    // =====================================================
+
+    async importData() {
+        try {
+            const confirmed = await this.showConfirmDialog(
+                'استيراد البيانات',
+                'تحذير: استيراد البيانات سيستبدل البيانات الحالية. هل تريد المتابعة؟'
+            );
+            
+            if (!confirmed) return;
+            
+            // إنشاء عنصر إدخال الملف
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = '.json,.xlsx,.xls';
+            
+            fileInput.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                try {
+                    const reader = new FileReader();
+                    
+                    reader.onload = async (event) => {
+                        try {
+                            const data = JSON.parse(event.target.result);
+                            
+                            const requestManager = window.firebaseApp?.RequestManager;
+                            let result;
+                            
+                            if (requestManager) {
+                                result = await requestManager.importData(data);
+                            } else {
+                                // استيراد محلي
+                                result = { success: false, error: 'لا يمكن الاستيراد في الوضع غير المتصل' };
+                            }
+                            
+                            if (result.success) {
+                                this.showAlert('نجاح', `تم استيراد ${result.imported} طلب بنجاح`);
+                                await this.loadData();
+                            } else {
+                                this.showAlert('خطأ', 'فشل في استيراد البيانات: ' + result.error);
+                            }
+                        } catch (parseError) {
+                            this.showAlert('خطأ', 'تنسيق الملف غير صالح');
+                        }
+                    };
+                    
+                    reader.readAsText(file);
+                } catch (error) {
+                    this.showAlert('خطأ', 'حدث خطأ في قراءة الملف');
+                }
+            };
+            
+            fileInput.click();
+            
+        } catch (error) {
+            console.error('❌ خطأ في استيراد البيانات:', error);
+            this.showAlert('خطأ', 'حدث خطأ في استيراد البيانات');
+        }
+    }
+
+    async createBackup() {
+        try {
+            this.showInfoToast('جاري إنشاء نسخة احتياطية...');
+            
+            const requestManager = window.firebaseApp?.RequestManager;
+            let result;
+            
+            if (requestManager) {
+                result = await requestManager.backupData();
+            } else {
+                result = await this.createLocalBackup();
+            }
+            
+            if (result.success) {
+                this.showSuccessToast('تم إنشاء النسخة الاحتياطية بنجاح');
+            } else {
+                this.showErrorToast('فشل في إنشاء النسخة الاحتياطية: ' + result.error);
+            }
+        } catch (error) {
+            console.error('❌ خطأ في إنشاء النسخة الاحتياطية:', error);
+            this.showAlert('خطأ', 'حدث خطأ في إنشاء النسخة الاحتياطية');
+        }
+    }
+
+    // =====================================================
     // INITIALIZATION COMPLETION
     // =====================================================
 
@@ -1613,7 +2353,21 @@ class ParliamentRequestsSystem {
 
         // الإرسال
         if (this.elements.newRequestForm) {
+            // منع الإرسال المزدوج بإزالة جميع المستمعين وإضافة واحد فقط
+            const form = this.elements.newRequestForm;
+            const newForm = form.cloneNode(true);
+            form.parentNode.replaceChild(newForm, form);
+            this.elements.newRequestForm = newForm;
+            
             this.elements.newRequestForm.addEventListener('submit', (e) => this.submitNewRequest(e));
+        }
+
+        // الإلغاء
+        if (this.elements.cancelForm) {
+            this.elements.cancelForm.addEventListener('click', () => {
+                this.resetForm();
+                this.switchPage('requests-section');
+            });
         }
 
         // أزرار إضافية
@@ -1624,13 +2378,41 @@ class ParliamentRequestsSystem {
         if (this.elements.backupBtn) {
             this.elements.backupBtn.addEventListener('click', () => this.createBackup());
         }
+        
+        if (this.elements.printAllBtn) {
+            this.elements.printAllBtn.addEventListener('click', () => this.printAllRequests());
+        }
+        
+        if (this.elements.exportAllBtn) {
+            this.elements.exportAllBtn.addEventListener('click', () => this.exportAllRequests());
+        }
+
+        // التنبيهات
+        if (this.elements.markAllRead) {
+            this.elements.markAllRead.addEventListener('click', () => this.markAllNotificationsRead());
+        }
+
+        // إعدادات التنبيهات
+        if (this.elements.upcomingAlerts) {
+            this.elements.upcomingAlerts.addEventListener('change', () => this.saveNotificationSettings());
+        }
+        if (this.elements.delayedAlerts) {
+            this.elements.delayedAlerts.addEventListener('change', () => this.saveNotificationSettings());
+        }
+        if (this.elements.followupAlerts) {
+            this.elements.followupAlerts.addEventListener('change', () => this.saveNotificationSettings());
+        }
+        if (this.elements.emailAlerts) {
+            this.elements.emailAlerts.addEventListener('change', () => this.saveNotificationSettings());
+        }
 
         // إغلاق النوافذ
         document.addEventListener('click', (e) => {
             if (e.target.classList.contains('close-modal') || e.target.classList.contains('close-btn')) {
                 this.closeModal();
             }
-            if (e.target.classList.contains('modal') && (e.target.id === 'requestModal' || e.target.id === 'documentModal')) {
+            if (e.target.classList.contains('modal') && 
+                (e.target.id === 'requestModal' || e.target.id === 'documentModal' || e.target.id === 'alertModal')) {
                 this.closeModal();
             }
         });
@@ -1641,8 +2423,7 @@ class ParliamentRequestsSystem {
             if ((e.ctrlKey || e.metaKey) && e.key === 's') {
                 e.preventDefault();
                 if (this.elements.newRequestForm && this.currentPage === 'add-request-section') {
-                    const submitEvent = new Event('submit', { cancelable: true });
-                    this.elements.newRequestForm.dispatchEvent(submitEvent);
+                    this.submitNewRequest();
                 }
             }
             
@@ -1661,13 +2442,235 @@ class ParliamentRequestsSystem {
         });
     }
 
+    saveNotificationSettings() {
+        this.systemSettings.notifications = {
+            upcomingAlerts: this.elements.upcomingAlerts?.checked || false,
+            delayedAlerts: this.elements.delayedAlerts?.checked || false,
+            followupAlerts: this.elements.followupAlerts?.checked || false,
+            emailAlerts: this.elements.emailAlerts?.checked || false
+        };
+        
+        this.saveSystemSettings();
+        this.showSuccessToast('تم حفظ إعدادات التنبيهات');
+    }
+
+    async markAllNotificationsRead() {
+        if (window.notificationsManager) {
+            await window.notificationsManager.markAllAsRead();
+            this.notifications = window.notificationsManager.notifications || [];
+            this.displayNotifications();
+            this.updateNotificationBadges();
+            this.showSuccessToast('تم تحديد جميع التنبيهات كمقروءة');
+        }
+    }
+
+    async printAllRequests() {
+        try {
+            const allRequests = await this.getAllRequests();
+            const requestsList = Object.values(allRequests).filter(req => !req.deleted);
+            
+            if (requestsList.length === 0) {
+                this.showAlert('تنبيه', 'لا توجد طلبات للطباعة');
+                return;
+            }
+            
+            const printWindow = window.open('', '_blank');
+            
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html lang="ar" dir="rtl">
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <title>طباعة جميع الطلبات</title>
+                    <style>
+                        body {
+                            font-family: 'Tajawal', sans-serif;
+                            line-height: 1.6;
+                            color: #333;
+                            margin: 0;
+                            padding: 20px;
+                        }
+                        .print-container {
+                            max-width: 1000px;
+                            margin: 0 auto;
+                        }
+                        .print-header {
+                            text-align: center;
+                            border-bottom: 3px solid #3498db;
+                            padding-bottom: 20px;
+                            margin-bottom: 30px;
+                        }
+                        .print-header h1 {
+                            color: #2c3e50;
+                            margin-bottom: 10px;
+                        }
+                        .print-header .subtitle {
+                            color: #7f8c8d;
+                            font-size: 18px;
+                        }
+                        table {
+                            width: 100%;
+                            border-collapse: collapse;
+                            margin-bottom: 30px;
+                        }
+                        th {
+                            background: #3498db;
+                            color: white;
+                            padding: 12px;
+                            text-align: right;
+                        }
+                        td {
+                            padding: 10px;
+                            border-bottom: 1px solid #ecf0f1;
+                        }
+                        tr:nth-child(even) {
+                            background: #f8f9fa;
+                        }
+                        .status-badge {
+                            display: inline-block;
+                            padding: 5px 10px;
+                            border-radius: 15px;
+                            color: white;
+                            font-size: 12px;
+                            font-weight: 600;
+                        }
+                        .pending { background: #f39c12; }
+                        .in-progress { background: #3498db; }
+                        .completed { background: #27ae60; }
+                        .rejected { background: #e74c3c; }
+                        .footer {
+                            text-align: center;
+                            margin-top: 50px;
+                            padding-top: 20px;
+                            border-top: 1px solid #ecf0f1;
+                            color: #7f8c8d;
+                            font-size: 14px;
+                        }
+                        @media print {
+                            body {
+                                padding: 0;
+                            }
+                            .no-print {
+                                display: none !important;
+                            }
+                        }
+                    </style>
+                </head>
+                <body>
+                    <div class="print-container">
+                        <div class="print-header">
+                            <h1>نظام إدارة الطلبات البرلمانية</h1>
+                            <p class="subtitle">النائب أحمد الحديدي - جميع الطلبات</p>
+                            <p>إجمالي الطلبات: ${requestsList.length}</p>
+                        </div>
+                        
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>رقم الطلب</th>
+                                    <th>العنوان</th>
+                                    <th>الجهة</th>
+                                    <th>التاريخ</th>
+                                    <th>الحالة</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${requestsList.map(request => `
+                                    <tr>
+                                        <td>${request.manualRequestNumber || request.id || 'N/A'}</td>
+                                        <td>${request.requestTitle || 'بلا عنوان'}</td>
+                                        <td>${request.receivingAuthority || 'غير محدد'}</td>
+                                        <td>${request.submissionDate ? 
+                                            new Date(request.submissionDate).toLocaleDateString('ar-EG') : 
+                                            'غير محدد'}</td>
+                                        <td>
+                                            <span class="status-badge ${request.status || 'pending'}">
+                                                ${this.getStatusText(request.status)}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                        
+                        <div class="footer">
+                            <p>تم الطباعة بتاريخ: ${new Date().toLocaleDateString('ar-EG')}</p>
+                            <p>© 2026 نظام إدارة الطلبات البرلمانية - جميع الحقوق محفوظة</p>
+                        </div>
+                    </div>
+                    
+                    <script>
+                        window.onload = function() {
+                            window.print();
+                            setTimeout(function() {
+                                window.close();
+                            }, 1000);
+                        }
+                    </script>
+                </body>
+                </html>
+            `);
+            
+            printWindow.document.close();
+            
+        } catch (error) {
+            console.error('❌ خطأ في طباعة جميع الطلبات:', error);
+            this.showAlert('خطأ', 'حدث خطأ في طباعة الطلبات');
+        }
+    }
+
+    async exportAllRequests() {
+        try {
+            const allRequests = await this.getAllRequests();
+            const requestsList = Object.values(allRequests).filter(req => !req.deleted);
+            
+            if (requestsList.length === 0) {
+                this.showAlert('تنبيه', 'لا توجد طلبات للتصدير');
+                return;
+            }
+            
+            // إنشاء ملف Excel
+            const worksheet = XLSX.utils.json_to_sheet(requestsList.map(req => ({
+                'رقم الطلب': req.manualRequestNumber || req.id,
+                'العنوان': req.requestTitle,
+                'التفاصيل': req.requestDetails,
+                'الجهة المستقبلة': req.receivingAuthority,
+                'تاريخ التقديم': req.submissionDate,
+                'الحالة': this.getStatusText(req.status),
+                'تاريخ الإنشاء': req.createdAt,
+                'تاريخ التحديث': req.updatedAt
+            })));
+            
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, 'الطلبات');
+            
+            // حفظ الملف
+            const fileName = `طلبات_برلمانية_${new Date().toISOString().split('T')[0]}.xlsx`;
+            XLSX.writeFile(workbook, fileName);
+            
+            this.showSuccessToast(`تم تصدير ${requestsList.length} طلب إلى ${fileName}`);
+            
+        } catch (error) {
+            console.error('❌ خطأ في تصدير الطلبات:', error);
+            this.showAlert('خطأ', 'حدث خطأ في تصدير الطلبات');
+        }
+    }
+
     // =====================================================
-    // GLOBAL EXPORT
+    // EXPORT FUNCTIONS TO GLOBAL SCOPE
     // =====================================================
 
-    exportToGlobal() {
+    exportFunctionsToGlobal() {
         window.parliamentSystem = this;
-        console.log('✅ تم تصدير النظام إلى النطاق العالمي');
+        
+        // تصدير الدوال الأساسية
+        window.showRequestDetails = (requestId) => this.showRequestDetails(requestId);
+        window.editRequest = (requestId) => this.editRequest(requestId);
+        window.deleteRequest = (requestId) => this.deleteRequest(requestId);
+        window.printRequest = (requestId) => this.printRequest(requestId);
+        
+        console.log('✅ تم تصدير جميع الدوال إلى النطاق العالمي');
     }
 }
 
@@ -1679,7 +2682,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         // تهيئة النظام
         const system = new ParliamentRequestsSystem();
-        system.exportToGlobal();
 
         // إضافة أنماط CSS إضافية
         const additionalStyles = document.createElement('style');
@@ -1703,6 +2705,11 @@ document.addEventListener('DOMContentLoaded', async () => {
                 0% { transform: scale(1); }
                 50% { transform: scale(1.05); }
                 100% { transform: scale(1); }
+            }
+            
+            @keyframes spin {
+                0% { transform: rotate(0deg); }
+                100% { transform: rotate(360deg); }
             }
             
             .fade-in-up {
@@ -1731,9 +2738,119 @@ document.addEventListener('DOMContentLoaded', async () => {
                 color: white;
             }
             
+            .fa-spin {
+                animation: spin 1s linear infinite;
+            }
+            
             .drag-over {
                 border: 2px dashed #3498db !important;
                 background: rgba(52, 152, 219, 0.1) !important;
+            }
+            
+            .request-details-container {
+                padding: 20px;
+            }
+            
+            .detail-header {
+                padding: 20px;
+                border-radius: 8px;
+                margin-bottom: 20px;
+                background: linear-gradient(135deg, #3498db, #2980b9);
+                color: white;
+            }
+            
+            .detail-header h3 {
+                margin: 0 0 10px 0;
+                font-size: 24px;
+            }
+            
+            .request-meta {
+                display: flex;
+                gap: 20px;
+                align-items: center;
+            }
+            
+            .detail-grid {
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 20px;
+                margin-bottom: 20px;
+            }
+            
+            .detail-section {
+                background: var(--bg-secondary);
+                padding: 20px;
+                border-radius: 8px;
+                border: 1px solid var(--border-color);
+            }
+            
+            .detail-section h4 {
+                color: var(--text-primary);
+                margin-bottom: 15px;
+                padding-bottom: 10px;
+                border-bottom: 2px solid var(--border-color);
+            }
+            
+            .detail-item {
+                margin-bottom: 15px;
+            }
+            
+            .detail-item label {
+                display: block;
+                color: var(--text-light);
+                margin-bottom: 5px;
+                font-weight: 500;
+            }
+            
+            .detail-item span {
+                color: var(--text-primary);
+                font-size: 16px;
+            }
+            
+            .status-badge {
+                display: inline-block;
+                padding: 5px 15px;
+                border-radius: 20px;
+                color: white;
+                font-weight: 600;
+            }
+            
+            .pending { background: #f39c12; }
+            .in-progress { background: #3498db; }
+            .completed { background: #27ae60; }
+            .rejected { background: #e74c3c; }
+            
+            .documents-list {
+                margin-top: 15px;
+            }
+            
+            .document-item {
+                display: flex;
+                align-items: center;
+                padding: 10px;
+                background: var(--bg-tertiary);
+                border-radius: 4px;
+                margin-bottom: 10px;
+            }
+            
+            .document-item i {
+                margin-left: 10px;
+                color: #3498db;
+            }
+            
+            .no-data {
+                color: var(--text-light);
+                text-align: center;
+                padding: 20px;
+                font-style: italic;
+            }
+            
+            .response-section {
+                background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+                padding: 20px;
+                border-radius: 8px;
+                margin-top: 20px;
+                border-right: 4px solid #27ae60;
             }
         `;
         document.head.appendChild(additionalStyles);
@@ -1800,6 +2917,21 @@ window.parliamentHelpers = {
         }
     },
     
+    formatDateTime: (dateString) => {
+        try {
+            const date = new Date(dateString);
+            return date.toLocaleDateString('ar-EG', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch {
+            return 'غير محدد';
+        }
+    },
+    
     formatNumber: (num) => {
         return new Intl.NumberFormat('ar-EG').format(num);
     },
@@ -1812,4 +2944,3 @@ window.parliamentHelpers = {
 };
 
 console.log('📦 نظام إدارة الطلبات البرلمانية - النسخة 3.0 جاهز للاستخدام');
-//
