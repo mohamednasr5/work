@@ -24,6 +24,7 @@
     <!-- مكتبة XLSX للتصدير -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
+        <link rel="manifest" href="manifest.json">
 <body data-theme="light">
     <!-- شاشة التحميل -->
     <div class="loading-screen" id="loadingScreen">
@@ -669,6 +670,18 @@
             window.notificationsManager = new NotificationsManager();
         });
     </script>
+    
+// Register Service Worker for PWA support
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register('service-worker.js')
+            .then(function(registration) {
+                console.log('Service Worker registered successfully:', registration);
+            })
+            .catch(function(error) {
+                console.log('Service Worker registration failed:', error);
+            });
+    });
+}
 </body>
 </html>
-//
