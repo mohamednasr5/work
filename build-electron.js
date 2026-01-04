@@ -44,4 +44,4 @@ console.log('1. cd electron-build');
 console.log('2. npm install');
 console.log('3. npm run build:win  (لـ Windows)');
 console.log('4. npm run build:mac  (لـ macOS)');
-console.log('5. npm run build:linux (لـ Linux)');//
+console.log('5. npm run build:linux (لـ Linux)');
