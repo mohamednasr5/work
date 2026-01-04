@@ -27,4 +27,6 @@ window.firebaseApp.RequestManager = {
         return snapshot.val() || {};
     },
     // يمكن إضافة دوال addRequest, updateRequest هنا
+
 };
+//
