@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>عن التطبيق</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Arial', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .about-container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            width: 90%;
+            max-width: 500px;
+            text-align: center;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+        
+        .app-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+            color: #d4af37;
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 10px;
+            color: white;
+        }
+        
+        .version {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 5px 15px;
+            border-radius: 20px;
+            display: inline-block;
+            margin-bottom: 20px;
+            font-size: 14px;
+        }
+        
+        .description {
+            line-height: 1.8;
+            margin-bottom: 25px;
+            opacity: 0.9;
+        }
+        
+        .features {
+            text-align: right;
+            margin-bottom: 25px;
+        }
+        
+        .features h3 {
+            margin-bottom: 10px;
+            color: #d4af37;
+        }
+        
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .features li {
+            padding: 5px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .features li i {
+            color: #2ecc71;
+        }
+        
+        .footer {
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
+            padding-top: 20px;
+            margin-top: 20px;
+        }
+        
+        .copyright {
+            font-size: 12px;
+            opacity: 0.7;
+            margin-top: 10px;
+        }
+        
+        .close-btn {
+            background: #d4af37;
+            color: #1e3c72;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+        }
+        
+        .close-btn:hover {
+            background: #e6c158;
+            transform: translateY(-2px);
+        }
+    </style>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="about-container">
+        <div class="app-icon">
+            <i class="fa-solid fa-landmark"></i>
+        </div>
+        
+        <h1>نظام متابعة طلبات النائب</h1>
+        
+        <div class="version">الإصدار 2.0.0</div>
+        
+        <p class="description">
+            نظام متكامل لإدارة ومتابعة طلبات النواب، تم تطويره لضمان سير العمل بكفاءة عالية وتقديم خدمات مميزة للمواطنين.
+        </p>
+        
+        <div class="features">
+            <h3>المميزات الرئيسية:</h3>
+            <ul>
+                <li><i class="fa-solid fa-check"></i> إدارة الطلبات بشكل منظم</li>
+                <li><i class="fa-solid fa-check"></i> متابعة حالة الطلبات</li>
+                <li><i class="fa-solid fa-check"></i> إرفاق المستندات والملفات</li>
+                <li><i class="fa-solid fa-check"></i> تقارير وإحصائيات مفصلة</li>
+                <li><i class="fa-solid fa-check"></i> نسخ احتياطي تلقائي</li>
+                <li><i class="fa-solid fa-check"></i> واجهة مستخدم متطورة</li>
+            </ul>
+        </div>
+        
+        <div class="footer">
+            <p>© 2024 مكتب النائب أحمد الحديدي</p>
+            <p class="copyright">جميع الحقوق محفوظة</p>
+            
+            <button class="close-btn" onclick="window.close()">
+                <i class="fa-solid fa-times"></i> إغلاق
+            </button>
+        </div>
+    </div>
+</body>
+</html>
