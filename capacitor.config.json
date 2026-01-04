@@ -1,0 +1,54 @@
+{
+  "appId": "com.parliament.requests",
+  "appName": "Parliamentary Requests",
+  "webDir": "build",
+  "server": {
+    "androidScheme": "https"
+  },
+  "ios": {
+    "contentInset": "automatic",
+    "scrollEnabled": true,
+    "allowsLinkPreview": true,
+    "backgroundColor": "#FFFFFF"
+  },
+  "android": {
+    "buildToolsVersion": "30.0.0",
+    "compileSdkVersion": 31,
+    "targetSdkVersion": 31,
+    "minSdkVersion": 21,
+    "usesCleartextTraffic": true
+  },
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    },
+    "CapacitorStorage": {
+      "enabled": true
+    },
+    "Camera": {
+      "permissions": ["camera", "photos"]
+    },
+    "Filesystem": {
+      "enabled": true
+    }
+  },
+  "cordova": {
+    "preferences": {
+      "ScrollEnabled": "false",
+      "BackupAgent": "false",
+      "orientation": "portrait",
+      "permissions": "INTERNET,ACCESS_NETWORK_STATE,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE"
+    }
+  },
+  "includePlugins": [
+    "@capacitor/core",
+    "@capacitor/android",
+    "@capacitor/ios",
+    "@capacitor/storage",
+    "@capacitor/filesystem",
+    "@capacitor/camera",
+    "@capacitor/browser",
+    "@capacitor/app",
+    "@capacitor/network"
+  ]
+}
