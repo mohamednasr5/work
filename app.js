@@ -1800,3 +1800,36 @@ class ParliamentRequestsSystem {
         };
     }
 }
+
+// ============================================
+// تقييد الملاحة - عرض لوحة البداية فقط
+// Lock Navigation - Dashboard Only
+// ============================================
+const restrictedNavigation = () => {
+    // إخفاء جميع الأقسام ما عدا لوحة البداية
+    const sections = document.querySelectorAll('section[id]');
+    sections.forEach(section => {
+        if (section.id !== 'dashboard-section') {
+            section.style.display = 'none';
+        } else {
+            section.style.display = 'block';
+        }
+    });
+    
+    // تعطيل جميع روابط الملاحة ما عدا لوحة البداية
+    const navLinks = document.querySelectorAll('.nav-link, [data-page]');
+    navLinks.forEach(link => {
+        const page = link.getAttribute('data-page') || link.textContent.toLowerCase();
+        if (page !== 'dashboard' && !link.classList.contains('dashboard-link')) {
+            link.style.pointerEvents = 'none';
+            link.style.opacity = '0.5';
+            link.style.cursor = 'not-allowed';
+            link.setAttribute('title', 'هذا القسم معطل');
+        }
+    });
+};
+
+// تنفيذ التقييد عند تحميل الصفحة
+window.addEventListener('load', () => {
+    restrictedNavigation();
+});
