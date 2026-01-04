@@ -101,4 +101,3 @@ class ChartsManager {
 // تهيئة تلقائية
 
 window.chartsManager = new ChartsManager();
-//
