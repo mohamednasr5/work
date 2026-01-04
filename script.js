@@ -1,6 +1,4 @@
-
 // script.js - Enhanced Parliament Requests Management System with Alerts & Documents
-
 let allRequests = [];
 let myChart = null;
 let currentSelectedRequest = null;
@@ -11,10 +9,14 @@ let documentCount = 0;
 document.addEventListener('DOMContentLoaded', () => {
     loadTheme();
     setupEventListeners();
-    setupTabNavigation(); // إضافة جديدة
-    document.getElementById('reqDate').valueAsDate = new Date();
+    setupTabNavigation(); // NEW: Setup tab navigation
     
-    // Wait for Firebase to load, then initialize
+    const reqDateInput = document.getElementById('reqDate');
+    if (reqDateInput) {
+        reqDateInput.valueAsDate = new Date();
+    }
+    
+    // Wait for Firebase to load
     waitForFirebase();
 });
 
@@ -22,7 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
  * Wait for Firebase to be ready
  */
 function waitForFirebase() {
-    if (typeof firebase !== 'undefined' && firebase.database) {
+    if (typeof firebase !== 'undefined' && window.database) {
         console.log('✅ Firebase ready, initializing...');
         initializeFirebase();
     } else {
@@ -32,7 +34,7 @@ function waitForFirebase() {
 }
 
 /**
- * Setup tab navigation
+ * Setup tab navigation - NEW FUNCTION
  */
 function setupTabNavigation() {
     const navLinks = document.querySelectorAll('.nav-links li');
@@ -40,10 +42,9 @@ function setupTabNavigation() {
     navLinks.forEach(link => {
         link.addEventListener('click', function() {
             const targetTab = this.getAttribute('data-tab');
-            
             if (!targetTab) return;
             
-            // Remove active class from all tabs and links
+            // Remove active class from all
             document.querySelectorAll('.tab-content').forEach(tab => {
                 tab.classList.remove('active');
             });
@@ -51,18 +52,65 @@ function setupTabNavigation() {
                 l.classList.remove('active');
             });
             
-            // Add active class to clicked link and target tab
+            // Add active class to current
             this.classList.add('active');
             const targetElement = document.getElementById(targetTab);
             if (targetElement) {
                 targetElement.classList.add('active');
                 console.log('✅ Switched to tab:', targetTab);
-            } else {
-                console.error('❌ Tab not found:', targetTab);
             }
         });
     });
     
+    console.log('✅ Tab navigation ready');
+}
+
+/**
+ * Load theme from localStorage
+ */
+function loadTheme() {
+    const savedTheme = localStorage.getItem('app-theme') || 'light';
+    document.body.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+}
+
+/**
+ * Setup all event listeners
+ */
+function setupEventListeners() {
+    const form = document.getElementById('requestForm');
+    if (form) form.addEventListener('submit', handleFormSubmit);
+
+    const themeIcon = document.getElementById('theme-icon');
+    if (themeIcon) themeIcon.addEventListener('click', toggleTheme);
+
+    window.addEventListener('click', (e) => {
+        const modal = document.getElementById('detailsModal');
+        if (e.target === modal) closeModal();
+    });
+}
+
+/**
+ * Initialize Firebase
+ */
+function initializeFirebase() {
+    if (window.RequestManager) {
+        window.RequestManager.listenToRequests((data) => {
+            allRequests = data.sort((a, b) => {
+                const dateA = new Date(a.submissionDate);
+                const dateB = new Date(b.submissionDate);
+                return dateB - dateA;
+            });
+            updateDashboard(allRequests);
+            renderTable(allRequests);
+            updateAlerts(allRequests);
+        });
+    } else {
+        console.error("❌ RequestManager not loaded!");
+        showAlert('خطأ في تحميل النظام', 'danger');
+    }
+}
+
     console.log('✅ Tab navigation setup complete');
 }
 
