@@ -1,3 +1,128 @@
+
+// script.js - Enhanced Parliament Requests Management System with Alerts & Documents
+
+let allRequests = [];
+let myChart = null;
+let currentSelectedRequest = null;
+let isEditMode = false;
+let documentCount = 0;
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', () => {
+    loadTheme();
+    setupEventListeners();
+    setupTabNavigation(); // إضافة جديدة
+    document.getElementById('reqDate').valueAsDate = new Date();
+    
+    // Wait for Firebase to load, then initialize
+    waitForFirebase();
+});
+
+/**
+ * Wait for Firebase to be ready
+ */
+function waitForFirebase() {
+    if (typeof firebase !== 'undefined' && firebase.database) {
+        console.log('✅ Firebase ready, initializing...');
+        initializeFirebase();
+    } else {
+        console.log('⏳ Waiting for Firebase...');
+        setTimeout(waitForFirebase, 500);
+    }
+}
+
+/**
+ * Setup tab navigation
+ */
+function setupTabNavigation() {
+    const navLinks = document.querySelectorAll('.nav-links li');
+    
+    navLinks.forEach(link => {
+        link.addEventListener('click', function() {
+            const targetTab = this.getAttribute('data-tab');
+            
+            if (!targetTab) return;
+            
+            // Remove active class from all tabs and links
+            document.querySelectorAll('.tab-content').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-links li').forEach(l => {
+                l.classList.remove('active');
+            });
+            
+            // Add active class to clicked link and target tab
+            this.classList.add('active');
+            const targetElement = document.getElementById(targetTab);
+            if (targetElement) {
+                targetElement.classList.add('active');
+                console.log('✅ Switched to tab:', targetTab);
+            } else {
+                console.error('❌ Tab not found:', targetTab);
+            }
+        });
+    });
+    
+    console.log('✅ Tab navigation setup complete');
+}
+
+/**
+ * Load theme from localStorage
+ */
+function loadTheme() {
+    const savedTheme = localStorage.getItem('app-theme') || 'light';
+    document.body.setAttribute('data-theme', savedTheme);
+    updateThemeIcon(savedTheme);
+}
+
+/**
+ * Setup all event listeners
+ */
+function setupEventListeners() {
+    const form = document.getElementById('requestForm');
+    if (form) {
+        form.addEventListener('submit', handleFormSubmit);
+    }
+
+    const themeIcon = document.getElementById('theme-icon');
+    if (themeIcon) {
+        themeIcon.addEventListener('click', toggleTheme);
+    }
+
+    window.addEventListener('click', (e) => {
+        const modal = document.getElementById('detailsModal');
+        if (e.target === modal) {
+            closeModal();
+        }
+    });
+    
+    console.log('✅ Event listeners setup complete');
+}
+
+/**
+ * Initialize Firebase
+ */
+function initializeFirebase() {
+    if (window.RequestManager) {
+        window.RequestManager.listenToRequests((data) => {
+            allRequests = data.sort((a, b) => {
+                const dateA = new Date(a.submissionDate);
+                const dateB = new Date(b.submissionDate);
+                return dateB - dateA;
+            });
+            updateDashboard(allRequests);
+            renderTable(allRequests);
+            updateAlerts(allRequests);
+        });
+    } else {
+        console.error("❌ RequestManager not loaded!");
+        showAlert('خطأ في تحميل النظام', 'danger');
+    }
+}
+
+// استمر مع باقي دوال script.js الأصلية...
+// (لا تغيّر أي شيء آخر - فقط أضف الكود أعلاه في البداية)
+
 // script.js - Enhanced Parliament Requests Management System with Alerts & Documents
 
 let allRequests = [];
