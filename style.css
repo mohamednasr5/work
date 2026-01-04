@@ -181,4 +181,126 @@ tr:hover { background: rgba(0,0,0,0.05); transform: scale(1.01); }
     align-items: center;
     animation: fadeInDown 0.5s;
 }
+.search-box {
+    position: relative;
+    width: 100%;
+}
+.search-box input {
+    width: 100%;
+    padding: 15px 45px 15px 15px;
+    font-size: 16px;
+    border-radius: 50px;
+    border: 2px solid transparent;
+    background: rgba(255,255,255,0.9);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+.search-box input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 5px 20px rgba(30, 60, 114, 0.2);
+}
+.search-box i {
+    position: absolute;
+    right: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #7f8c8d;
+    font-size: 18px;
+}
 
+/* تنسيق الجدول */
+tbody tr { cursor: pointer; }
+tbody tr:hover { background: rgba(30, 60, 114, 0.1) !important; transform: scale(1.005); }
+
+/* --- تصميم النافذة العائمة (Modal) --- */
+.modal-overlay {
+    display: none; /* مخفي افتراضياً */
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    backdrop-filter: blur(5px);
+    animation: fadeIn 0.3s;
+}
+
+.modal-content {
+    width: 90%;
+    max-width: 600px;
+    background: #fff;
+    padding: 30px;
+    border-radius: 20px;
+    position: relative;
+    animation: slideUpModal 0.4s;
+}
+
+.close-modal {
+    position: absolute;
+    left: 20px;
+    top: 20px;
+    font-size: 24px;
+    cursor: pointer;
+    color: #e74c3c;
+    font-weight: bold;
+}
+
+.modal-header {
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.detail-row {
+    margin-bottom: 12px;
+    font-size: 16px;
+    display: flex;
+    justify-content: space-between;
+    border-bottom: 1px dashed #eee;
+    padding-bottom: 8px;
+}
+.detail-row.full { flex-direction: column; border: none; }
+.detail-row.full p {
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 8px;
+    margin-top: 5px;
+    line-height: 1.6;
+}
+
+/* أزرار الإجراءات */
+.modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 25px;
+    flex-wrap: wrap;
+}
+
+.btn-action {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    border-radius: 10px;
+    font-weight: bold;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: 0.2s;
+    color: white;
+}
+
+.btn-action.edit { background: #f39c12; } /* برتقالي للتعديل */
+.btn-action.delete { background: #e74c3c; } /* أحمر للحذف */
+.btn-action.print { background: #34495e; } /* رمادي للطباعة */
+.btn-action.export { background: #27ae60; } /* أخضر للتصدير */
+
+.btn-action:hover { transform: translateY(-3px); opacity: 0.9; }
+
+@keyframes slideUpModal {
+    from { transform: translateY(50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
