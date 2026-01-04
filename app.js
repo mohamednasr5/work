@@ -16,7 +16,6 @@ class ParliamentRequestsSystem {
             }
         };
         this.documents = [];
-        this.currentEditingRequestId = null;
         this.init();
     }
 
@@ -506,14 +505,11 @@ class ParliamentRequestsSystem {
                 <button class="action-btn view-btn" onclick="window.parliamentSystem.showRequestDetails('${request.id}')">
                     <i class="fas fa-eye"></i> عرض
                 </button>
-                <button class="action-btn edit-btn" onclick="window.parliamentSystem.editRequest('${request.id}')">
-                    <i class="fas fa-edit"></i> تعديل
-                </button>
-                <button class="action-btn delete-btn" onclick="window.parliamentSystem.deleteRequest('${request.id}')">
-                    <i class="fas fa-trash"></i> حذف
-                </button>
                 <button class="action-btn print-btn" onclick="window.parliamentSystem.printRequest('${request.id}')">
                     <i class="fas fa-print"></i> طباعة
+                </button>
+                <button class="action-btn export-btn" onclick="window.parliamentSystem.exportRequestToExcel('${request.id}')">
+                    <i class="fas fa-file-excel"></i> تصدير
                 </button>
             </div>
         `;
@@ -646,197 +642,12 @@ class ParliamentRequestsSystem {
                 </div>
             `;
 
-            // تحديث أزرار النافذة المنبثقة
-            const modalFooter = this.elements.requestModal.querySelector('.modal-footer');
-            modalFooter.innerHTML = `
-                <button class="modal-btn print-btn" onclick="window.parliamentSystem.printRequest('${requestId}')">
-                    <i class="fas fa-print"></i> طباعة
-                </button>
-                <button class="modal-btn edit-btn" onclick="window.parliamentSystem.editRequest('${requestId}'); window.parliamentSystem.closeModal();">
-                    <i class="fas fa-edit"></i> تعديل
-                </button>
-                <button class="modal-btn delete-btn" onclick="window.parliamentSystem.deleteRequest('${requestId}')">
-                    <i class="fas fa-trash"></i> حذف
-                </button>
-                <button class="modal-btn close-btn" onclick="window.parliamentSystem.closeModal()">
-                    <i class="fas fa-times"></i> إغلاق
-                </button>
-            `;
-
             this.elements.requestModal.style.display = 'flex';
             this.elements.requestModal.classList.add('fade-in');
         } catch (error) {
             console.error('خطأ في عرض تفاصيل الطلب:', error);
             this.showAlert('خطأ', 'حدث خطأ في عرض تفاصيل الطلب');
         }
-    }
-
-    // تعديل طلب
-    async editRequest(requestId) {
-        try {
-            const request = await window.firebaseApp.RequestManager.getRequest(requestId);
-            if (!request) {
-                this.showAlert('خطأ', 'لم يتم العثور على الطلب');
-                return;
-            }
-
-            // الانتقال إلى صفحة إضافة طلب
-            this.switchPage('add-request');
-
-            // ملء النموذج بالبيانات
-            setTimeout(() => {
-                this.fillFormForEdit(request);
-                this.currentEditingRequestId = requestId;
-                
-                // تغيير عنوان الصفحة
-                const sectionHeader = document.querySelector('#add-request .section-header');
-                if (sectionHeader) {
-                    sectionHeader.querySelector('h2').innerHTML = '<i class="fas fa-edit"></i> تعديل الطلب';
-                    sectionHeader.querySelector('p').textContent = 'قم بتعديل بيانات الطلب';
-                }
-
-                // تغيير نص زر الحفظ
-                const submitBtn = this.elements.newRequestForm.querySelector('.submit-btn');
-                if (submitBtn) {
-                    submitBtn.innerHTML = '<i class="fas fa-save"></i> تحديث الطلب';
-                }
-            }, 100);
-        } catch (error) {
-            console.error('خطأ في تعديل الطلب:', error);
-            this.showAlert('خطأ', 'حدث خطأ في تحميل بيانات الطلب');
-        }
-    }
-
-    // ملء النموذج للتعديل
-    fillFormForEdit(request) {
-        // ملء الحقول الأساسية
-        if (this.elements.manualRequestNumber) {
-            this.elements.manualRequestNumber.value = request.manualRequestNumber || '';
-            this.elements.manualRequestNumber.disabled = true; // منع تعديل الرقم
-        }
-        
-        if (this.elements.requestTitle) {
-            this.elements.requestTitle.value = request.requestTitle || '';
-        }
-        
-        if (this.elements.requestDetails) {
-            this.elements.requestDetails.value = request.requestDetails || '';
-        }
-        
-        if (this.elements.receivingAuthority) {
-            this.elements.receivingAuthority.value = request.receivingAuthority || '';
-        }
-        
-        if (this.elements.submissionDate) {
-            this.elements.submissionDate.value = request.submissionDate || '';
-        }
-
-        // المستندات
-        if (request.documents && request.documents.length > 0) {
-            this.elements.hasDocuments.checked = true;
-            this.elements.documentsSection.style.display = 'block';
-            this.documents = [...request.documents];
-            this.displayDocuments();
-        }
-
-        // الرد
-        if (request.responseStatus) {
-            this.elements.hasResponse.checked = true;
-            this.elements.responseSection.style.display = 'block';
-            
-            if (this.elements.responseDetails) {
-                this.elements.responseDetails.value = request.responseDetails || '';
-            }
-            
-            if (this.elements.responseDate) {
-                this.elements.responseDate.value = request.responseDate || '';
-            }
-        }
-    }
-
-    // حذف طلب
-    async deleteRequest(requestId) {
-        // إظهار تأكيد الحذف
-        const confirmed = await this.showConfirmDialog(
-            'تأكيد الحذف',
-            'هل أنت متأكد من حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.'
-        );
-
-        if (!confirmed) return;
-
-        try {
-            const result = await window.firebaseApp.RequestManager.deleteRequest(requestId);
-
-            if (result.success) {
-                this.showAlert('نجاح', 'تم حذف الطلب بنجاح');
-                
-                // إعادة تحميل البيانات
-                await this.loadData();
-                
-                // إغلاق النافذة المنبثقة إذا كانت مفتوحة
-                this.closeModal();
-            } else {
-                this.showAlert('خطأ', 'فشل في حذف الطلب: ' + result.error);
-            }
-        } catch (error) {
-            console.error('خطأ في حذف الطلب:', error);
-            this.showAlert('خطأ', 'حدث خطأ في حذف الطلب');
-        }
-    }
-
-    // نافذة تأكيد
-    showConfirmDialog(title, message) {
-        return new Promise((resolve) => {
-            const alertModal = this.elements.alertModal;
-            if (!alertModal) {
-                resolve(false);
-                return;
-            }
-
-            document.getElementById('alertTitle').textContent = title;
-            document.getElementById('alertMessage').textContent = message;
-
-            alertModal.style.display = 'flex';
-            alertModal.classList.add('fade-in');
-
-            // إظهار زر الإلغاء
-            const cancelBtn = document.getElementById('alertCancel');
-            if (cancelBtn) {
-                cancelBtn.style.display = 'inline-flex';
-            }
-
-            // تغيير أيقونة التنبيه
-            const alertIcon = alertModal.querySelector('.alert-icon');
-            if (alertIcon) {
-                alertIcon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
-                alertIcon.style.color = 'var(--accent-color)';
-            }
-
-            // إغلاق عند النقر على موافق
-            const confirmBtn = document.getElementById('alertConfirm');
-            const newConfirmBtn = confirmBtn.cloneNode(true);
-            confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-            
-            newConfirmBtn.onclick = () => {
-                alertModal.style.display = 'none';
-                alertModal.classList.remove('fade-in');
-                if (cancelBtn) cancelBtn.style.display = 'none';
-                resolve(true);
-            };
-
-            // إغلاق عند النقر على إلغاء
-            if (cancelBtn) {
-                const newCancelBtn = cancelBtn.cloneNode(true);
-                cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
-                
-                newCancelBtn.onclick = () => {
-                    alertModal.style.display = 'none';
-                    alertModal.classList.remove('fade-in');
-                    newCancelBtn.style.display = 'none';
-                    resolve(false);
-                };
-            }
-        });
     }
 
     // إغلاق النافذة المنبثقة
@@ -1049,10 +860,7 @@ class ParliamentRequestsSystem {
 
                 <div class="print-footer">
                     <p>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                    <p>نظام إدارة الطلبات البرلمانية - تطوير: مهندس محمد حماد</p>
-                    <p style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">
-                        facebook.com/en.mohamed.nasr
-                    </p>
+                    <p>نظام إدارة الطلبات البرلمانية - تطوير: Mohamed Nasr</p>
                 </div>
 
                 <script>
@@ -1184,10 +992,7 @@ class ParliamentRequestsSystem {
                     <div class="print-footer">
                         <p>إجمالي الطلبات: ${allRequests.length}</p>
                         <p>تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                        <p>نظام إدارة الطلبات البرلمانية - تطوير: مهندس محمد حماد</p>
-                        <p style="font-size: 12px; color: #7f8c8d; margin-top: 5px;">
-                            facebook.com/en.mohamed.nasr
-                        </p>
+                        <p>نظام إدارة الطلبات البرلمانية - تطوير: Mohamed Nasr</p>
                     </div>
 
                     <script>
@@ -1355,8 +1160,24 @@ class ParliamentRequestsSystem {
         e.preventDefault();
 
         try {
+            // التحقق من رقم الطلب اليدوي إذا تم إدخاله
+            let manualRequestNumber = this.elements.manualRequestNumber.value.trim();
+            
+            if (manualRequestNumber) {
+                // التحقق من عدم تكرار الرقم
+                const allRequests = Object.values(this.allRequests || {});
+                const isDuplicate = allRequests.some(req => 
+                    req.manualRequestNumber === manualRequestNumber || req.id === manualRequestNumber
+                );
+                
+                if (isDuplicate) {
+                    this.showAlert('خطأ', 'رقم الطلب موجود مسبقاً. يرجى اختيار رقم آخر');
+                    return;
+                }
+            }
+
             const requestData = {
-                manualRequestNumber: this.elements.manualRequestNumber.value.trim() || null,
+                manualRequestNumber: manualRequestNumber || null,
                 requestTitle: this.elements.requestTitle.value.trim(),
                 requestDetails: this.elements.requestDetails.value.trim(),
                 receivingAuthority: this.elements.receivingAuthority.value,
@@ -1368,62 +1189,19 @@ class ParliamentRequestsSystem {
                 responseDate: this.elements.hasResponse.checked ? this.elements.responseDate.value : null
             };
 
-            // التحقق من وجود تعديل
-            if (this.currentEditingRequestId) {
-                // تحديث الطلب
-                const result = await window.firebaseApp.RequestManager.updateRequest(
-                    this.currentEditingRequestId,
-                    requestData
-                );
+            const result = await window.firebaseApp.RequestManager.addRequest(requestData);
 
-                if (result.success) {
-                    this.showAlert('نجاح', 'تم تحديث الطلب بنجاح');
-                    this.resetForm();
-                    this.currentEditingRequestId = null;
-                    
-                    // إعادة عنوان الصفحة
-                    const sectionHeader = document.querySelector('#add-request .section-header');
-                    if (sectionHeader) {
-                        sectionHeader.querySelector('h2').innerHTML = '<i class="fas fa-plus-circle"></i> إضافة طلب جديد';
-                        sectionHeader.querySelector('p').textContent = 'قم بإدخال بيانات الطلب الجديد للنائب أحمد الحديدي';
-                    }
-                    
-                    await this.loadData();
-                    this.switchPage('requests');
-                } else {
-                    this.showAlert('خطأ', 'فشل في تحديث الطلب: ' + result.error);
-                }
+            if (result.success) {
+                this.showAlert('نجح', 'تم إضافة الطلب بنجاح');
+                this.resetForm();
+                await this.loadData();
+                this.switchPage('requests');
             } else {
-                // التحقق من رقم الطلب اليدوي إذا تم إدخاله
-                let manualRequestNumber = requestData.manualRequestNumber;
-                
-                if (manualRequestNumber) {
-                    const allRequests = Object.values(this.allRequests || {});
-                    const isDuplicate = allRequests.some(req => 
-                        req.manualRequestNumber === manualRequestNumber || req.id === manualRequestNumber
-                    );
-                    
-                    if (isDuplicate) {
-                        this.showAlert('خطأ', 'رقم الطلب موجود مسبقاً. يرجى اختيار رقم آخر');
-                        return;
-                    }
-                }
-
-                // إضافة طلب جديد
-                const result = await window.firebaseApp.RequestManager.addRequest(requestData);
-
-                if (result.success) {
-                    this.showAlert('نجاح', 'تم إضافة الطلب بنجاح');
-                    this.resetForm();
-                    await this.loadData();
-                    this.switchPage('requests');
-                } else {
-                    this.showAlert('خطأ', 'فشل في إضافة الطلب: ' + result.error);
-                }
+                this.showAlert('خطأ', 'فشل في إضافة الطلب: ' + result.error);
             }
         } catch (error) {
             console.error('خطأ في إرسال الطلب:', error);
-            this.showAlert('خطأ', 'حدث خطأ في حفظ الطلب');
+            this.showAlert('خطأ', 'حدث خطأ في إضافة الطلب');
         }
     }
 
@@ -1436,27 +1214,6 @@ class ParliamentRequestsSystem {
         this.displayDocuments();
         this.elements.documentsSection.style.display = 'none';
         this.elements.responseSection.style.display = 'none';
-        
-        // إلغاء وضع التعديل
-        this.currentEditingRequestId = null;
-        
-        // إعادة تفعيل حقل رقم الطلب
-        if (this.elements.manualRequestNumber) {
-            this.elements.manualRequestNumber.disabled = false;
-        }
-        
-        // إعادة عنوان الصفحة
-        const sectionHeader = document.querySelector('#add-request .section-header');
-        if (sectionHeader) {
-            sectionHeader.querySelector('h2').innerHTML = '<i class="fas fa-plus-circle"></i> إضافة طلب جديد';
-            sectionHeader.querySelector('p').textContent = 'قم بإدخال بيانات الطلب الجديد للنائب أحمد الحديدي';
-        }
-        
-        // إعادة نص زر الحفظ
-        const submitBtn = this.elements.newRequestForm.querySelector('.submit-btn');
-        if (submitBtn) {
-            submitBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الطلب';
-        }
         
         // إعادة تعيين التاريخ الحالي
         const today = new Date().toISOString().split('T')[0];
@@ -1539,73 +1296,11 @@ class ParliamentRequestsSystem {
         }
     }
 
-    // التبديل بين الصفحات
-    switchPage(pageName) {
-        // إخفاء جميع الصفحات
-        document.querySelectorAll('.page-section').forEach(section => {
-            section.classList.remove('active');
-        });
-
-        // إظهار الصفحة المطلوبة
-        const targetPage = document.getElementById(pageName);
-        if (targetPage) {
-            targetPage.classList.add('active');
-        }
-
-        // تحديث روابط التنقل
-        this.elements.navLinks.forEach(link => {
-            link.classList.remove('active');
-            if (link.getAttribute('data-page') === pageName) {
-                link.classList.add('active');
-            }
-        });
-
-        this.currentPage = pageName;
-    }
-
-    // تبديل الوضع الليلي/النهاري
-    toggleTheme() {
-        const currentTheme = document.body.getAttribute('data-theme');
-        const newTheme = currentTheme === 'light' ? 'dark' : 'light';
-        
-        document.body.setAttribute('data-theme', newTheme);
-        
-        const icon = this.elements.themeToggle.querySelector('i');
-        icon.className = newTheme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
-        
-        // حفظ التفضيل
-        localStorage.setItem('theme', newTheme);
-        this.systemSettings.theme = newTheme;
-    }
-
-    // تحميل الإعدادات
-    loadSettings() {
-        const savedTheme = localStorage.getItem('theme');
-        if (savedTheme) {
-            document.body.setAttribute('data-theme', savedTheme);
-            const icon = this.elements.themeToggle.querySelector('i');
-            icon.className = savedTheme === 'light' ? 'fas fa-moon' : 'fas fa-sun';
-            this.systemSettings.theme = savedTheme;
-        }
-    }
-
-    // حفظ إعدادات التنبيهات
-    saveNotificationSettings() {
-        this.systemSettings.notifications = {
-            upcomingAlerts: this.elements.upcomingAlerts.checked,
-            delayedAlerts: this.elements.delayedAlerts.checked,
-            followupAlerts: this.elements.followupAlerts.checked,
-            emailAlerts: this.elements.emailAlerts.checked
-        };
-
-        localStorage.setItem('notificationSettings', JSON.stringify(this.systemSettings.notifications));
-    }
-
     // توليد التنبيهات
     async generateNotifications() {
+        // سيتم التعامل معها في notifications.js
         if (window.notificationsManager) {
             await window.notificationsManager.checkForNotifications();
-            this.notifications = window.notificationsManager.notifications || [];
         }
     }
 
@@ -1702,49 +1397,175 @@ class ParliamentRequestsSystem {
         const filter = e.target.closest('.filter-btn').getAttribute('data-filter');
         
         // تحديث حالة الأزرار
-        document.querySelectorAll('.notifications-filter .filter-btn').forEach(btn => {
-            btn.classList.remove('active');
-        });
+        this.elements.notificationFilters.forEach(btn => btn.classList.remove('active'));
         e.target.closest('.filter-btn').classList.add('active');
 
-        // تصفية وعرض التنبيهات
+        // تصفية التنبيهات
         if (filter === 'all') {
             this.displayNotifications();
         } else {
             const filteredNotifications = this.notifications.filter(n => n.type === filter);
-            const tempNotifications = this.notifications;
+            const temp = this.notifications;
             this.notifications = filteredNotifications;
             this.displayNotifications();
-            this.notifications = tempNotifications;
+            this.notifications = temp;
         }
     }
 
-    // تحديث شارات التنبيهات
+    // تحديث شارة التنبيهات
     updateNotificationBadges() {
         const unreadCount = this.notifications.filter(n => !n.read).length;
         const badge = document.getElementById('notificationBadge');
+        
         if (badge) {
             badge.textContent = unreadCount;
             badge.style.display = unreadCount > 0 ? 'flex' : 'none';
         }
     }
 
+    // حفظ إعدادات التنبيهات
+    saveNotificationSettings() {
+        this.systemSettings.notifications = {
+            upcomingAlerts: this.elements.upcomingAlerts.checked,
+            delayedAlerts: this.elements.delayedAlerts.checked,
+            followupAlerts: this.elements.followupAlerts.checked,
+            emailAlerts: this.elements.emailAlerts.checked
+        };
+        
+        this.saveSettings();
+    }
+
     // بدء مراقبة التنبيهات
     startNotificationsMonitoring() {
-        // التحقق كل دقيقة
-        setInterval(async () => {
-            await this.loadNotifications();
-        }, 60000);
+        // التحقق كل 5 دقائق
+        setInterval(() => {
+            this.generateNotifications();
+        }, 300000);
+    }
+
+    // تحميل الإعدادات
+    loadSettings() {
+        try {
+            const savedSettings = localStorage.getItem('parliament_system_settings');
+            if (savedSettings) {
+                this.systemSettings = JSON.parse(savedSettings);
+                this.applySystemSettings();
+            }
+        } catch (error) {
+            console.error('خطأ في تحميل الإعدادات:', error);
+        }
+    }
+
+    // حفظ الإعدادات
+    async saveSettings() {
+        try {
+            localStorage.setItem('parliament_system_settings', JSON.stringify(this.systemSettings));
+            await window.firebaseApp.dbRef.settings.set(this.systemSettings);
+        } catch (error) {
+            console.error('خطأ في حفظ الإعدادات:', error);
+        }
+    }
+
+    // تطبيق الإعدادات
+    applySystemSettings() {
+        // تطبيق الوضع (ليلي/نهاري)
+        if (this.systemSettings.theme === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            if (this.elements.themeToggle) {
+                this.elements.themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+            }
+        } else {
+            document.documentElement.setAttribute('data-theme', 'light');
+            if (this.elements.themeToggle) {
+                this.elements.themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+            }
+        }
+
+        // تطبيق إعدادات التنبيهات
+        if (this.elements.upcomingAlerts) {
+            this.elements.upcomingAlerts.checked = this.systemSettings.notifications.upcomingAlerts;
+        }
+        if (this.elements.delayedAlerts) {
+            this.elements.delayedAlerts.checked = this.systemSettings.notifications.delayedAlerts;
+        }
+        if (this.elements.followupAlerts) {
+            this.elements.followupAlerts.checked = this.systemSettings.notifications.followupAlerts;
+        }
+        if (this.elements.emailAlerts) {
+            this.elements.emailAlerts.checked = this.systemSettings.notifications.emailAlerts;
+        }
+    }
+
+    // تبديل الوضع الليلي/النهاري
+    toggleTheme() {
+        if (this.systemSettings.theme === 'light') {
+            this.systemSettings.theme = 'dark';
+            document.documentElement.setAttribute('data-theme', 'dark');
+            this.elements.themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+        } else {
+            this.systemSettings.theme = 'light';
+            document.documentElement.setAttribute('data-theme', 'light');
+            this.elements.themeToggle.innerHTML = '<i class="fas fa-moon"></i>';
+        }
+        this.saveSettings();
+    }
+
+    // تبديل الصفحات
+    switchPage(pageName) {
+        // إخفاء جميع الصفحات
+        document.querySelectorAll('.page-section').forEach(section => {
+            section.classList.remove('active');
+        });
+
+        // إزالة النشاط من روابط التنقل
+        this.elements.navLinks.forEach(link => {
+            link.classList.remove('active');
+        });
+
+        // إظهار الصفحة المطلوبة
+        const targetPage = document.getElementById(pageName);
+        if (targetPage) {
+            targetPage.classList.add('active');
+            targetPage.classList.add('fade-in');
+
+            // إضافة النشاط لرابط التنقل
+            const activeLink = document.querySelector(`.nav-link[data-page="${pageName}"]`);
+            if (activeLink) {
+                activeLink.classList.add('active');
+            }
+
+            this.currentPage = pageName;
+
+            // تحديث واجهة المستخدم حسب الصفحة
+            setTimeout(() => {
+                this.updateUIForPage(pageName);
+            }, 100);
+        }
+    }
+
+    // تحديث واجهة المستخدم حسب الصفحة
+    updateUIForPage(pageName) {
+        switch(pageName) {
+            case 'dashboard':
+                this.loadStatistics();
+                break;
+            case 'requests':
+                this.loadRequests();
+                break;
+            case 'analytics':
+                if (window.chartsManager) {
+                    window.chartsManager.loadAnalyticsCharts();
+                }
+                break;
+            case 'notifications':
+                this.loadNotifications();
+                break;
+        }
     }
 
     // تحديث واجهة المستخدم
     updateUI() {
-        // تحديث التاريخ
-        if (this.elements.currentDate) {
-            const date = new Date();
-            const options = { year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' };
-            this.elements.currentDate.textContent = date.toLocaleDateString('ar-EG', options);
-        }
+        this.updateUIForPage(this.currentPage);
     }
 
     // إخفاء شاشة التحميل
@@ -1768,64 +1589,430 @@ class ParliamentRequestsSystem {
         alertModal.style.display = 'flex';
         alertModal.classList.add('fade-in');
 
-        // إخفاء زر الإلغاء
+        // إخفاء زر الإلغاء للتنبيهات البسيطة
         const cancelBtn = document.getElementById('alertCancel');
         if (cancelBtn) {
             cancelBtn.style.display = 'none';
         }
 
-        // تغيير أيقونة التنبيه حسب العنوان
-        const alertIcon = alertModal.querySelector('.alert-icon');
-        if (alertIcon) {
-            if (title === 'نجاح' || title === 'نجح') {
-                alertIcon.innerHTML = '<i class="fas fa-check-circle"></i>';
-                alertIcon.style.color = 'var(--success-color)';
-            } else if (title === 'خطأ') {
-                alertIcon.innerHTML = '<i class="fas fa-times-circle"></i>';
-                alertIcon.style.color = 'var(--accent-color)';
-            } else {
-                alertIcon.innerHTML = '<i class="fas fa-info-circle"></i>';
-                alertIcon.style.color = 'var(--info-color)';
-            }
-        }
-
         // إغلاق عند النقر على موافق
         const confirmBtn = document.getElementById('alertConfirm');
-        const newConfirmBtn = confirmBtn.cloneNode(true);
-        confirmBtn.parentNode.replaceChild(newConfirmBtn, confirmBtn);
-        
-        newConfirmBtn.onclick = () => {
+        confirmBtn.onclick = () => {
             alertModal.style.display = 'none';
             alertModal.classList.remove('fade-in');
         };
     }
 }
+// في نهاية class ParliamentRequestsSystem، أضف هذه الدوال:
 
-// ============================================
-// تقييد الملاحة - عرض لوحة البداية فقط
-// Lock Navigation - Dashboard Only
-// ============================================
-const restrictedNavigation = () => {
-    // إخفاء جميع الأقسام ما عدا لوحة البداية
-    const sections = document.querySelectorAll('section[id]');
-    sections.forEach(section => {
-        if (section.id !== 'dashboard-section') {
-            section.style.display = 'none';
-        } else {
-            section.style.display = 'block';
-        }
-    });
-    
-    // تعطيل جميع روابط الملاحة ما عدا لوحة البداية
-    const navLinks = document.querySelectorAll('.nav-link, [data-page]');
-    navLinks.forEach(link => {
-        const page = link.getAttribute('data-page') || link.textContent.toLowerCase();
-        if (page !== 'dashboard' && !link.classList.contains('dashboard-link')) {
-            link.style.pointerEvents = 'none';
-            link.style.opacity = '0.5';
-            link.style.cursor = 'not-allowed';
-            link.setAttribute('title', 'هذا القسم معطل');
-        }
-    });
-};
+    // تعديل طلب
+    async editRequest(requestId) {
+        try {
+            const request = await window.firebaseApp.RequestManager.getRequest(requestId);
+            if (!request) {
+                this.showAlert('خطأ', 'لم يتم العثور على الطلب');
+                return;
+            }
 
+            // الانتقال إلى صفحة إضافة طلب
+            this.switchPage('add-request');
+
+            // ملء النموذج بالبيانات
+            setTimeout(() => {
+                this.fillFormForEdit(request);
+                this.currentEditingRequestId = requestId;
+                
+                // تغيير عنوان الصفحة
+                const sectionHeader = document.querySelector('#add-request .section-header');
+                if (sectionHeader) {
+                    sectionHeader.querySelector('h2').innerHTML = '<i class="fas fa-edit"></i> تعديل الطلب';
+                    sectionHeader.querySelector('p').textContent = 'قم بتعديل بيانات الطلب';
+                }
+
+                // تغيير نص زر الحفظ
+                const submitBtn = this.elements.newRequestForm.querySelector('.submit-btn');
+                if (submitBtn) {
+                    submitBtn.innerHTML = '<i class="fas fa-save"></i> تحديث الطلب';
+                }
+            }, 100);
+        } catch (error) {
+            console.error('خطأ في تعديل الطلب:', error);
+            this.showAlert('خطأ', 'حدث خطأ في تحميل بيانات الطلب');
+        }
+    }
+
+    // ملء النموذج للتعديل
+    fillFormForEdit(request) {
+        // ملء الحقول الأساسية
+        if (this.elements.manualRequestNumber) {
+            this.elements.manualRequestNumber.value = request.manualRequestNumber || '';
+            this.elements.manualRequestNumber.disabled = true; // منع تعديل الرقم
+        }
+        
+        if (this.elements.requestTitle) {
+            this.elements.requestTitle.value = request.requestTitle || '';
+        }
+        
+        if (this.elements.requestDetails) {
+            this.elements.requestDetails.value = request.requestDetails || '';
+        }
+        
+        if (this.elements.receivingAuthority) {
+            this.elements.receivingAuthority.value = request.receivingAuthority || '';
+        }
+        
+        if (this.elements.submissionDate) {
+            this.elements.submissionDate.value = request.submissionDate || '';
+        }
+
+        // المستندات
+        if (request.documents && request.documents.length > 0) {
+            this.elements.hasDocuments.checked = true;
+            this.elements.documentsSection.style.display = 'block';
+            this.documents = [...request.documents];
+            this.displayDocuments();
+        }
+
+        // الرد
+        if (request.responseStatus) {
+            this.elements.hasResponse.checked = true;
+            this.elements.responseSection.style.display = 'block';
+            
+            if (this.elements.responseDetails) {
+                this.elements.responseDetails.value = request.responseDetails || '';
+            }
+            
+            if (this.elements.responseDate) {
+                this.elements.responseDate.value = request.responseDate || '';
+            }
+        }
+    }
+
+    // حذف طلب
+    async deleteRequest(requestId) {
+        // إظهار تأكيد الحذف
+        const confirmed = await this.showConfirmDialog(
+            'تأكيد الحذف',
+            'هل أنت متأكد من حذف هذا الطلب؟ لا يمكن التراجع عن هذا الإجراء.'
+        );
+
+        if (!confirmed) return;
+
+        try {
+            const result = await window.firebaseApp.RequestManager.deleteRequest(requestId);
+
+            if (result.success) {
+                this.showAlert('نجاح', 'تم حذف الطلب بنجاح');
+                
+                // إعادة تحميل البيانات
+                await this.loadData();
+                
+                // إغلاق النافذة المنبثقة إذا كانت مفتوحة
+                this.closeModal();
+            } else {
+                this.showAlert('خطأ', 'فشل في حذف الطلب: ' + result.error);
+            }
+        } catch (error) {
+            console.error('خطأ في حذف الطلب:', error);
+            this.showAlert('خطأ', 'حدث خطأ في حذف الطلب');
+        }
+    }
+
+    // نافذة تأكيد
+    showConfirmDialog(title, message) {
+        return new Promise((resolve) => {
+            const alertModal = this.elements.alertModal;
+            if (!alertModal) {
+                resolve(false);
+                return;
+            }
+
+            document.getElementById('alertTitle').textContent = title;
+            document.getElementById('alertMessage').textContent = message;
+
+            alertModal.style.display = 'flex';
+            alertModal.classList.add('fade-in');
+
+            // إظهار زر الإلغاء
+            const cancelBtn = document.getElementById('alertCancel');
+            if (cancelBtn) {
+                cancelBtn.style.display = 'inline-flex';
+            }
+
+            // تغيير أيقونة التنبيه
+            const alertIcon = alertModal.querySelector('.alert-icon');
+            if (alertIcon) {
+                alertIcon.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+                alertIcon.style.color = 'var(--accent-color)';
+            }
+
+            // إغلاق عند النقر على موافق
+            const confirmBtn = document.getElementById('alertConfirm');
+            confirmBtn.onclick = () => {
+                alertModal.style.display = 'none';
+                alertModal.classList.remove('fade-in');
+                resolve(true);
+            };
+
+            // إغلاق عند النقر على إلغاء
+            if (cancelBtn) {
+                cancelBtn.onclick = () => {
+                    alertModal.style.display = 'none';
+                    alertModal.classList.remove('fade-in');
+                    resolve(false);
+                };
+            }
+        });
+    }
+
+    // تحديث دالة submitNewRequest لدعم التعديل
+    async submitNewRequest(e) {
+        e.preventDefault();
+
+        try {
+            const requestData = {
+                manualRequestNumber: this.elements.manualRequestNumber.value.trim() || null,
+                requestTitle: this.elements.requestTitle.value.trim(),
+                requestDetails: this.elements.requestDetails.value.trim(),
+                receivingAuthority: this.elements.receivingAuthority.value,
+                submissionDate: this.elements.submissionDate.value,
+                status: 'pending',
+                documents: this.elements.hasDocuments.checked ? this.documents : [],
+                responseStatus: this.elements.hasResponse.checked,
+                responseDetails: this.elements.hasResponse.checked ? this.elements.responseDetails.value.trim() : null,
+                responseDate: this.elements.hasResponse.checked ? this.elements.responseDate.value : null
+            };
+
+            // التحقق من وجود تعديل
+            if (this.currentEditingRequestId) {
+                // تحديث الطلب
+                const result = await window.firebaseApp.RequestManager.updateRequest(
+                    this.currentEditingRequestId,
+                    requestData
+                );
+
+                if (result.success) {
+                    this.showAlert('نجاح', 'تم تحديث الطلب بنجاح');
+                    this.resetForm();
+                    this.currentEditingRequestId = null;
+                    
+                    // إعادة عنوان الصفحة
+                    const sectionHeader = document.querySelector('#add-request .section-header');
+                    if (sectionHeader) {
+                        sectionHeader.querySelector('h2').innerHTML = '<i class="fas fa-plus-circle"></i> إضافة طلب جديد';
+                        sectionHeader.querySelector('p').textContent = 'قم بإدخال بيانات الطلب الجديد للنائب أحمد الحديدي';
+                    }
+                    
+                    await this.loadData();
+                    this.switchPage('requests');
+                } else {
+                    this.showAlert('خطأ', 'فشل في تحديث الطلب: ' + result.error);
+                }
+            } else {
+                // التحقق من رقم الطلب اليدوي إذا تم إدخاله
+                let manualRequestNumber = requestData.manualRequestNumber;
+                
+                if (manualRequestNumber) {
+                    const allRequests = Object.values(this.allRequests || {});
+                    const isDuplicate = allRequests.some(req => 
+                        req.manualRequestNumber === manualRequestNumber || req.id === manualRequestNumber
+                    );
+                    
+                    if (isDuplicate) {
+                        this.showAlert('خطأ', 'رقم الطلب موجود مسبقاً. يرجى اختيار رقم آخر');
+                        return;
+                    }
+                }
+
+                // إضافة طلب جديد
+                const result = await window.firebaseApp.RequestManager.addRequest(requestData);
+
+                if (result.success) {
+                    this.showAlert('نجاح', 'تم إضافة الطلب بنجاح');
+                    this.resetForm();
+                    await this.loadData();
+                    this.switchPage('requests');
+                } else {
+                    this.showAlert('خطأ', 'فشل في إضافة الطلب: ' + result.error);
+                }
+            }
+        } catch (error) {
+            console.error('خطأ في إرسال الطلب:', error);
+            this.showAlert('خطأ', 'حدث خطأ في حفظ الطلب');
+        }
+    }
+
+    // تحديث resetForm لإلغاء وضع التعديل
+    resetForm() {
+        if (this.elements.newRequestForm) {
+            this.elements.newRequestForm.reset();
+        }
+        this.documents = [];
+        this.displayDocuments();
+        this.elements.documentsSection.style.display = 'none';
+        this.elements.responseSection.style.display = 'none';
+        
+        // إلغاء وضع التعديل
+        this.currentEditingRequestId = null;
+        
+        // إعادة تفعيل حقل رقم الطلب
+        if (this.elements.manualRequestNumber) {
+            this.elements.manualRequestNumber.disabled = false;
+        }
+        
+        // إعادة عنوان الصفحة
+        const sectionHeader = document.querySelector('#add-request .section-header');
+        if (sectionHeader) {
+            sectionHeader.querySelector('h2').innerHTML = '<i class="fas fa-plus-circle"></i> إضافة طلب جديد';
+            sectionHeader.querySelector('p').textContent = 'قم بإدخال بيانات الطلب الجديد للنائب أحمد الحديدي';
+        }
+        
+        // إعادة نص زر الحفظ
+        const submitBtn = this.elements.newRequestForm.querySelector('.submit-btn');
+        if (submitBtn) {
+            submitBtn.innerHTML = '<i class="fas fa-save"></i> حفظ الطلب';
+        }
+        
+        // إعادة تعيين التاريخ الحالي
+        const today = new Date().toISOString().split('T')[0];
+        this.elements.submissionDate.value = today;
+        this.elements.responseDate.value = today;
+    }
+
+    // تحديث createRequestCard لإضافة أزرار التعديل والحذف
+    createRequestCard(request) {
+        const card = document.createElement('div');
+        card.className = `request-card ${request.status} fade-in-up`;
+        
+        const displayId = request.manualRequestNumber || request.id;
+        const statusText = this.getStatusText(request.status);
+        const statusClass = request.status;
+
+        card.innerHTML = `
+            <div class="request-header">
+                <span class="request-id">${displayId}</span>
+                <span class="request-status ${statusClass}">${statusText}</span>
+            </div>
+            <h4 class="request-title">${request.requestTitle}</h4>
+            <p class="request-details">${request.requestDetails?.substring(0, 100) || 'لا توجد تفاصيل'}...</p>
+            <div class="request-meta">
+                <span class="meta-item">
+                    <i class="fas fa-building"></i>
+                    ${request.receivingAuthority}
+                </span>
+                <span class="meta-item">
+                    <i class="fas fa-calendar"></i>
+                    ${new Date(request.submissionDate).toLocaleDateString('ar-EG')}
+                </span>
+            </div>
+            <div class="request-actions">
+                <button class="action-btn view-btn" onclick="window.parliamentSystem.showRequestDetails('${request.id}')">
+                    <i class="fas fa-eye"></i> عرض
+                </button>
+                <button class="action-btn edit-btn" onclick="window.parliamentSystem.editRequest('${request.id}')">
+                    <i class="fas fa-edit"></i> تعديل
+                </button>
+                <button class="action-btn delete-btn" onclick="window.parliamentSystem.deleteRequest('${request.id}')">
+                    <i class="fas fa-trash"></i> حذف
+                </button>
+                <button class="action-btn print-btn" onclick="window.parliamentSystem.printRequest('${request.id}')">
+                    <i class="fas fa-print"></i> طباعة
+                </button>
+            </div>
+        `;
+
+        return card;
+    }
+
+    // تحديث showRequestDetails لإضافة زر الحذف
+    async showRequestDetails(requestId) {
+        try {
+            const request = await window.firebaseApp.RequestManager.getRequest(requestId);
+            if (!request) {
+                this.showAlert('خطأ', 'لم يتم العثور على الطلب');
+                return;
+            }
+
+            this.currentRequestId = requestId;
+            const displayId = request.manualRequestNumber || request.id;
+            const statusText = this.getStatusText(request.status);
+
+            this.elements.requestModalBody.innerHTML = `
+                <div class="request-details-full">
+                    <div class="detail-section">
+                        <h3><i class="fas fa-info-circle"></i> معلومات الطلب</h3>
+                        <div class="detail-grid">
+                            <div class="detail-item">
+                                <span class="detail-label">رقم الطلب:</span>
+                                <span class="detail-value">${displayId}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">الحالة:</span>
+                                <span class="detail-value"><span class="request-status ${request.status}">${statusText}</span></span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">العنوان:</span>
+                                <span class="detail-value">${request.requestTitle}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">الجهة المستقبلة:</span>
+                                <span class="detail-value">${request.receivingAuthority}</span>
+                            </div>
+                            <div class="detail-item">
+                                <span class="detail-label">تاريخ التقديم:</span>
+                                <span class="detail-value">${new Date(request.submissionDate).toLocaleDateString('ar-EG')}</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="detail-section">
+                        <h3><i class="fas fa-align-right"></i> التفاصيل</h3>
+                        <p class="detail-text">${request.requestDetails || 'لا توجد تفاصيل'}</p>
+                    </div>
+
+                    ${request.documents && request.documents.length > 0 ? `
+                        <div class="detail-section">
+                            <h3><i class="fas fa-paperclip"></i> المستندات المرفقة</h3>
+                            <ul class="documents-list-modal">
+                                ${request.documents.map(doc => `<li><i class="fas fa-file"></i> ${doc}</li>`).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+
+                    ${request.responseStatus ? `
+                        <div class="detail-section">
+                            <h3><i class="fas fa-reply"></i> الرد</h3>
+                            <p class="detail-text">${request.responseDetails || 'لا يوجد رد'}</p>
+                            <div class="detail-item">
+                                <span class="detail-label">تاريخ الرد:</span>
+                                <span class="detail-value">${new Date(request.responseDate).toLocaleDateString('ar-EG')}</span>
+                            </div>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            // تحديث أزرار النافذة المنبثقة
+            const modalFooter = this.elements.requestModal.querySelector('.modal-footer');
+            modalFooter.innerHTML = `
+                <button class="modal-btn print-btn" onclick="window.parliamentSystem.printRequest('${requestId}')">
+                    <i class="fas fa-print"></i> طباعة
+                </button>
+                <button class="modal-btn edit-btn" onclick="window.parliamentSystem.editRequest('${requestId}'); window.parliamentSystem.closeModal();">
+                    <i class="fas fa-edit"></i> تعديل
+                </button>
+                <button class="modal-btn delete-btn" onclick="window.parliamentSystem.deleteRequest('${requestId}')">
+                    <i class="fas fa-trash"></i> حذف
+                </button>
+                <button class="modal-btn close-btn" onclick="window.parliamentSystem.closeModal()">
+                    <i class="fas fa-times"></i> إغلاق
+                </button>
+            `;
+
+            this.elements.requestModal.style.display = 'flex';
+            this.elements.requestModal.classList.add('fade-in');
+        } catch (error) {
+            console.error('خطأ في عرض تفاصيل الطلب:', error);
+            this.showAlert('خطأ', 'حدث خطأ في عرض تفاصيل الطلب');
+        }
+    }
