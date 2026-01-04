@@ -1829,7 +1829,3 @@ const restrictedNavigation = () => {
     });
 };
 
-// تنفيذ التقييد عند تحميل الصفحة
-window.addEventListener('load', () => {
-    restrictedNavigation();
-});
