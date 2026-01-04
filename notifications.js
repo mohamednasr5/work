@@ -263,4 +263,4 @@ class EnhancedNotificationsManager {
 // تهيئة وإتاحة المدير للنطاق العام
 
 window.notificationsManager = new EnhancedNotificationsManager();
-//
+
