@@ -688,3 +688,73 @@ body {
     
     .filters-bar { flex-direction: column; }
 }
+
+/* Advanced button styles for request actions */
+.request-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #e5e7eb;
+}
+
+.btn-edit, .btn-delete, .btn-print, .btn-export {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 12px;
+  transition: all 0.3s ease;
+  flex: 1;
+  text-align: center;
+}
+
+.btn-edit {
+  background: #2563eb;
+  color: white;
+}
+
+.btn-edit:hover {
+  background: #1e40af;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-delete {
+  background: #ef4444;
+  color: white;
+}
+
+.btn-delete:hover {
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-print {
+  background: #f59e0b;
+  color: white;
+}
+
+.btn-print:hover {
+  background: #d97706;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-export {
+  background: #10b981;
+  color: white;
+}
+
+.btn-export:hover {
+  background: #059669;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.btn-edit:active, .btn-delete:active, .btn-print:active, .btn-export:active {
+  transform: translateY(0);
+}
+
