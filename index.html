@@ -3,175 +3,176 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
-    
-    <!-- Primary Meta Tags -->
-    <title>نظام إدارة طلبات البرلمان</title>
-    <meta name="title" content="نظام إدارة طلبات البرلمان">
-    <meta name="description" content="نظام احترافي متكامل لإدارة ومتابعة طلبات وأسئلة أعضاء البرلمان المصري">
-    
-    <!-- Mobile Optimization -->
+    <meta name="theme-color" content="#1e3c72">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="طلبات البرلمان">
-    
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
-    
-    <!-- Theme Colors -->
-    <meta name="theme-color" content="#1e3c72">
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&display=swap" rel="stylesheet">
-    
+
+    <title>نظام إدارة طلبات البرلمان</title>
+
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
+
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" crossorigin="anonymous">
-    
-    <!-- Main Stylesheet -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Firebase -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <!-- Styles -->
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar Navigation -->
+        <!-- Sidebar - سيصبح bottom navigation في الموبايل -->
         <aside class="sidebar">
-            <div>
+            <div class="sidebar-content">
                 <div class="logo">
                     <i class="fas fa-landmark"></i>
                     <h2>نظام إدارة<br>طلبات البرلمان</h2>
                 </div>
 
-                <ul class="nav-links">
-                    <li class="active" data-tab="dashboard">
-                        <i class="fas fa-chart-line"></i>
-                        <span>لوحة المعلومات</span>
-                    </li>
-                    <li data-tab="new-request">
-                        <i class="fas fa-plus-circle"></i>
-                        <span>طلب جديد</span>
-                    </li>
-                    <li data-tab="archive">
-                        <i class="fas fa-archive"></i>
-                        <span>الأرشيف</span>
-                    </li>
-                    <li data-tab="statistics">
-                        <i class="fas fa-chart-pie"></i>
-                        <span>الإحصائيات</span>
-                    </li>
-                </ul>
-            </div>
+                <nav>
+                    <ul class="nav-links">
+                        <li class="active" onclick="switchTab('dashboard')">
+                            <i class="fas fa-chart-line"></i>
+                            <span>لوحة المعلومات</span>
+                        </li>
+                        <li onclick="switchTab('register')">
+                            <i class="fas fa-plus-circle"></i>
+                            <span>تسجيل طلب</span>
+                        </li>
+                        <li onclick="switchTab('archive')">
+                            <i class="fas fa-archive"></i>
+                            <span>الأرشيف</span>
+                        </li>
+                    </ul>
+                </nav>
 
-            <div class="theme-toggle">
-                <i class="fas fa-moon" id="theme-icon"></i>
+                <div class="theme-toggle">
+                    <i class="fas fa-moon" id="theme-icon"></i>
+                </div>
             </div>
         </aside>
 
-        <!-- Main Content Area -->
+        <!-- Main Content -->
         <main class="main-content">
             <!-- Dashboard Tab -->
             <section id="dashboard" class="tab-content active">
+                <header class="header-3d">
+                    <h1><i class="fas fa-chart-line"></i> لوحة المعلومات والتنبيهات</h1>
+                </header>
+
+                <!-- Alerts Section -->
+                <div id="alertsContainer" class="glass-panel alerts-section">
+                    <h3><i class="fas fa-bell"></i> التنبيهات الهامة</h3>
+                    <div id="alertsContent">
+                        <p class="no-alerts">لا توجد تنبيهات حالية</p>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card total">
+                        <div class="icon"><i class="fas fa-clipboard-list"></i></div>
+                        <h3>إجمالي الطلبات</h3>
+                        <span class="number" id="totalRequests">0</span>
+                    </div>
+                    <div class="stat-card success">
+                        <div class="icon"><i class="fas fa-check-circle"></i></div>
+                        <h3>مكتملة</h3>
+                        <span class="number" id="completedRequests">0</span>
+                    </div>
+                    <div class="stat-card warning">
+                        <div class="icon"><i class="fas fa-hourglass-half"></i></div>
+                        <h3>قيد التنفيذ</h3>
+                        <span class="number" id="pendingRequests">0</span>
+                    </div>
+                    <div class="stat-card danger">
+                        <div class="icon"><i class="fas fa-times-circle"></i></div>
+                        <h3>مرفوضة</h3>
+                        <span class="number" id="rejectedRequests">0</span>
+                    </div>
+                </div>
+
+                <!-- Chart -->
                 <div class="glass-panel">
-                    <div class="header-3d">
-                        <h1>📊 لوحة المعلومات والتنبيهات</h1>
-                    </div>
-
-                    <!-- Alerts Section -->
-                    <div id="alertsContainer">
-                        <h2 style="font-size: 22px; margin-bottom: 15px; color: var(--primary);">
-                            <i class="fas fa-bell"></i> التنبيهات الهامة
-                        </h2>
-                        <div id="alertsList"></div>
-                    </div>
-
-                    <!-- Stats Cards -->
-                    <div class="stats-grid">
-                        <div class="stat-card total">
-                            <div class="icon"><i class="fas fa-folder-open"></i></div>
-                            <h3>إجمالي الطلبات</h3>
-                            <span class="number" id="totalRequests">0</span>
-                        </div>
-                        <div class="stat-card success">
-                            <div class="icon"><i class="fas fa-check-circle"></i></div>
-                            <h3>مكتملة</h3>
-                            <span class="number" id="completedRequests">0</span>
-                        </div>
-                        <div class="stat-card warning">
-                            <div class="icon"><i class="fas fa-clock"></i></div>
-                            <h3>قيد التنفيذ</h3>
-                            <span class="number" id="pendingRequests">0</span>
-                        </div>
-                        <div class="stat-card danger">
-                            <div class="icon"><i class="fas fa-times-circle"></i></div>
-                            <h3>مرفوضة</h3>
-                            <span class="number" id="rejectedRequests">0</span>
-                        </div>
+                    <h3><i class="fas fa-chart-bar"></i> إحصائيات الطلبات حسب الحالة</h3>
+                    <div class="charts-container">
+                        <canvas id="requestsChart"></canvas>
                     </div>
                 </div>
             </section>
 
-            <!-- New Request Tab -->
-            <section id="new-request" class="tab-content">
-                <div class="glass-panel">
-                    <div class="header-3d">
-                        <h1>➕ تسجيل / تعديل طلب</h1>
-                    </div>
+            <!-- Register Tab -->
+            <section id="register" class="tab-content">
+                <header class="header-3d">
+                    <h1><i class="fas fa-plus-circle"></i> تسجيل / تعديل طلب</h1>
+                </header>
 
+                <div class="glass-panel">
                     <form id="requestForm" class="form-container">
                         <div class="form-grid">
                             <div class="input-group">
-                                <label for="reqId">🔢 رقم الطلب</label>
-                                <input type="text" id="reqId" required placeholder="مثال: REQ-2026-001">
+                                <label for="reqId"><i class="fas fa-hashtag"></i> رقم الطلب</label>
+                                <input type="text" id="reqId" placeholder="مثال: 2024-001" required>
                             </div>
 
                             <div class="input-group">
-                                <label for="reqDate">📅 تاريخ التقديم</label>
+                                <label for="reqDate"><i class="fas fa-calendar-alt"></i> تاريخ التقديم</label>
                                 <input type="date" id="reqDate" required>
                             </div>
 
                             <div class="input-group full-width">
-                                <label for="reqTitle">📝 عنوان الطلب</label>
-                                <input type="text" id="reqTitle" required placeholder="أدخل عنوان الطلب بشكل واضح">
+                                <label for="reqTitle"><i class="fas fa-heading"></i> عنوان الطلب</label>
+                                <input type="text" id="reqTitle" placeholder="عنوان الطلب" required>
                             </div>
 
                             <div class="input-group full-width">
-                                <label for="reqDetails">📋 التفاصيل الكاملة</label>
-                                <textarea id="reqDetails" required placeholder="اكتب تفاصيل الطلب بشكل كامل ومفصل..."></textarea>
+                                <label for="reqDetails"><i class="fas fa-align-right"></i> تفاصيل الطلب</label>
+                                <textarea id="reqDetails" placeholder="اكتب التفاصيل هنا..." required></textarea>
                             </div>
 
                             <div class="input-group">
-                                <label for="reqAuthority">🏛️ الجهة المختصة</label>
-                                <input type="text" id="reqAuthority" required placeholder="مثال: وزارة الصحة">
+                                <label for="reqAuthority"><i class="fas fa-building"></i> الجهة المعنية</label>
+                                <input type="text" id="reqAuthority" placeholder="اسم الجهة" required>
                             </div>
 
                             <div class="input-group">
-                                <label for="reqStatus">✅ الحالة</label>
+                                <label for="reqStatus"><i class="fas fa-flag"></i> الحالة</label>
                                 <select id="reqStatus" required>
-                                    <option value="review">قيد المراجعة</option>
                                     <option value="execution">قيد التنفيذ</option>
+                                    <option value="review">قيد المراجعة</option>
                                     <option value="completed">مكتمل</option>
                                     <option value="rejected">مرفوض</option>
                                 </select>
                             </div>
 
-                            <!-- Documents Section -->
                             <div class="input-group full-width">
                                 <label>
                                     <input type="checkbox" id="hasDocuments" onchange="toggleDocumentsSection()">
-                                    إضافة مستندات مرفقة
+                                    <span>هل توجد مستندات مرفقة؟</span>
                                 </label>
                             </div>
 
-                            <div id="documentsSection" class="input-group full-width" style="display: none;">
+                            <div id="documentsSection" class="documents-section">
+                                <div class="section-header">
+                                    <h3><i class="fas fa-paperclip"></i> المستندات المرفقة</h3>
+                                    <button type="button" class="btn-3d" onclick="addDocumentForm()">
+                                        <i class="fas fa-plus"></i> إضافة مستند
+                                    </button>
+                                </div>
                                 <div id="documentsContainer"></div>
-                                <button type="button" class="btn-3d secondary" onclick="addDocumentForm()" style="margin-top: 10px;">
-                                    <i class="fas fa-plus"></i> إضافة مستند آخر
-                                </button>
                             </div>
                         </div>
 
                         <div class="form-actions">
                             <button type="submit" class="btn-3d">
-                                <i class="fas fa-save"></i>
-                                <span id="submitBtnText">حفظ الطلب</span>
+                                <i class="fas fa-save"></i> <span id="submitButtonText">حفظ الطلب</span>
                             </button>
                             <button type="button" class="btn-3d secondary" onclick="resetForm()">
                                 <i class="fas fa-redo"></i> إعادة تعيين
@@ -183,16 +184,16 @@
 
             <!-- Archive Tab -->
             <section id="archive" class="tab-content">
-                <div class="glass-panel">
-                    <div class="header-3d">
-                        <h1>📋 سجل الطلبات والأرشيف</h1>
-                    </div>
+                <header class="header-3d">
+                    <h1><i class="fas fa-archive"></i> سجل الطلبات والأرشيف</h1>
+                </header>
 
+                <div class="glass-panel">
                     <div class="controls-bar">
                         <div class="search-box">
                             <i class="fas fa-search"></i>
-                            <input type="text" id="searchInput" placeholder="ابحث عن طلب برقمه أو عنوانه أو الجهة..." 
-                                   onkeyup="filterRequests()">
+                            <input type="text" id="searchInput" placeholder="بحث في الطلبات..." 
+                                   onkeyup="searchRequests(this.value)">
                         </div>
                     </div>
 
@@ -209,50 +210,50 @@
                                 </tr>
                             </thead>
                             <tbody id="requestsTableBody">
-                                <!-- Data will be populated dynamically -->
+                                <tr>
+                                    <td colspan="6" class="text-center">لا توجد طلبات للعرض</td>
+                                </tr>
                             </tbody>
                         </table>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Statistics Tab -->
-            <section id="statistics" class="tab-content">
-                <div class="glass-panel">
-                    <div class="header-3d">
-                        <h1>📈 الإحصائيات والتحليلات</h1>
-                    </div>
-                    <div class="charts-container">
-                        <canvas id="requestsChart"></canvas>
                     </div>
                 </div>
             </section>
         </main>
     </div>
 
-    <!-- Details Modal -->
+    <!-- Modal for Request Details -->
     <div id="detailsModal" class="modal-overlay">
         <div class="modal-content">
-            <span class="close-modal" onclick="closeModal()">×</span>
-            <div id="modalBody"></div>
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+
+            <div class="modal-header">
+                <h2 id="modalTitle">تفاصيل الطلب</h2>
+                <span id="modalReqId" class="modal-req-id"></span>
+            </div>
+
+            <div class="modal-body" id="modalBody">
+                <!-- Content will be injected here -->
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-action edit" onclick="editRequest()">
+                    <i class="fas fa-edit"></i> تعديل
+                </button>
+                <button class="btn-action delete" onclick="confirmDelete()">
+                    <i class="fas fa-trash"></i> حذف
+                </button>
+                <button class="btn-action print" onclick="printRequest()">
+                    <i class="fas fa-print"></i> طباعة
+                </button>
+                <button class="btn-action export" onclick="exportRequest()">
+                    <i class="fas fa-download"></i> تصدير
+                </button>
+            </div>
         </div>
     </div>
 
-    <!-- Load Scripts in Correct Order -->
-    <!-- 1. Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    
-    <!-- 2. Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.3.0/dist/chart.umd.min.js"></script>
-    
-    <!-- 3. Firebase Config (after Firebase SDK loads) -->
+    <!-- Scripts -->
     <script src="firebase-config.js"></script>
-    
-    <!-- 4. Main Script (after Firebase Config) -->
     <script src="script.js"></script>
-    
-    <!-- 5. PWA Install Handler (last) -->
-    <script src="install.js"></script>
 </body>
 </html>
