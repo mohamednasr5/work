@@ -1,42 +1,23 @@
 // firebase-config.js - Firebase Configuration & Request Manager
 
-// Wait for Firebase to load
-(function() {
-    // Check if Firebase is loaded
-    if (typeof firebase === 'undefined') {
-        console.error('❌ Firebase SDK not loaded! Please check your internet connection.');
-        // Retry after 2 seconds
-        setTimeout(() => {
-            if (typeof firebase !== 'undefined') {
-                initializeFirebaseApp();
-            }
-        }, 2000);
-        return;
-    }
+const firebaseConfig = {
+    apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE8",
+    authDomain: "hedor-bea3c.firebaseapp.com",
+    databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
+    projectId: "hedor-bea3c",
+    storageBucket: "hedor-bea3c.firebasestorage.app",
+    messagingSenderId: "369239455736",
+    appId: "1:369239455736:web:116295854269abecf6480d",
+    measurementId: "G-R2MG1YKQEP"
+};
 
-    initializeFirebaseApp();
-})();
-
-function initializeFirebaseApp() {
-    const firebaseConfig = {
-        apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE8",
-        authDomain: "hedor-bea3c.firebaseapp.com",
-        databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
-        projectId: "hedor-bea3c",
-        storageBucket: "hedor-bea3c.firebasestorage.app",
-        messagingSenderId: "369239455736",
-        appId: "1:369239455736:web:116295854269abecf6480d",
-        measurementId: "G-R2MG1YKQEP"
-    };
-
-    try {
-        // Initialize Firebase
-        firebase.initializeApp(firebaseConfig);
-        window.database = firebase.database();
-        console.log('✅ Firebase Initialized Successfully');
-    } catch (error) {
-        console.error("❌ Firebase initialization error:", error);
-    }
+// Initialize Firebase
+if (typeof firebase !== 'undefined') {
+    firebase.initializeApp(firebaseConfig);
+    window.database = firebase.database();
+    console.log('✅ Firebase Initialized Successfully');
+} else {
+    console.error("❌ Firebase SDK not loaded!");
 }
 
 /**
@@ -48,10 +29,6 @@ window.RequestManager = {
      */
     addRequest: async (data) => {
         try {
-            if (!window.database) {
-                throw new Error("Database not initialized");
-            }
-
             if (!data.reqId || !data.title) {
                 throw new Error("Missing required fields");
             }
@@ -76,10 +53,6 @@ window.RequestManager = {
      */
     updateRequest: async (key, data) => {
         try {
-            if (!window.database) {
-                throw new Error("Database not initialized");
-            }
-
             if (!key) {
                 throw new Error("Invalid firebase key");
             }
@@ -92,6 +65,7 @@ window.RequestManager = {
                 ...data,
                 updatedAt: new Date().toISOString()
             };
+
             await window.database.ref(`parliament-requests/${key}`).update(updateData);
             console.log('✅ Request updated successfully:', key);
             return true;
@@ -106,10 +80,6 @@ window.RequestManager = {
      */
     deleteRequest: async (key) => {
         try {
-            if (!window.database) {
-                throw new Error("Database not initialized");
-            }
-
             if (!key) {
                 throw new Error("Invalid firebase key");
             }
@@ -128,13 +98,7 @@ window.RequestManager = {
      */
     listenToRequests: (callback) => {
         if (!window.database) {
-            console.error("❌ Database not initialized - waiting...");
-            // Retry after database is ready
-            setTimeout(() => {
-                if (window.database) {
-                    window.RequestManager.listenToRequests(callback);
-                }
-            }, 1000);
+            console.error("❌ Database not initialized");
             return;
         }
 
@@ -142,12 +106,14 @@ window.RequestManager = {
             try {
                 const data = snapshot.val();
                 let requests = [];
+
                 if (data && typeof data === 'object') {
                     requests = Object.entries(data).map(([key, value]) => ({
                         ...value,
                         firebaseKey: key
                     }));
                 }
+
                 callback(requests);
                 console.log(`✅ Loaded ${requests.length} requests`);
             } catch (error) {
@@ -164,10 +130,6 @@ window.RequestManager = {
      */
     getRequest: async (key) => {
         try {
-            if (!window.database) {
-                throw new Error("Database not initialized");
-            }
-
             const snapshot = await window.database.ref(`parliament-requests/${key}`).once('value');
             const data = snapshot.val();
             if (data) {
@@ -185,19 +147,17 @@ window.RequestManager = {
      */
     getAllRequests: async () => {
         try {
-            if (!window.database) {
-                throw new Error("Database not initialized");
-            }
-
             const snapshot = await window.database.ref('parliament-requests').once('value');
             const data = snapshot.val();
             let requests = [];
+
             if (data && typeof data === 'object') {
                 requests = Object.entries(data).map(([key, value]) => ({
                     ...value,
                     firebaseKey: key
                 }));
             }
+
             return requests;
         } catch (error) {
             console.error("❌ Error fetching all requests:", error);
@@ -211,15 +171,19 @@ window.RequestManager = {
     searchRequests: async (criteria) => {
         try {
             const allRequests = await window.RequestManager.getAllRequests();
+
             return allRequests.filter(req => {
                 if (criteria.status && req.status !== criteria.status) return false;
+
                 if (criteria.searchTerm) {
                     const term = criteria.searchTerm.toLowerCase();
                     const text = `${req.reqId} ${req.title} ${req.details} ${req.authority}`.toLowerCase();
                     if (!text.includes(term)) return false;
                 }
+
                 if (criteria.fromDate && new Date(req.submissionDate) < new Date(criteria.fromDate)) return false;
                 if (criteria.toDate && new Date(req.submissionDate) > new Date(criteria.toDate)) return false;
+
                 return true;
             });
         } catch (error) {
@@ -234,6 +198,7 @@ window.RequestManager = {
     getStatistics: async () => {
         try {
             const requests = await window.RequestManager.getAllRequests();
+
             return {
                 total: requests.length,
                 completed: requests.filter(r => r.status === 'completed').length,
@@ -283,4 +248,23 @@ function groupByMonth(requests) {
         acc[month] = (acc[month] || 0) + 1;
         return acc;
     }, {});
+}
+
+/**
+ * Calculate deadline status for a request
+ */
+function getDeadlineStatus(submissionDate) {
+    const submissionDateObj = new Date(submissionDate);
+    submissionDateObj.setDate(submissionDateObj.getDate() + 90);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const timeDiff = submissionDateObj - today;
+    const daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+
+    if (daysLeft < 0) return 'overdue';
+    if (daysLeft <= 30) return 'urgent';
+    if (daysLeft <= 60) return 'warning';
+    return 'normal';
 }
