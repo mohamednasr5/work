@@ -1,0 +1,29 @@
+/* Advanced Professional Styles for Request System */
+:root{--primary:#2563eb;--dark:#1e40af;--success:#10b981;--warning:#f59e0b;--danger:#ef4444}
+.modal{display:none;position:fixed;z-index:1000;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,.5);backdrop-filter:blur(4px)}
+.modal.active{display:flex;justify-content:center;align-items:center}
+.modal-content{background:#fff;padding:30px;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,.15);width:90%;max-width:600px;animation:slideUp .3s}
+@keyframes slideUp{from{transform:translateY(30px);opacity:0}to{transform:translateY(0);opacity:1}}
+.btn-edit,.btn-delete,.btn-print,.btn-export{padding:8px 16px;border:none;border-radius:8px;cursor:pointer;font-weight:600;transition:.3s;font-size:14px}
+.btn-edit{background:var(--primary);color:#fff}
+.btn-edit:hover{background:var(--dark);transform:translateY(-2px);box-shadow:0 4px 6px rgba(0,0,0,.1)}
+.btn-delete{background:var(--danger);color:#fff}
+.btn-delete:hover{background:#dc2626;transform:translateY(-2px)}
+.btn-print{background:var(--warning);color:#fff}
+.btn-print:hover{background:#d97706;transform:translateY(-2px)}
+.btn-export{background:var(--success);color:#fff}
+.btn-export:hover{background:#059669;transform:translateY(-2px)}
+.request-card{background:#fff;border-radius:12px;padding:20px;margin-bottom:16px;border-left:4px solid var(--primary);box-shadow:0 4px 6px rgba(0,0,0,.1);transition:.3s}
+.request-card:hover{box-shadow:0 10px 25px rgba(0,0,0,.15);transform:translateY(-4px)}
+.request-card.pending{border-left-color:var(--warning)}
+.request-card.inprogress{border-left-color:var(--primary)}
+.request-card.completed{border-left-color:var(--success)}
+.status-badge{display:inline-block;padding:6px 12px;border-radius:20px;font-weight:600;font-size:13px}
+.status-badge.pending{background:#fef08a;color:#92400e}
+.status-badge.inprogress{background:#dbeafe;color:#0c4a6e}
+.status-badge.completed{background:#dcfce7;color:#065f46}
+.form-group{margin-bottom:20px}
+.form-group label{display:block;margin-bottom:8px;font-weight:600;color:#1f2937}
+.form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 12px;border:2px solid #e5e7eb;border-radius:8px;font-size:14px;transition:.3s}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:0;border-color:var(--primary);box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+@media(max-width:768px){.modal-content{width:95%;padding:20px}.btn-edit,.btn-delete,.btn-print,.btn-export{padding:6px 12px;font-size:12px}}
