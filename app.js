@@ -164,3 +164,100 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 //
+
+// Import advanced features
+if(typeof requestMgr === 'undefined') {
+  requestMgr = {};
+}
+
+// Add action buttons to request card
+ParliamentRequestsSystem.prototype.displayRequests = (function(original) {
+  return function(filter) {
+    original.call(this, filter);
+    const self = this;
+    document.querySelectorAll('.request-card').forEach(card => {
+      if(!card.querySelector('.request-actions')) {
+        const id = card.querySelector('.request-id').textContent;
+        const actions = document.createElement('div');
+        actions.className = 'request-actions';
+        actions.innerHTML = `
+          <button class="btn-edit" data-id="${id}">تعديل</button>
+          <button class="btn-delete" data-id="${id}">حذف</button>
+          <button class="btn-print" data-id="${id}">طباعة</button>
+          <button class="btn-export" data-id="${id}">تصدير</button>
+        `;
+        card.appendChild(actions);
+        
+        actions.querySelector('.btn-edit').addEventListener('click', () => self.handleEdit(id));
+        actions.querySelector('.btn-delete').addEventListener('click', () => self.handleDelete(id));
+        actions.querySelector('.btn-print').addEventListener('click', () => self.handlePrint(id));
+        actions.querySelector('.btn-export').addEventListener('click', () => self.handleExport(id));
+      }
+    });
+  };
+})(ParliamentRequestsSystem.prototype.displayRequests);
+
+ParliamentRequestsSystem.prototype.handleEdit = function(id) {
+  const req = this.allRequests.find(r => r.id === id);
+  if(req) {
+    const newName = prompt('اسم جديد:', req.name);
+    if(newName) {
+      req.name = newName;
+      this.saveToStorage();
+      this.displayRequests('all');
+      alert('تم تحديث الطلب بنجاح');
+    }
+  }
+};
+
+ParliamentRequestsSystem.prototype.handleDelete = function(id) {
+  if(confirm('هل تريد حذف هذا الطلب؟')) {
+    this.allRequests = this.allRequests.filter(r => r.id !== id);
+    this.saveToStorage();
+    this.displayRequests('all');
+    alert('تم حذف الطلب بنجاح');
+  }
+};
+
+ParliamentRequestsSystem.prototype.handlePrint = function(id) {
+  const req = this.allRequests.find(r => r.id === id);
+  if(req) {
+    const printWin = window.open('', '_blank');
+    const html = `
+      <!DOCTYPE html>
+      <html dir="rtl"><head><title>طباعة الطلب</title>
+      <style>body{font-family:Arial;padding:20px;direction:rtl;} .header{border-bottom:3px solid #2563eb;padding-bottom:20px;margin-bottom:30px;} .field{padding:10px;margin:10px 0;background:#f3f4f6;border-right:3px solid #2563eb;}</style>
+      </head><body><div class="header"><h1>مكتب النائب أحمد الحديدي</h1></div>
+      <div class="field"><strong>رقم الطلب:</strong> ${req.id}</div>
+      <div class="field"><strong>الاسم:</strong> ${req.name}</div>
+      <div class="field"><strong>الوزارة:</strong> ${req.receivingAuthority}</div>
+      <div class="field"><strong>التفاصيل:</strong> ${req.title}</div>
+      <div class="field"><strong>الحالة:</strong> ${req.status}</div>
+      <div class="field"><strong>التاريخ:</strong> ${new Date(req.createdAt).toLocaleDateString('ar-EG')}</div>
+      </body></html>`;
+    printWin.document.write(html);
+    printWin.document.close();
+    setTimeout(() => printWin.print(), 100);
+  }
+};
+
+ParliamentRequestsSystem.prototype.handleExport = function(id) {
+  const req = this.allRequests.find(r => r.id === id);
+  if(req) {
+    let html = '<html dir="rtl"><head><meta charset="utf-8"></head><body>';
+    html += '<table border="1" cellpadding="10" cellspacing="0" style="border-collapse:collapse;width:100%">';
+    html += '<tr style="background:#2563eb;color:white;font-weight:bold;"><th style="border:2px solid #1e40af;padding:15px">الحقل</th><th style="border:2px solid #1e40af;padding:15px">القيمة</th></tr>';
+    html += `<tr style="background:#f9fafb"><td style="border:1px solid #d1d5db;padding:12px">رقم الطلب</td><td style="border:1px solid #d1d5db;padding:12px">${req.id}</td></tr>`;
+    html += `<tr style="background:white"><td style="border:1px solid #d1d5db;padding:12px">الاسم</td><td style="border:1px solid #d1d5db;padding:12px">${req.name}</td></tr>`;
+    html += `<tr style="background:#f9fafb"><td style="border:1px solid #d1d5db;padding:12px">الوزارة</td><td style="border:1px solid #d1d5db;padding:12px">${req.receivingAuthority}</td></tr>`;
+    html += `<tr style="background:white"><td style="border:1px solid #d1d5db;padding:12px">الحالة</td><td style="border:1px solid #d1d5db;padding:12px;background:#dbeafe;font-weight:bold">${req.status}</td></tr>`;
+    html += '</table></body></html>';
+    const blob = new Blob([html], {type: 'application/vnd.ms-excel;charset=utf-8'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Request_${req.id}_${Date.now()}.xls`;
+    link.click();
+    alert('تم التصدير بنجاح');
+  }
+};
+
