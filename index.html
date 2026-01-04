@@ -55,7 +55,6 @@
             gap: 0;
         }
 
-        /* --- SIDEBAR --- */
         .sidebar {
             width: 260px;
             padding: 25px;
@@ -113,6 +112,7 @@
             align-items: center;
             gap: 10px;
             color: var(--dark);
+            position: relative;
         }
 
         .nav-links li:hover,
@@ -125,6 +125,21 @@
 
         .nav-links li i {
             font-size: 18px;
+        }
+
+        .notification-badge {
+            position: absolute;
+            left: 10px;
+            background: var(--danger);
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
         }
 
         .theme-toggle {
@@ -145,7 +160,6 @@
             transform: rotate(20deg) scale(1.1);
         }
 
-        /* --- MAIN CONTENT --- */
         .main-content {
             flex: 1;
             padding: 35px 40px;
@@ -166,7 +180,6 @@
             border-radius: 4px;
         }
 
-        /* --- GLASS PANEL --- */
         .glass-panel {
             background: rgba(255, 255, 255, 0.7);
             backdrop-filter: blur(10px);
@@ -186,7 +199,6 @@
             box-shadow: var(--shadow-lg);
         }
 
-        /* --- HEADERS --- */
         .header-3d h1 {
             font-size: 32px;
             font-weight: 900;
@@ -208,7 +220,6 @@
             }
         }
 
-        /* --- TABS --- */
         .tab-content {
             display: none;
             animation: fadeInUp 0.5s ease;
@@ -229,7 +240,6 @@
             }
         }
 
-        /* --- STATS GRID --- */
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -245,27 +255,12 @@
             cursor: pointer;
             position: relative;
             overflow: hidden;
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(135deg, rgba(255, 255, 255, 0.5), rgba(255, 255, 255, 0));
-            opacity: 0;
-            transition: opacity 0.3s ease;
+            color: white;
         }
 
         .stat-card:hover {
             transform: translateY(-10px) scale(1.02);
             box-shadow: var(--shadow-lg);
-        }
-
-        .stat-card:hover::before {
-            opacity: 1;
         }
 
         .stat-card .icon {
@@ -277,7 +272,7 @@
         .stat-card h3 {
             font-size: 14px;
             margin-bottom: 10px;
-            opacity: 0.8;
+            opacity: 0.9;
             font-weight: 600;
         }
 
@@ -289,12 +284,10 @@
 
         .stat-card.total {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
         }
 
         .stat-card.success {
             background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%);
-            color: white;
         }
 
         .stat-card.warning {
@@ -304,10 +297,60 @@
 
         .stat-card.danger {
             background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-            color: white;
         }
 
-        /* --- FORM --- */
+        .alerts-section {
+            margin-bottom: 30px;
+        }
+
+        .alert-item {
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.1), rgba(241, 196, 15, 0.1));
+            border-left: 4px solid var(--danger);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideInDown 0.5s ease;
+        }
+
+        .alert-item.high {
+            border-left-color: var(--danger);
+            background: linear-gradient(135deg, rgba(231, 76, 60, 0.1), rgba(231, 76, 60, 0.05));
+        }
+
+        .alert-item.medium {
+            border-left-color: var(--warning);
+            background: linear-gradient(135deg, rgba(241, 196, 15, 0.1), rgba(241, 196, 15, 0.05));
+        }
+
+        .alert-item.low {
+            border-left-color: var(--info);
+            background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(52, 152, 219, 0.05));
+        }
+
+        .alert-content {
+            flex: 1;
+        }
+
+        .alert-title {
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+
+        .alert-description {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+
+        .alert-time {
+            font-size: 12px;
+            opacity: 0.6;
+            margin-left: 15px;
+        }
+
         .form-container {
             margin-top: 20px;
         }
@@ -331,7 +374,9 @@
             font-size: 14px;
         }
 
-        input, select, textarea {
+        input,
+        select,
+        textarea {
             width: 100%;
             padding: 12px 15px;
             border: 2px solid rgba(0, 0, 0, 0.1);
@@ -340,6 +385,7 @@
             font-size: 14px;
             transition: all 0.3s ease;
             background: rgba(255, 255, 255, 0.8);
+            color: var(--dark);
         }
 
         [data-theme="dark"] input,
@@ -357,7 +403,102 @@
             transform: scale(1.01);
         }
 
-        /* --- BUTTONS --- */
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 15px;
+            background: rgba(255, 255, 255, 0.8);
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .checkbox-group:hover {
+            border-color: var(--primary);
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .checkbox-label {
+            cursor: pointer;
+            flex: 1;
+        }
+
+        .documents-section {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            background: rgba(30, 60, 114, 0.05);
+            border-radius: 10px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .documents-section.active {
+            display: block;
+        }
+
+        .document-item {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            border: 2px solid rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        [data-theme="dark"] .document-item {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .document-item:hover {
+            box-shadow: var(--shadow);
+        }
+
+        .document-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .document-type {
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .remove-doc-btn {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .remove-doc-btn:hover {
+            background: #c0392b;
+            transform: scale(1.05);
+        }
+
+        .document-field {
+            margin: 10px 0;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .document-field.full {
+            grid-column: 1 / -1;
+        }
+
         .btn-3d {
             padding: 13px 28px;
             background: linear-gradient(135deg, var(--primary), var(--secondary));
@@ -391,6 +532,11 @@
             background: linear-gradient(135deg, #e74c3c, #c0392b);
         }
 
+        .btn-3d.small {
+            padding: 8px 15px;
+            font-size: 13px;
+        }
+
         .form-actions {
             display: flex;
             gap: 15px;
@@ -401,7 +547,6 @@
             flex: 1;
         }
 
-        /* --- SEARCH BOX --- */
         .controls-bar {
             margin-bottom: 25px;
         }
@@ -419,6 +564,7 @@
             background: rgba(255, 255, 255, 0.9);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
             font-size: 16px;
+            transition: all 0.3s ease;
         }
 
         .search-box input:focus {
@@ -435,7 +581,6 @@
             font-size: 18px;
         }
 
-        /* --- TABLE --- */
         .table-responsive {
             overflow-x: auto;
             margin-top: 20px;
@@ -485,7 +630,8 @@
             color: #2ecc71;
         }
 
-        .status-pending {
+        .status-pending,
+        .status-execution {
             background: rgba(241, 196, 15, 0.2);
             color: #f39c12;
         }
@@ -500,7 +646,6 @@
             color: #3498db;
         }
 
-        /* --- MODAL --- */
         .modal-overlay {
             display: none;
             position: fixed;
@@ -525,7 +670,7 @@
             padding: 35px;
             border-radius: 20px;
             width: 90%;
-            max-width: 650px;
+            max-width: 750px;
             max-height: 90vh;
             overflow-y: auto;
             box-shadow: var(--shadow-lg);
@@ -613,6 +758,24 @@
             text-align: justify;
         }
 
+        .documents-list {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .doc-item-view {
+            background: rgba(0, 0, 0, 0.05);
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .doc-item-view strong {
+            color: var(--primary);
+        }
+
         .modal-actions {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -656,13 +819,11 @@
             box-shadow: 0 8px 15px rgba(0, 0, 0, 0.2);
         }
 
-        /* --- CHARTS --- */
         .charts-container {
             margin-top: 30px;
             height: 400px;
         }
 
-        /* --- ALERTS --- */
         .alert-box {
             padding: 16px 20px;
             margin-bottom: 15px;
@@ -709,7 +870,6 @@
             transform: scale(1.2);
         }
 
-        /* --- RESPONSIVE --- */
         @media (max-width: 1024px) {
             .form-grid {
                 grid-template-columns: 1fr;
@@ -720,6 +880,10 @@
             }
 
             .modal-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .document-field {
                 grid-template-columns: 1fr;
             }
         }
@@ -767,10 +931,6 @@
                 grid-template-columns: 1fr;
             }
 
-            .form-grid {
-                grid-template-columns: 1fr;
-            }
-
             table {
                 font-size: 13px;
             }
@@ -781,14 +941,10 @@
 
             .modal-content {
                 padding: 25px;
-            }
-
-            .modal-actions {
-                grid-template-columns: 1fr;
+                width: 95%;
             }
         }
 
-        /* --- ANIMATIONS --- */
         @keyframes fadeIn {
             from {
                 opacity: 0;
@@ -798,22 +954,17 @@
             }
         }
 
-        /* --- UTILITIES --- */
         .text-center {
             text-align: center;
-        }
-
-        .mt-20 {
-            margin-top: 20px;
         }
 
         .hidden {
             display: none !important;
         }
 
-        .loading {
-            opacity: 0.6;
-            pointer-events: none;
+        .add-doc-btn {
+            margin-top: 15px;
+            width: 100%;
         }
     </style>
 </head>
@@ -831,6 +982,7 @@
                     <li class="active" onclick="switchTab('dashboard')">
                         <i class="fa-solid fa-chart-pie"></i>
                         <span>لوحة التحكم</span>
+                        <span class="notification-badge hidden" id="dashboard-badge">0</span>
                     </li>
                     <li onclick="switchTab('add-request')">
                         <i class="fa-solid fa-plus-circle"></i>
@@ -852,9 +1004,16 @@
             <!-- DASHBOARD -->
             <section id="dashboard" class="tab-content active">
                 <div class="header-3d">
-                    <h1>📊 لوحة المعلومات والتحليلات</h1>
+                    <h1>📊 لوحة المعلومات والتنبيهات</h1>
                 </div>
-                <div id="alerts-container"></div>
+
+                <!-- ALERTS SECTION -->
+                <div class="alerts-section" id="alertsContainer">
+                    <h3 style="margin-bottom: 15px; color: var(--primary); font-weight: 700;">
+                        🔔 التنبيهات الهامة
+                    </h3>
+                </div>
+
                 <div class="stats-grid">
                     <div class="stat-card glass-panel total">
                         <div class="icon"><i class="fa-solid fa-folder-open"></i></div>
@@ -920,7 +1079,30 @@
                                     <option value="rejected">مرفوض</option>
                                 </select>
                             </div>
+
+                            <!-- DOCUMENTS SECTION -->
+                            <div class="input-group full-width">
+                                <label>📎 هل يوجد مستندات للطلب؟</label>
+                                <div class="checkbox-group">
+                                    <input type="checkbox" id="hasDocuments" onchange="toggleDocumentsSection()">
+                                    <label class="checkbox-label" for="hasDocuments">نعم، هناك مستندات مرفقة</label>
+                                </div>
+                            </div>
+
+                            <!-- DOCUMENTS FORM -->
+                            <div class="documents-section full-width" id="documentsSection">
+                                <h3 style="margin-bottom: 20px; color: var(--primary);">📋 إدارة المستندات</h3>
+                                
+                                <div id="documentsContainer">
+                                    <!-- Documents will be added here dynamically -->
+                                </div>
+
+                                <button type="button" class="btn-3d add-doc-btn" onclick="addDocumentForm()">
+                                    <i class="fa-solid fa-plus"></i> إضافة مستند جديد
+                                </button>
+                            </div>
                         </div>
+
                         <div class="form-actions">
                             <button type="submit" class="btn-3d" id="saveBtn">
                                 <i class="fa-solid fa-save"></i> حفظ الطلب
@@ -952,6 +1134,7 @@
                                 <th>📝 العنوان</th>
                                 <th>🏛️ الجهة</th>
                                 <th>📅 التاريخ</th>
+                                <th>📎 مستندات</th>
                                 <th>✅ الحالة</th>
                             </tr>
                         </thead>
@@ -987,6 +1170,10 @@
                 <div class="detail-row full">
                     <strong>📄 التفاصيل:</strong>
                     <p id="mDetails"></p>
+                </div>
+                <div class="documents-list" id="docsListContainer" style="display: none;">
+                    <strong style="color: var(--primary); display: block; margin-bottom: 12px;">📎 المستندات المرفقة:</strong>
+                    <div id="docsList"></div>
                 </div>
             </div>
             <div class="modal-actions">
