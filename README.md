@@ -238,3 +238,97 @@ window.parliamentSystem.printAllRequests();
 ---
 
 © 2026 جميع الحقوق محفوظة - نظام إدارة الطلبات البرلمانية
+
+
+---
+
+## New Advanced Features - الميزات المتقدمة الجديدة v3.0
+
+### Edit Request - تعديل الطلب
+- Modify request details after creation
+- Update status, priority, and ministry
+- Automatic timestamp tracking
+
+### Delete Request - حذف الطلب
+- Remove requests with confirmation dialog
+- Permanent deletion from system
+- Safe and reversible in backups
+
+### Print Request - طباعة الطلب
+- Generate professional print-ready document
+- Beautiful formatted layout
+- Arabic support with RTL direction
+- Date and reference number included
+
+### Export to Excel - تصدير إلى Excel
+- Export all or filtered requests
+- Professional formatting with:
+  - **Thick borders** (2px solid)
+  - **Colored headers** (Blue #2563eb)
+  - **Alternating row colors** (Light gray/white)
+  - **Status-based colors** (Green/Blue/Yellow)
+  - **RTL Support** for Arabic
+
+### Notification Settings - إعدادات التنبيهات
+- Toggle new request notifications
+- Status change alerts
+- Completion notifications
+- Email notifications support
+- Urgent request priority alerts
+- Sound notifications
+
+### Professional CSS - تصميم احترافي
+- Modern gradient colors
+- Smooth animations and transitions
+- Hover effects on buttons and cards
+- Modal dialogs with backdrop blur
+- Responsive design (mobile-first)
+- Card-based layouts
+
+---
+
+## File Structure
+```
+- index.html          (Main HTML structure)
+- app.js              (Core functionality)
+- style.css           (Base styles)
+- advanced-features.js (NEW - Edit, Delete, Print, Export)
+- advanced-styles.css (NEW - Professional styling)
+- notifications.js     (Notification system)
+```
+
+---
+
+## Usage Instructions
+
+### To Edit a Request:
+```javascript
+requestMgr.editRequest(requestId, {name: 'New Name', status: 'completed'});
+```
+
+### To Delete a Request:
+```javascript
+requestMgr.deleteRequest(requestId);
+```
+
+### To Print a Request:
+```javascript
+requestMgr.printRequest(requestId);
+```
+
+### To Export to Excel:
+```javascript
+requestMgr.exportExcel();  // All requests
+requestMgr.exportExcel('pending');  // Filtered
+```
+
+### To Update Settings:
+```javascript
+requestMgr.updateNotificationSettings({notifyNew: true, soundEnabled: false});
+```
+
+---
+
+**Created:** January 4, 2026
+**Version:** v3.0
+**Status:** Production Ready
