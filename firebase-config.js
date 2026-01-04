@@ -272,7 +272,7 @@ class OfflineStorage {
       const backup = {
         data: data,
         timestamp: new Date().toISOString(),
-        version: '2.0.0',
+        version: '3.0.0',
         count: Array.isArray(data) ? data.length : Object.keys(data || {}).length
       };
       
@@ -378,6 +378,7 @@ class EnhancedRequestManager {
   }
 
   init() {
+    // تحميل العمليات المعلقة من التخزين المحلي
     this.pendingOperations = this.offlineStorage.loadPendingOperations();
     this.startSyncInterval();
     this.setupOfflineQueue();
@@ -963,7 +964,7 @@ class EnhancedRequestManager {
           exportDate: new Date().toISOString(),
           totalRequests: requestList.length,
           format: format,
-          version: '2.0.0'
+          version: '3.0.0'
         }
       };
       
@@ -1025,7 +1026,7 @@ class EnhancedRequestManager {
       const backup = {
         data: requestList,
         timestamp: new Date().toISOString(),
-        version: '2.0.0',
+        version: '3.0.0',
         count: requestList.length
       };
       
