@@ -973,3 +973,176 @@ tbody tr:hover {
         font-size: 24px;
     }
 }
+/* ==========================================
+   PWA & Mobile Enhancements
+========================================== */
+
+/* Better touch targets for mobile */
+@media (max-width: 768px) {
+  /* Ensure minimum touch target size of 44x44px */
+  button, a, input, select, textarea, .stat-card, .nav-links li {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Improve form inputs on mobile */
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  
+  /* Better table scrolling on mobile */
+  .table-responsive {
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Optimize sidebar for mobile */
+  .sidebar {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Better modal on mobile */
+  .modal-content {
+    max-height: 90vh;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  /* Optimize chart for mobile */
+  .charts-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+  }
+  
+  .charts-container canvas {
+    max-width: 100%;
+    height: auto !important;
+  }
+}
+
+/* Landscape mode optimization */
+@media (max-width: 768px) and (orientation: landscape) {
+  .app-container {
+    flex-direction: row;
+  }
+  
+  .sidebar {
+    width: 200px;
+    height: 100vh;
+    flex-direction: column;
+  }
+  
+  .logo h2 {
+    font-size: 12px;
+  }
+  
+  .nav-links {
+    flex-direction: column;
+  }
+  
+  .nav-links li span {
+    display: inline;
+    font-size: 11px;
+  }
+}
+
+/* Tablet optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .sidebar {
+    width: 220px;
+  }
+  
+  .main-content {
+    padding: 25px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Safe area insets for notched devices */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(0px, env(safe-area-inset-left));
+    padding-right: max(0px, env(safe-area-inset-right));
+  }
+  
+  .sidebar {
+    padding-top: max(25px, env(safe-area-inset-top));
+    padding-bottom: max(25px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Print styles */
+@media print {
+  .sidebar, .theme-toggle, .form-actions, .controls-bar, .install-pwa-btn {
+    display: none !important;
+  }
+  
+  .main-content {
+    padding: 0;
+  }
+  
+  .glass-panel {
+    background: white !important;
+    box-shadow: none !important;
+  }
+  
+  body {
+    background: white !important;
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .glass-panel {
+    border: 2px solid var(--primary);
+  }
+  
+  .btn-3d {
+    border: 2px solid white;
+  }
+  
+  .status-badge {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Dark mode improvements for mobile */
+@media (max-width: 768px) {
+  [data-theme="dark"] .sidebar {
+    background: rgba(0, 0, 0, 0.95);
+  }
+  
+  [data-theme="dark"] .glass-panel {
+    background: rgba(0, 0, 0, 0.6);
+  }
+}
+
+/* Better scrollbar for mobile browsers that support it */
+.main-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 4px;
+}
