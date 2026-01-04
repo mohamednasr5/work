@@ -1212,24 +1212,81 @@ class ParliamentRequestsSystem {
         }
     }
 
-    validateRequestData(data) {
-        if (!data.requestTitle || data.requestTitle.trim().length < 3) {
-            this.showAlert('خطأ', 'يرجى إدخال عنوان صحيح للطلب (3 أحرف على الأقل)');
-            return false;
-        }
-        
-        if (!data.receivingAuthority) {
-            this.showAlert('خطأ', 'يرجى اختيار الجهة المستقبلة');
-            return false;
-        }
-        
-        if (!data.submissionDate) {
-            this.showAlert('خطأ', 'يرجى اختيار تاريخ التقديم');
-            return false;
-        }
-        
-        return true;
+   validateRequestData(data) {
+    console.log('🔍 التحقق من صحة البيانات:', data);
+    
+    // التحقق من عنوان الطلب
+    if (!data.requestTitle) {
+        this.showAlert('خطأ', 'عنوان الطلب مطلوب');
+        return false;
     }
+    
+    const title = data.requestTitle.trim();
+    if (title.length < 3) {
+        this.showAlert('خطأ', 'يرجى إدخال عنوان صحيح للطلب (3 أحرف على الأقل)');
+        return false;
+    }
+    
+    if (title.length > 200) {
+        this.showAlert('خطأ', 'عنوان الطلب طويل جداً (الحد الأقصى 200 حرف)');
+        return false;
+    }
+    
+    // التحقق من الجهة المستقبلة
+    if (!data.receivingAuthority || data.receivingAuthority.trim() === '' || data.receivingAuthority === 'اختر الجهة') {
+        this.showAlert('خطأ', 'يرجى اختيار الجهة المستقبلة');
+        return false;
+    }
+    
+    // التحقق من تاريخ التقديم
+    if (!data.submissionDate || data.submissionDate.trim() === '') {
+        this.showAlert('خطأ', 'يرجى اختيار تاريخ التقديم');
+        return false;
+    }
+    
+    // التحقق من صحة التاريخ
+    const submissionDate = new Date(data.submissionDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (isNaN(submissionDate.getTime())) {
+        this.showAlert('خطأ', 'تاريخ التقديم غير صالح');
+        return false;
+    }
+    
+    if (submissionDate > today) {
+        this.showAlert('خطأ', 'تاريخ التقديم لا يمكن أن يكون في المستقبل');
+        return false;
+    }
+    
+    // التحقق من تفاصيل الطلب (اختياري ولكن مفضل)
+    if (!data.requestDetails || data.requestDetails.trim() === '') {
+        const confirmed = confirm('لم تقم بإدخال تفاصيل الطلب. هل تريد المتابعة بدون تفاصيل؟');
+        if (!confirmed) {
+            return false;
+        }
+    } else if (data.requestDetails.trim().length < 10) {
+        this.showAlert('تحذير', 'تفاصيل الطلب قصيرة جداً. يرجى إدخال تفاصيل أكثر وضوحاً');
+        // لا نمنع الإرسال ولكن ننبه فقط
+    }
+    
+    // التحقق من تاريخ الرد إذا تم إدخاله
+    if (data.responseDate && data.responseDate.trim() !== '') {
+        const responseDate = new Date(data.responseDate);
+        if (isNaN(responseDate.getTime())) {
+            this.showAlert('خطأ', 'تاريخ الرد غير صالح');
+            return false;
+        }
+        
+        if (data.submissionDate && responseDate < new Date(data.submissionDate)) {
+            this.showAlert('خطأ', 'تاريخ الرد لا يمكن أن يكون قبل تاريخ التقديم');
+            return false;
+        }
+    }
+    
+    console.log('✅ البيانات صالحة');
+    return true;
+}
 
     resetForm() {
         if (this.elements.newRequestForm) {
