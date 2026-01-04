@@ -156,8 +156,10 @@ class ParliamentRequestsSystem {
         });
     }
 }
+//
 
 // تشغيل النظام
 document.addEventListener('DOMContentLoaded', () => {
     window.parliamentSystem = new ParliamentRequestsSystem();
+
 });
