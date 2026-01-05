@@ -216,6 +216,22 @@ function removeDocument(docId) {
 }
 
 /**
+ * Check if request ID is unique when editing
+ */
+function isRequestIdUniqueForEdit(reqId, currentRequestKey) {
+    const existingRequest = allRequests.find(req => req.reqId === reqId);
+    
+    // إذا لم يوجد طلب بنفس الرقم، فهو فريد
+    if (!existingRequest) return true;
+    
+    // إذا كان نفس الطلب (نفس المفتاح)، فهذا مقبول
+    if (existingRequest.firebaseKey === currentRequestKey) return true;
+    
+    // إذا كان طلباً آخر بنفس الرقم، فهذا غير مقبول
+    return false;
+}
+
+/**
  * Handle form submission
  */
 async function handleFormSubmit(e) {
@@ -230,16 +246,29 @@ async function handleFormSubmit(e) {
 
     const reqId = document.getElementById('reqId').value.trim();
     
-    // التحقق من تكرار رقم الطلب في حالة الإضافة فقط (ليس في وضع التعديل)
+    // التحقق من تكرار رقم الطلب مع استثناء حالة التعديل
     if (!isEditMode) {
-        // البحث إذا كان رقم الطلب موجود مسبقاً
+        // حالة الإضافة الجديدة: رفض إذا كان الرقم موجوداً
         const existingRequest = allRequests.find(req => req.reqId === reqId);
         if (existingRequest) {
             showAlert(`❌ رقم الطلب ${reqId} موجود مسبقاً!`, 'danger');
             submitButton.innerHTML = originalText;
             submitButton.disabled = false;
             
-            // التمركز على حقل رقم الطلب
+            const reqIdField = document.getElementById('reqId');
+            if (reqIdField) {
+                reqIdField.focus();
+                reqIdField.select();
+            }
+            return;
+        }
+    } else {
+        // حالة التعديل: التحقق من تكرار الرقم
+        if (!isRequestIdUniqueForEdit(reqId, currentSelectedRequest.firebaseKey)) {
+            showAlert(`❌ رقم الطلب ${reqId} موجود مسبقاً في طلب آخر!`, 'danger');
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+            
             const reqIdField = document.getElementById('reqId');
             if (reqIdField) {
                 reqIdField.focus();
@@ -620,6 +649,9 @@ function editRequest() {
     if (!currentSelectedRequest) return;
 
     isEditMode = true;
+    
+    // حفظ الطلب الأصلي للمقارنة لاحقاً
+    window.originalRequestData = { ...currentSelectedRequest };
 
     const fields = {
         reqId: document.getElementById('reqId'),
