@@ -228,8 +228,29 @@ async function handleFormSubmit(e) {
     submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
     submitButton.disabled = true;
 
+    const reqId = document.getElementById('reqId').value.trim();
+    
+    // التحقق من تكرار رقم الطلب في حالة الإضافة فقط (ليس في وضع التعديل)
+    if (!isEditMode) {
+        // البحث إذا كان رقم الطلب موجود مسبقاً
+        const existingRequest = allRequests.find(req => req.reqId === reqId);
+        if (existingRequest) {
+            showAlert(`❌ رقم الطلب ${reqId} موجود مسبقاً!`, 'danger');
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+            
+            // التمركز على حقل رقم الطلب
+            const reqIdField = document.getElementById('reqId');
+            if (reqIdField) {
+                reqIdField.focus();
+                reqIdField.select();
+            }
+            return;
+        }
+    }
+
     const formData = {
-        reqId: document.getElementById('reqId').value.trim(),
+        reqId: reqId,
         title: document.getElementById('reqTitle').value.trim(),
         details: document.getElementById('reqDetails').value.trim(),
         authority: document.getElementById('reqAuthority').value.trim(),
