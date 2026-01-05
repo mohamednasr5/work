@@ -24,24 +24,31 @@ if (typeof firebase !== 'undefined') {
  * Enhanced Request Manager with improved error handling and validation
  */
 window.RequestManager = {
+    
     /**
      * Add new request to database
+     * @param {Object} data - Request data
+     * @returns {Promise<boolean>} - Success status
      */
     addRequest: async (data) => {
         try {
+            // Validate data
             if (!data.reqId || !data.title) {
                 throw new Error("Missing required fields");
             }
 
             const newRef = window.database.ref('parliament-requests').push();
+            
             await newRef.set({
                 ...data,
                 firebaseKey: newRef.key,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             });
+
             console.log('✅ Request added successfully:', newRef.key);
             return true;
+
         } catch (error) {
             console.error("❌ Error adding request:", error);
             return false;
@@ -50,6 +57,9 @@ window.RequestManager = {
 
     /**
      * Update existing request
+     * @param {string} key - Firebase key
+     * @param {Object} data - Updated data
+     * @returns {Promise<boolean>} - Success status
      */
     updateRequest: async (key, data) => {
         try {
@@ -57,6 +67,7 @@ window.RequestManager = {
                 throw new Error("Invalid firebase key");
             }
 
+            // Validate data
             if (!data.reqId || !data.title) {
                 throw new Error("Missing required fields");
             }
@@ -67,8 +78,10 @@ window.RequestManager = {
             };
 
             await window.database.ref(`parliament-requests/${key}`).update(updateData);
+
             console.log('✅ Request updated successfully:', key);
             return true;
+
         } catch (error) {
             console.error("❌ Error updating request:", error);
             return false;
@@ -77,6 +90,8 @@ window.RequestManager = {
 
     /**
      * Delete request from database
+     * @param {string} key - Firebase key
+     * @returns {Promise<boolean>} - Success status
      */
     deleteRequest: async (key) => {
         try {
@@ -85,8 +100,10 @@ window.RequestManager = {
             }
 
             await window.database.ref(`parliament-requests/${key}`).remove();
+
             console.log('✅ Request deleted successfully:', key);
             return true;
+
         } catch (error) {
             console.error("❌ Error deleting request:", error);
             return false;
@@ -95,6 +112,7 @@ window.RequestManager = {
 
     /**
      * Listen to real-time updates of all requests
+     * @param {Function} callback - Callback function to handle data
      */
     listenToRequests: (callback) => {
         if (!window.database) {
@@ -116,6 +134,7 @@ window.RequestManager = {
 
                 callback(requests);
                 console.log(`✅ Loaded ${requests.length} requests`);
+
             } catch (error) {
                 console.error("❌ Error processing requests:", error);
                 callback([]);
@@ -127,15 +146,19 @@ window.RequestManager = {
 
     /**
      * Get single request by key
+     * @param {string} key - Firebase key
+     * @returns {Promise<Object|null>} - Request data or null
      */
     getRequest: async (key) => {
         try {
             const snapshot = await window.database.ref(`parliament-requests/${key}`).once('value');
             const data = snapshot.val();
+            
             if (data) {
                 return { ...data, firebaseKey: key };
             }
             return null;
+
         } catch (error) {
             console.error("❌ Error fetching request:", error);
             return null;
@@ -144,6 +167,7 @@ window.RequestManager = {
 
     /**
      * Get all requests once (not real-time)
+     * @returns {Promise<Array>} - Array of requests
      */
     getAllRequests: async () => {
         try {
@@ -159,6 +183,7 @@ window.RequestManager = {
             }
 
             return requests;
+
         } catch (error) {
             console.error("❌ Error fetching all requests:", error);
             return [];
@@ -167,25 +192,25 @@ window.RequestManager = {
 
     /**
      * Search requests by criteria
+     * @param {Object} criteria - Search criteria
+     * @returns {Promise<Array>} - Matching requests
      */
     searchRequests: async (criteria) => {
         try {
             const allRequests = await window.RequestManager.getAllRequests();
-
+            
             return allRequests.filter(req => {
                 if (criteria.status && req.status !== criteria.status) return false;
-
                 if (criteria.searchTerm) {
                     const term = criteria.searchTerm.toLowerCase();
                     const text = `${req.reqId} ${req.title} ${req.details} ${req.authority}`.toLowerCase();
                     if (!text.includes(term)) return false;
                 }
-
                 if (criteria.fromDate && new Date(req.submissionDate) < new Date(criteria.fromDate)) return false;
                 if (criteria.toDate && new Date(req.submissionDate) > new Date(criteria.toDate)) return false;
-
                 return true;
             });
+
         } catch (error) {
             console.error("❌ Error searching requests:", error);
             return [];
@@ -194,11 +219,12 @@ window.RequestManager = {
 
     /**
      * Get requests statistics
+     * @returns {Promise<Object>} - Statistics object
      */
     getStatistics: async () => {
         try {
             const requests = await window.RequestManager.getAllRequests();
-
+            
             return {
                 total: requests.length,
                 completed: requests.filter(r => r.status === 'completed').length,
@@ -207,6 +233,7 @@ window.RequestManager = {
                 byAuthority: groupByAuthority(requests),
                 byMonth: groupByMonth(requests)
             };
+
         } catch (error) {
             console.error("❌ Error getting statistics:", error);
             return {};
@@ -215,11 +242,13 @@ window.RequestManager = {
 
     /**
      * Export requests to JSON
+     * @returns {Promise<string>} - JSON string
      */
     exportToJSON: async () => {
         try {
             const requests = await window.RequestManager.getAllRequests();
             return JSON.stringify(requests, null, 2);
+
         } catch (error) {
             console.error("❌ Error exporting to JSON:", error);
             return '';
@@ -256,13 +285,13 @@ function groupByMonth(requests) {
 function getDeadlineStatus(submissionDate) {
     const submissionDateObj = new Date(submissionDate);
     submissionDateObj.setDate(submissionDateObj.getDate() + 90);
-
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-
+    
     const timeDiff = submissionDateObj - today;
     const daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-
+    
     if (daysLeft < 0) return 'overdue';
     if (daysLeft <= 30) return 'urgent';
     if (daysLeft <= 60) return 'warning';
