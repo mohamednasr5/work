@@ -3,857 +3,516 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>منظم صور البطاقات المتقدم</title>
+    <title>ماسح البطاقات الذكي</title>
+    <script async src="https://docs.opencv.org/4.5.4/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
+        :root {
+            --primary: #2563eb;
+            --secondary: #1e40af;
+            --success: #16a34a;
+            --bg: #f3f4f6;
         }
 
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 
-        /* --- تنسيقات الطباعة المعدلة --- */
-        @media print {
-            @page {
-                margin: 0;
-                size: auto;
-            }
-            
-            body, html {
-                background: white;
-                margin: 0;
-                padding: 0;
-                width: 100%;
-                height: 100%;
-            }
-
-            .container, .header, .left-panel, .control-buttons, .settings-box, .btn-main {
-                display: none !important;
-            }
-
-            .main-content {
-                display: block;
-                padding: 0;
-                margin: 0;
-            }
-
-            .right-panel {
-                display: block;
-                width: 100%;
-            }
-
-            .preview-box {
-                background: transparent;
-                border: none;
-                padding: 0;
-                margin: 0;
-                box-shadow: none;
-                overflow: visible;
-            }
-
-            .preview-title {
-                display: none;
-            }
-
-            #preview {
-                background: transparent;
-                padding: 0;
-                margin: 0;
-                width: 100%;
-            }
-
-            /* إجبار الشبكة على المحاذاة لليسار والأعلى */
-            .cards-preview-grid {
-                justify-content: flex-start !important; /* محاذاة لليسار */
-                align-content: flex-start !important;
-                margin: 10px 0 0 10px !important; /* هامش بسيط جداً من الحافة */
-                width: 100% !important;
-            }
-            
-            .preview-card {
-                box-shadow: none !important;
-                border: 1px dashed #ccc; /* إطار خفيف جداً للقص اختياري */
-            }
-        }
-        /* --- نهاية تنسيقات الطباعة --- */
+        body { background: var(--bg); padding: 20px; min-height: 100vh; }
 
         .container {
-            max-width: 1400px;
+            max-width: 1200px;
             margin: 0 auto;
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
             overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         .header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
-            padding: 40px;
+            padding: 20px;
             text-align: center;
         }
 
-        .header h1 {
-            font-size: 32px;
-            margin-bottom: 10px;
-            font-weight: 700;
-        }
-
-        .header p {
-            opacity: 0.95;
-            font-size: 16px;
-        }
-
-        .main-content {
+        .content-area {
             display: grid;
-            grid-template-columns: 1fr 2fr;
-            gap: 30px;
-            padding: 40px;
+            grid-template-columns: 1fr 300px;
+            gap: 20px;
+            padding: 20px;
         }
 
-        .left-panel {
-            background: #f8f9fa;
-            padding: 25px;
-            border-radius: 15px;
-            height: fit-content;
-        }
-
-        .section-title {
-            font-weight: 700;
-            color: #333;
-            margin-bottom: 20px;
-            padding-bottom: 12px;
-            border-bottom: 3px solid #667eea;
-            font-size: 18px;
-        }
-
-        .upload-zone {
-            border: 3px dashed #667eea;
-            border-radius: 12px;
-            padding: 40px;
+        /* --- منطقة الرفع والعرض --- */
+        .upload-section {
+            border: 2px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: 30px;
             text-align: center;
             cursor: pointer;
-            transition: all 0.3s ease;
-            background: #f0f4ff;
-            margin-bottom: 20px;
+            transition: 0.3s;
+            background: #f8fafc;
         }
-
-        .upload-zone:hover {
-            border-color: #764ba2;
-            background: #e8ecff;
-            transform: translateY(-2px);
-        }
-
-        .upload-zone.dragover {
-            border-color: #27ae60;
-            background: #d4edda;
-        }
-
-        .upload-zone p {
-            color: #667eea;
-            font-weight: 700;
-            margin-bottom: 10px;
-            font-size: 16px;
-        }
-
-        .upload-zone small {
-            color: #999;
-            font-size: 13px;
-        }
-
-        #fileInput {
-            display: none;
-        }
-
-        .card-count {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 15px;
-            border-radius: 10px;
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 16px;
-            font-weight: 700;
-        }
-
-        .cards-gallery {
+        .upload-section:hover { border-color: var(--primary); background: #eff6ff; }
+        
+        .gallery-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
             gap: 15px;
-            max-height: 700px;
-            overflow-y: auto;
-            padding: 10px;
+            margin-top: 20px;
         }
 
         .card-item {
-            position: relative;
-            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
             overflow: hidden;
-            border: 2px solid #ddd;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            aspect-ratio: 16 / 10;
             background: white;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            position: relative;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: 0.2s;
         }
-
-        .card-item:hover {
-            border-color: #667eea;
-            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
-            transform: translateY(-3px);
-        }
+        
+        .card-item:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
 
         .card-item img {
             width: 100%;
-            height: 100%;
+            height: 180px;
             object-fit: contain;
-            background: #eee;
-        }
-
-        .card-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            gap: 5px;
-            flex-wrap: wrap;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            padding: 10px;
-        }
-
-        .card-item:hover .card-overlay {
-            opacity: 1;
-        }
-
-        .action-btn {
-            width: 35px;
-            height: 35px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: all 0.2s ease;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-        }
-
-        .btn-crop { background: #3498db; color: white; }
-        .btn-rotate { background: #f1c40f; color: white; }
-        .btn-bg-remove { background: #27ae60; color: white; }
-        .btn-delete { background: #e74c3c; color: white; }
-
-        .action-btn:hover { transform: scale(1.1); filter: brightness(1.1); }
-
-        .right-panel {
-            display: flex;
-            flex-direction: column;
-            gap: 25px;
-        }
-
-        .settings-box {
-            background: #f8f9fa;
-            padding: 25px;
-            border-radius: 15px;
-        }
-
-        .setting-item {
-            margin-bottom: 20px;
-        }
-
-        .setting-item label {
+            background: #333; /* خلفية داكنة لتمييز البطاقة */
             display: block;
-            margin-bottom: 10px;
-            color: #333;
-            font-weight: 700;
-            font-size: 14px;
         }
 
-        .setting-item input,
-        .setting-item select {
+        .card-actions {
+            display: flex;
+            justify-content: space-around;
+            padding: 10px;
+            background: #f1f5f9;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.2rem;
+            padding: 5px;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+        .btn-icon:hover { background: #e2e8f0; }
+
+        /* --- القائمة الجانبية --- */
+        .sidebar {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 10px;
+            height: fit-content;
+        }
+
+        .control-group { margin-bottom: 20px; }
+        .control-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #334155; }
+        .control-group select, .control-group input {
+            width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;
+        }
+
+        .btn-primary {
             width: 100%;
             padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 14px;
-            font-family: inherit;
-            transition: border-color 0.3s ease;
-        }
-
-        .preview-box {
-            background: #f8f9fa;
-            padding: 25px;
-            border-radius: 15px;
-            flex: 1;
-            overflow-y: auto;
-            border: 2px solid #ddd;
-        }
-
-        .preview-title {
-            text-align: center;
-            color: #667eea;
-            font-weight: 700;
-            margin-bottom: 20px;
-            font-size: 16px;
-        }
-
-        #preview {
-            background: white;
-            padding: 15px;
-            border-radius: 10px;
-            min-height: 200px;
-        }
-
-        .cards-preview-grid {
-            display: grid;
-            gap: 15px;
-            width: 100%;
-        }
-
-        .preview-card {
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            overflow: hidden;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-            background: white;
-        }
-
-        .preview-card img {
-            width: 100%;
-            height: 100%;
-            object-fit: fill;
-            display: block;
-        }
-
-        .empty-preview {
-            text-align: center;
-            color: #999;
-            padding: 40px 20px;
-            font-size: 16px;
-        }
-
-        .control-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-        }
-
-        .btn-main {
-            padding: 15px;
+            background: var(--success);
+            color: white;
             border: none;
-            border-radius: 10px;
+            border-radius: 6px;
+            font-weight: bold;
             cursor: pointer;
-            font-weight: 700;
-            font-size: 14px;
-            transition: all 0.3s ease;
-            color: white;
+            margin-bottom: 10px;
+            transition: 0.2s;
         }
+        .btn-primary:hover { filter: brightness(1.1); }
 
-        .btn-print { background: linear-gradient(135deg, #27ae60 0%, #229954 100%); }
-        .btn-download { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
-        .btn-clear { grid-column: 1 / -1; background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
-
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.7);
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.active { display: flex; }
-
-        .modal-content {
-            background-color: white;
+        .status-badge {
+            display: inline-block;
+            padding: 5px 10px;
             border-radius: 15px;
-            width: 90%;
-            max-width: 900px;
-            max-height: 90vh;
-            overflow-y: auto;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            font-size: 0.8rem;
+            margin-bottom: 10px;
+        }
+        .status-loading { background: #fef3c7; color: #d97706; }
+        .status-ready { background: #dcfce7; color: #15803d; }
+
+        /* --- إعدادات الطباعة الخاصة --- */
+        #printableArea {
+            display: none; /* مخفي في العرض العادي */
         }
 
-        .modal-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            padding: 25px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-radius: 15px 15px 0 0;
+        @media print {
+            body * {
+                visibility: hidden; /* إخفاء كل شيء */
+            }
+            
+            #printableArea {
+                display: block !important;
+                visibility: visible !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+            }
+
+            #printableArea * {
+                visibility: visible !important;
+            }
+
+            .print-grid {
+                display: flex;
+                flex-wrap: wrap;
+                align-content: flex-start;
+                padding: 10mm; /* هوامش الورقة */
+                gap: 5mm; /* مسافة بين البطاقات */
+            }
+
+            .print-card {
+                /* إزالة أي حدود أو خلفيات عند الطباعة */
+                box-shadow: none;
+                border: 1px dashed #ccc; /* إطار قص خفيف */
+                break-inside: avoid;
+            }
+            
+            .print-card img {
+                width: 100%;
+                height: 100%;
+                object-fit: fill; /* ملء الإطار بالكامل */
+            }
         }
 
-        .close-btn {
-            background: rgba(255, 255, 255, 0.2);
-            border: none;
-            color: white;
-            font-size: 28px;
-            cursor: pointer;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        @media (max-width: 768px) {
+            .content-area { grid-template-columns: 1fr; }
         }
-
-        .modal-body { padding: 30px; }
-        .cropper-wrapper { max-width: 100%; max-height: 500px; margin-bottom: 25px; overflow: hidden; }
-        .cropper-wrapper img { max-width: 100%; display: block; }
-
-        .modal-buttons {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-top: 25px;
-        }
-
-        .btn-modal { padding: 12px; border: none; border-radius: 8px; cursor: pointer; font-weight: 700; color: white; }
-        .btn-confirm { background: linear-gradient(135deg, #27ae60 0%, #229954 100%); }
-        .btn-cancel { background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%); }
-
-        .bg-controls {
-            margin-bottom: 20px;
-            padding: 20px;
-            background: #f8f9fa;
-            border-radius: 10px;
-            border: 1px solid #ddd;
-        }
-        
-        .range-slider {
-            width: 100%;
-            height: 10px;
-            border-radius: 5px;
-            background: #d3d3d3;
-            outline: none;
-            margin-top: 10px;
-        }
-
-        .preview-compare {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-bottom: 20px;
-        }
-
-        .preview-compare div {
-            flex: 1;
-            text-align: center;
-        }
-
-        .preview-compare img {
-            max-width: 100%;
-            max-height: 300px;
-            border: 1px solid #ddd;
-            background-image: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iI2VlZSI+PHJlY3Qgd2lkdGg1PSI1IiBoZWlnaHQ9IjUiIHg9IjAiIHk9IjAiIC8+PHJlY3Qgd2lkdGg1PSI1IiBoZWlnaHQ9IjUiIHg9IjUiIHk9IjUiIC8+PC9zdmc+");
-        }
-
-        .success-message {
-            background: #d4edda;
-            color: #155724;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            display: none;
-            font-size: 14px;
-            text-align: center;
-            font-weight: 600;
-        }
-        .success-message.show { display: block; animation: slideDown 0.3s ease; }
-        @keyframes slideDown { from { transform: translateY(-20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>🎫 منظم صور البطاقات المتقدم</h1>
-            <p>قص الصور، تدوير، وإزالة الخلفية - طباعة احترافية</p>
-        </div>
 
-        <div class="main-content">
-            <div class="left-panel">
-                <div class="success-message" id="successMsg">✓ تمت العملية بنجاح!</div>
-
-                <div class="section-title">📤 استيراد الصور</div>
-
-                <div class="upload-zone" id="uploadZone">
-                    <p>🖼️ انقر هنا أو اسحب الصور</p>
-                    <small>JPG, PNG, WebP - حد أقصى 5 MB</small>
-                </div>
-
-                <input type="file" id="fileInput" multiple accept="image/*">
-
-                <div class="card-count">
-                    <span id="cardCount">0 بطاقة</span>
-                </div>
-
-                <div class="section-title">📋 البطاقات المرفوعة</div>
-                <div class="cards-gallery" id="cardsGallery"></div>
-
-                <button class="btn-main btn-clear" onclick="clearAllCards()" style="margin-top: 20px;">🗑️ حذف الكل</button>
-            </div>
-
-            <div class="right-panel">
-                <div class="settings-box">
-                    <div class="section-title">⚙️ إعدادات الطباعة</div>
-                    
-                    <div class="setting-item">
-                        <label for="cardsPerRow">عدد البطاقات في الصف:</label>
-                        <select id="cardsPerRow" onchange="updatePreview()">
-                            <option value="1">1 بطاقة</option>
-                            <option value="2" selected>2 بطاقة</option>
-                            <option value="3">3 بطاقات</option>
-                            <option value="4">4 بطاقات</option>
-                        </select>
-                    </div>
-
-                    <div class="setting-item">
-                        <label for="cardWidth">عرض البطاقة (px):</label>
-                        <input type="number" id="cardWidth" value="300" min="100" max="600" onchange="updatePreview()">
-                    </div>
-
-                    <div class="setting-item">
-                        <label for="cardHeight">ارتفاع البطاقة (px):</label>
-                        <input type="number" id="cardHeight" value="200" min="100" max="600" onchange="updatePreview()">
-                    </div>
-
-                    <div class="setting-item">
-                        <label for="cardGap">المسافة بين البطاقات (px):</label>
-                        <input type="number" id="cardGap" value="10" min="0" max="50" onchange="updatePreview()">
-                    </div>
-                </div>
-
-                <div class="preview-box">
-                    <div class="preview-title">👁️ معاينة الطباعة (تظهر البطاقات فقط)</div>
-                    <div id="preview">
-                        <div class="empty-preview">📷 استيراد الصور لمعاينتها هنا</div>
-                    </div>
-                </div>
-
-                <div class="control-buttons">
-                    <button class="btn-main btn-print" onclick="printCards()">🖨️ طباعة</button>
-                    <button class="btn-main btn-download" onclick="downloadAsImage()">💾 حفظ كصورة</button>
-                </div>
-            </div>
-        </div>
+<div class="container">
+    <div class="header">
+        <h1>📸 ماسح البطاقات الذكي</h1>
+        <p>استخراج البطاقة من الخلفية تلقائياً + طباعة دقيقة</p>
     </div>
 
-    <div id="cropperModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>✂️ قص الصورة</h2>
-                <button class="close-btn" onclick="closeCropperModal()">&times;</button>
+    <div class="content-area">
+        <main>
+            <div id="cvStatus" class="status-badge status-loading">⏳ جاري تحميل نظام المعالجة الذكي...</div>
+            
+            <input type="file" id="fileInput" multiple accept="image/*" style="display: none">
+            <div class="upload-section" onclick="document.getElementById('fileInput').click()">
+                <h2>📤 اضغط هنا لرفع صور البطاقات</h2>
+                <p>يفضل تصوير البطاقة على خلفية بلون مختلف</p>
             </div>
-            <div class="modal-body">
-                <div class="cropper-wrapper">
-                    <img id="cropperImage" src="" alt="Image to crop">
+
+            <div class="gallery-grid" id="gallery">
                 </div>
-                <div class="modal-buttons">
-                    <button class="btn-modal btn-confirm" onclick="confirmCrop()">✓ تأكيد القص</button>
-                    <button class="btn-modal btn-cancel" onclick="closeCropperModal()">✕ إلغاء</button>
-                </div>
+        </main>
+
+        <aside class="sidebar">
+            <div class="control-group">
+                <label>🖨️ إعدادات الطباعة</label>
+                <select id="printSize">
+                    <option value="standard">حجم البطاقة القياسي (8.6 × 5.4 سم)</option>
+                    <option value="large">حجم كبير (9 × 6 سم)</option>
+                </select>
             </div>
-        </div>
+
+            <div class="control-group">
+                <label>تخطيط الصفحة</label>
+                <select id="cardsPerRow">
+                    <option value="2">2 بطاقة في الصف</option>
+                    <option value="3">3 بطاقات في الصف</option>
+                </select>
+            </div>
+
+            <button class="btn-primary" onclick="prepareAndPrint()">🖨️ طباعة الورقة</button>
+            <button class="btn-primary" style="background: #ef4444;" onclick="clearAll()">🗑️ حذف الكل</button>
+        </aside>
     </div>
+</div>
 
-    <div id="bgRemovalModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h2>🎨 إزالة الخلفية المتقدمة</h2>
-                <button class="close-btn" onclick="closeBgRemovalModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="bg-controls">
-                    <label>درجة الحساسية للون الأبيض: <span id="toleranceValue">220</span></label>
-                    <input type="range" min="150" max="255" value="220" class="range-slider" id="bgTolerance" oninput="updateBgPreview()">
-                    <p style="font-size: 12px; color: #666; margin-top: 5px;">اسحب لليسار لتقليل الحذف، ولليمين لزيادة الحذف.</p>
-                </div>
+<div id="printableArea"></div>
 
-                <div class="preview-compare">
-                    <div>
-                        <p>الأصلية</p>
-                        <img id="bgOriginalImg" src="">
-                    </div>
-                    <div>
-                        <p>بعد الحذف</p>
-                        <img id="bgPreviewImg" src="">
-                    </div>
-                </div>
+<script>
+    let cardsData = []; // Store original and processed images
+    let cvReady = false;
 
-                <div class="modal-buttons">
-                    <button class="btn-modal btn-confirm" onclick="applyBackgroundRemoval()">✓ تطبيق الإزالة</button>
-                    <button class="btn-modal btn-cancel" onclick="closeBgRemovalModal()">✕ إلغاء</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    // 1. تهيئة مكتبة OpenCV
+    function onOpenCvReady() {
+        cvReady = true;
+        const status = document.getElementById('cvStatus');
+        status.textContent = "✓ النظام جاهز للمعالجة";
+        status.className = "status-badge status-ready";
+    }
 
-    <script>
-        let cards = [];
-        let cropper = null;
-        let currentEditIndex = -1;
-        let tempProcessedImage = null; // لتخزين الصورة المعالجة مؤقتاً
+    // 2. التعامل مع رفع الملفات
+    document.getElementById('fileInput').addEventListener('change', async (e) => {
+        if (!cvReady) { alert("الرجاء الانتظار حتى تحميل النظام..."); return; }
+        
+        const files = Array.from(e.target.files);
+        for (const file of files) {
+            await processUploadedFile(file);
+        }
+        e.target.value = ''; // Reset input
+    });
 
-        const fileInput = document.getElementById('fileInput');
-        const uploadZone = document.getElementById('uploadZone');
-        const cardsGallery = document.getElementById('cardsGallery');
-        const cardCount = document.getElementById('cardCount');
-        const preview = document.getElementById('preview');
-        const successMsg = document.getElementById('successMsg');
-        const cropperModal = document.getElementById('cropperModal');
-        const bgRemovalModal = document.getElementById('bgRemovalModal');
+    async function processUploadedFile(file) {
+        const imgUrl = URL.createObjectURL(file);
+        const img = new Image();
+        img.src = imgUrl;
+        
+        await new Promise(r => img.onload = r);
 
-        // Upload Logic
-        uploadZone.addEventListener('click', () => fileInput.click());
-        uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
-        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
-        uploadZone.addEventListener('drop', (e) => { e.preventDefault(); uploadZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
-        fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
+        // إضافة البطاقة مبدئياً بالصورة الأصلية
+        const cardObj = {
+            id: Date.now() + Math.random(),
+            original: img,
+            processed: imgUrl, // سيتم تحديثها بعد المعالجة
+            isProcessed: false
+        };
+        cardsData.push(cardObj);
+        renderGallery();
 
-        function handleFiles(files) {
-            Array.from(files).forEach(file => {
-                if (file.type.startsWith('image/')) {
-                    const reader = new FileReader();
-                    reader.onload = (event) => {
-                        cards.push({ original: event.target.result, edited: event.target.result });
-                        renderGallery();
-                        updatePreview();
-                        showSuccess('✓ تم إضافة الصورة');
-                    };
-                    reader.readAsDataURL(file);
-                }
-            });
+        // محاولة القص التلقائي
+        try {
+            const processedUrl = autoCropCard(img);
+            // تحديث البطاقة بالصورة المقصوصة
+            const index = cardsData.findIndex(c => c.id === cardObj.id);
+            if (index !== -1) {
+                cardsData[index].processed = processedUrl;
+                cardsData[index].isProcessed = true;
+                renderGallery(); // إعادة الرسم بالصورة الجديدة
+            }
+        } catch (err) {
+            console.error("فشل القص التلقائي لهذه الصورة، سيتم استخدام الأصلية", err);
+        }
+    }
+
+    // 3. خوارزمية اكتشاف البطاقة وقصها (OpenCV Logic)
+    function autoCropCard(imgElement) {
+        // إنشاء Canvas مؤقت للمعالجة
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // تقليص الحجم لتسريع المعالجة (Max width 1000px)
+        const scale = Math.min(1000 / imgElement.width, 1);
+        canvas.width = imgElement.width * scale;
+        canvas.height = imgElement.height * scale;
+        ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
+
+        // قراءة الصورة بواسطة OpenCV
+        let src = cv.imread(canvas);
+        let dst = new cv.Mat();
+        let gray = new cv.Mat();
+        let blur = new cv.Mat();
+        let edges = new cv.Mat();
+
+        // 1. تحويل للرمادي
+        cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
+        
+        // 2. تمويه خفيف لإزالة الضوضاء
+        cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
+        
+        // 3. كشف الحواف (Canny)
+        // الأرقام هنا حساسة للإضاءة، 75 و 200 تعمل جيداً مع البطاقات
+        cv.Canny(blur, edges, 75, 200);
+
+        // 4. إيجاد الكونتور (الأشكال المغلقة)
+        let contours = new cv.MatVector();
+        let hierarchy = new cv.Mat();
+        cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
+
+        // 5. البحث عن أكبر مستطيل
+        let maxArea = 0;
+        let maxContourIndex = -1;
+        let approx = new cv.Mat();
+        let bestApprox = null;
+
+        for (let i = 0; i < contours.size(); ++i) {
+            let cnt = contours.get(i);
+            let area = cv.contourArea(cnt);
+            
+            // تجاهل المناطق الصغيرة جداً
+            if (area < 5000) continue;
+
+            // تقريب الشكل إلى مضلع
+            let peri = cv.arcLength(cnt, true);
+            cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
+
+            // إذا كان المضلع له 4 زوايا وهو الأكبر حتى الآن
+            if (approx.rows === 4 && area > maxArea) {
+                maxArea = area;
+                maxContourIndex = i;
+                // نسخ النقاط
+                bestApprox = approx.clone(); 
+            }
         }
 
-        function renderGallery() {
-            cardsGallery.innerHTML = '';
-            cards.forEach((card, index) => {
-                const item = document.createElement('div');
-                item.className = 'card-item';
-                item.innerHTML = `
-                    <img src="${card.edited}" alt="Card ${index + 1}">
-                    <div class="card-overlay">
-                        <button class="action-btn btn-crop" onclick="openCropperModal(${index})" title="قص">✂️</button>
-                        <button class="action-btn btn-rotate" onclick="rotateCard(${index})" title="تدوير">🔄</button>
-                        <button class="action-btn btn-bg-remove" onclick="openBgRemovalModal(${index})" title="إزالة خلفية">🎨</button>
-                        <button class="action-btn btn-delete" onclick="deleteCard(${index})" title="حذف">✕</button>
-                    </div>
-                `;
-                cardsGallery.appendChild(item);
-            });
-            cardCount.textContent = `${cards.length} بطاقة`;
+        // إذا لم نجد مستطيل واضح، نرجع الصورة الأصلية
+        if (maxContourIndex === -1 || !bestApprox) {
+            src.delete(); dst.delete(); gray.delete(); blur.delete(); edges.delete(); contours.delete(); hierarchy.delete(); approx.delete();
+            throw new Error("No card found");
         }
 
-        /* --- Rotate Function (New) --- */
-        function rotateCard(index) {
+        // 6. تحويل المنظور (Perspective Warp)
+        // ترتيب النقاط الأربعة (أعلى-يسار، أعلى-يمين، أسفل-يمين، أسفل-يسار)
+        let pts = [];
+        for(let i=0; i<4; i++) {
+            pts.push({
+                x: bestApprox.data32S[i*2],
+                y: bestApprox.data32S[i*2+1]
+            });
+        }
+        const sortedPts = sortPoints(pts);
+
+        // تحديد أبعاد البطاقة النهائية (نسبة البطاقة القياسية 8.56 : 5.4)
+        // نستخدم عرض تقريبي عالي الجودة
+        const width = 1000; 
+        const height = 1000 * (5.4 / 8.56); // الحفاظ على نسبة الأبعاد
+
+        let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+            sortedPts[0].x, sortedPts[0].y,
+            sortedPts[1].x, sortedPts[1].y,
+            sortedPts[2].x, sortedPts[2].y,
+            sortedPts[3].x, sortedPts[3].y
+        ]);
+
+        let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
+            0, 0,
+            width, 0,
+            width, height,
+            0, height
+        ]);
+
+        let M = cv.getPerspectiveTransform(srcTri, dstTri);
+        let warped = new cv.Mat();
+        
+        // تطبيق القص على الصورة الأصلية (src)
+        cv.warpPerspective(src, warped, M, new cv.Size(width, height), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
+
+        // عرض النتيجة
+        cv.imshow(canvas, warped);
+        const resultUrl = canvas.toDataURL('image/jpeg', 0.9);
+
+        // تنظيف الذاكرة
+        src.delete(); dst.delete(); gray.delete(); blur.delete(); edges.delete(); 
+        contours.delete(); hierarchy.delete(); approx.delete(); bestApprox.delete();
+        srcTri.delete(); dstTri.delete(); M.delete(); warped.delete();
+
+        return resultUrl;
+    }
+
+    // دالة مساعدة لترتيب النقاط الأربعة
+    function sortPoints(pts) {
+        // ترتيب حسب قيمة Y لإيجاد الأعلى والأسفل
+        pts.sort((a,b) => a.y - b.y);
+        
+        // أول نقطتين هما الأعلى، آخر نقطتين هما الأسفل
+        const top = pts.slice(0, 2).sort((a,b) => a.x - b.x); // ترتيب الأعلى حسب X (يسار ويمين)
+        const bottom = pts.slice(2, 4).sort((a,b) => a.x - b.x); // ترتيب الأسفل حسب X
+        
+        // الترتيب النهائي: TL, TR, BR, BL
+        return [top[0], top[1], bottom[1], bottom[0]];
+    }
+
+    // 4. عرض المعرض
+    function renderGallery() {
+        const gallery = document.getElementById('gallery');
+        gallery.innerHTML = '';
+        cardsData.forEach(card => {
+            const div = document.createElement('div');
+            div.className = 'card-item';
+            div.innerHTML = `
+                <img src="${card.processed}" alt="Card">
+                <div class="card-actions">
+                    <button class="btn-icon" onclick="rotateCard(${card.id})" title="تدوير">🔄</button>
+                    <button class="btn-icon" onclick="revertCard(${card.id})" title="إلغاء القص">↩️</button>
+                    <button class="btn-icon" style="color:red" onclick="removeCard(${card.id})" title="حذف">✕</button>
+                </div>
+            `;
+            gallery.appendChild(div);
+        });
+    }
+
+    // 5. وظائف مساعدة
+    function removeCard(id) {
+        cardsData = cardsData.filter(c => c.id !== id);
+        renderGallery();
+    }
+
+    function revertCard(id) {
+        const card = cardsData.find(c => c.id === id);
+        if(card) {
+            // إعادة الصورة الأصلية للـ canvas وتحويلها لـ url
+            const canvas = document.createElement('canvas');
+            canvas.width = card.original.width;
+            canvas.height = card.original.height;
+            canvas.getContext('2d').drawImage(card.original, 0, 0);
+            card.processed = canvas.toDataURL();
+            renderGallery();
+        }
+    }
+
+    function rotateCard(id) {
+        const card = cardsData.find(c => c.id === id);
+        if(card) {
             const img = new Image();
             img.onload = () => {
                 const canvas = document.createElement('canvas');
-                // تبديل الأبعاد
                 canvas.width = img.height;
                 canvas.height = img.width;
                 const ctx = canvas.getContext('2d');
-                
-                // التدوير حول المركز
                 ctx.translate(canvas.width/2, canvas.height/2);
                 ctx.rotate(90 * Math.PI / 180);
                 ctx.drawImage(img, -img.width/2, -img.height/2);
-                
-                cards[index].edited = canvas.toDataURL();
+                card.processed = canvas.toDataURL();
                 renderGallery();
-                updatePreview();
             };
-            img.src = cards[index].edited;
+            img.src = card.processed;
         }
+    }
 
-        /* --- Cropper Functions --- */
-        function openCropperModal(index) {
-            currentEditIndex = index;
-            const cropperImage = document.getElementById('cropperImage');
-            cropperImage.src = cards[index].edited;
-            cropperModal.classList.add('active');
-
-            setTimeout(() => {
-                if (cropper) cropper.destroy();
-                cropper = new Cropper(cropperImage, {
-                    autoCropArea: 0.9,
-                    viewMode: 1,
-                    responsive: true
-                });
-            }, 100);
-        }
-
-        function confirmCrop() {
-            if (cropper && currentEditIndex >= 0) {
-                cards[currentEditIndex].edited = cropper.getCroppedCanvas().toDataURL();
-                renderGallery();
-                updatePreview();
-                closeCropperModal();
-                showSuccess('✓ تم القص');
-            }
-        }
-
-        function closeCropperModal() {
-            cropperModal.classList.remove('active');
-            if (cropper) { cropper.destroy(); cropper = null; }
-        }
-
-        /* --- Background Removal Functions (Enhanced) --- */
-        function openBgRemovalModal(index) {
-            currentEditIndex = index;
-            document.getElementById('bgOriginalImg').src = cards[index].edited;
-            document.getElementById('bgPreviewImg').src = cards[index].edited; // مبدئيا نفس الصورة
-            document.getElementById('bgTolerance').value = 220;
-            document.getElementById('toleranceValue').textContent = 220;
-            bgRemovalModal.classList.add('active');
-            // عمل تحديث أولي
-            updateBgPreview();
-        }
-
-        function updateBgPreview() {
-            const tolerance = parseInt(document.getElementById('bgTolerance').value);
-            document.getElementById('toleranceValue').textContent = tolerance;
-            
-            if (currentEditIndex < 0) return;
-
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-
-                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                const data = imageData.data;
-
-                for (let i = 0; i < data.length; i += 4) {
-                    const r = data[i];
-                    const g = data[i + 1];
-                    const b = data[i + 2];
-                    // حساب السطوع
-                    const brightness = (r + g + b) / 3;
-
-                    if (brightness > tolerance) {
-                        data[i + 3] = 0; // شفاف
-                    }
-                }
-
-                ctx.putImageData(imageData, 0, 0);
-                tempProcessedImage = canvas.toDataURL('image/png');
-                document.getElementById('bgPreviewImg').src = tempProcessedImage;
-            };
-            img.crossOrigin = 'anonymous';
-            img.src = cards[currentEditIndex].edited; // نستخدم النسخة المعدلة الحالية كأصل
-        }
-
-        function applyBackgroundRemoval() {
-            if (tempProcessedImage && currentEditIndex >= 0) {
-                cards[currentEditIndex].edited = tempProcessedImage;
-                renderGallery();
-                updatePreview();
-                closeBgRemovalModal();
-                showSuccess('✓ تمت إزالة الخلفية');
-            }
-        }
-
-        function closeBgRemovalModal() {
-            bgRemovalModal.classList.remove('active');
-            tempProcessedImage = null;
-        }
-
-        /* --- General Utilities --- */
-        function deleteCard(index) {
-            cards.splice(index, 1);
+    function clearAll() {
+        if(confirm("هل أنت متأكد من حذف الكل؟")) {
+            cardsData = [];
             renderGallery();
-            updatePreview();
         }
+    }
 
-        function clearAllCards() {
-            if (confirm('حذف الكل؟')) {
-                cards = [];
-                fileInput.value = '';
-                renderGallery();
-                updatePreview();
-            }
-        }
+    // 6. وظيفة الطباعة (المعدلة جذرياً)
+    function prepareAndPrint() {
+        if (cardsData.length === 0) { alert("لا توجد بطاقات للطباعة"); return; }
 
-        function updatePreview() {
-            if (cards.length === 0) {
-                preview.innerHTML = '<div class="empty-preview">📷 استيراد الصور لمعاينتها هنا</div>';
-                return;
-            }
-
-            const cardsPerRow = parseInt(document.getElementById('cardsPerRow').value);
-            const cardWidth = parseInt(document.getElementById('cardWidth').value);
-            const cardHeight = parseInt(document.getElementById('cardHeight').value);
-            const cardGap = parseInt(document.getElementById('cardGap').value);
-
-            // نستخدم inline style للعرض العادي، لكن @media print سيفرض styles خاصة
-            let html = `<div class="cards-preview-grid" style="grid-template-columns: repeat(${cardsPerRow}, ${cardWidth}px); gap: ${cardGap}px; justify-content: center;">`;
-            
-            cards.forEach((card, index) => {
-                html += `
-                    <div class="preview-card" style="width: ${cardWidth}px; height: ${cardHeight}px;">
-                        <img src="${card.edited}" alt="Card ${index + 1}">
-                    </div>
-                `;
-            });
-
-            html += '</div>';
-            preview.innerHTML = html;
-        }
-
-        function showSuccess(message) {
-            successMsg.textContent = message;
-            successMsg.classList.add('show');
-            setTimeout(() => successMsg.classList.remove('show'), 3000);
-        }
-
-        function printCards() {
-            if (cards.length === 0) return alert('لا توجد بطاقات للطباعة');
-            window.print();
-        }
-
-        function downloadAsImage() {
-            if (cards.length === 0) return alert('لا توجد بطاقات');
-            const element = document.getElementById('preview');
-            html2canvas(element, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => {
-                const link = document.createElement('a');
-                link.href = canvas.toDataURL('image/png');
-                link.download = `cards_${Date.now()}.png`;
-                link.click();
-            });
-        }
+        const printableArea = document.getElementById('printableArea');
+        const sizeMode = document.getElementById('printSize').value;
+        const perRow = document.getElementById('cardsPerRow').value;
         
-        // Modal Click Outside
-        window.onclick = (e) => {
-            if (e.target == cropperModal) closeCropperModal();
-            if (e.target == bgRemovalModal) closeBgRemovalModal();
-        };
+        // تحديد الأبعاد بناء على الاختيار (بالمليمتر لضمان الدقة في الطباعة)
+        let widthCss = sizeMode === 'standard' ? '86mm' : '90mm';
+        let heightCss = sizeMode === 'standard' ? '54mm' : '60mm';
 
-        updatePreview();
-    </script>
+        let html = `<div class="print-grid" style="display: grid; grid-template-columns: repeat(${perRow}, ${widthCss}); gap: 5mm;">`;
+        
+        cardsData.forEach(card => {
+            html += `
+                <div class="print-card" style="width: ${widthCss}; height: ${heightCss}; overflow: hidden;">
+                    <img src="${card.processed}" style="width: 100%; height: 100%;">
+                </div>
+            `;
+        });
+        html += `</div>`;
+
+        printableArea.innerHTML = html;
+
+        // تنفيذ الطباعة
+        window.print();
+        
+        // تنظيف بعد الطباعة (اختياري)
+        // setTimeout(() => printableArea.innerHTML = '', 1000);
+    }
+</script>
+
 </body>
 </html>
