@@ -84,7 +84,7 @@ function switchTab(tabName) {
     const activeTab = document.getElementById(tabName);
     if (activeTab) activeTab.classList.add('active');
 
-    const activeNav = event.currentTarget;
+    const activeNav = event?.currentTarget;
     if (activeNav) activeNav.classList.add('active');
 
     // Scroll to top on mobile
@@ -390,7 +390,7 @@ function renderTable(requests) {
 }
 
 /**
- * Search requests
+ * Enhanced Search - يبحث في كل محتوى الطلب
  */
 function searchRequests(searchTerm) {
     if (!searchTerm.trim()) {
@@ -398,16 +398,61 @@ function searchRequests(searchTerm) {
         return;
     }
 
+    const term = searchTerm.toLowerCase();
+
     const filtered = allRequests.filter(req => {
-        const text = `${req.reqId} ${req.title} ${req.details} ${req.authority}`.toLowerCase();
-        return text.includes(searchTerm.toLowerCase());
+        // البحث في رقم الطلب
+        if (req.reqId && req.reqId.toLowerCase().includes(term)) return true;
+
+        // البحث في العنوان
+        if (req.title && req.title.toLowerCase().includes(term)) return true;
+
+        // البحث في الجهة المعنية
+        if (req.authority && req.authority.toLowerCase().includes(term)) return true;
+
+        // البحث في التفاصيل
+        if (req.details && req.details.toLowerCase().includes(term)) return true;
+
+        // البحث في تاريخ التقديم
+        if (req.submissionDate) {
+            const formattedDate = formatDate(req.submissionDate);
+            if (formattedDate.toLowerCase().includes(term)) return true;
+        }
+
+        // البحث في الحالة
+        const statusText = getStatusText(req.status).toLowerCase();
+        if (statusText.includes(term)) return true;
+
+        // البحث في الموعد النهائي
+        const deadlineText = getDeadlineText(req.submissionDate).toLowerCase();
+        if (deadlineText.includes(term)) return true;
+
+        // البحث في المستندات
+        if (req.hasDocuments && req.documents && Array.isArray(req.documents)) {
+            for (const doc of req.documents) {
+                // البحث في نوع المستند
+                const docTypeName = getDocumentTypeName(doc.type).toLowerCase();
+                if (docTypeName.includes(term)) return true;
+
+                // البحث في وصف المستند
+                if (doc.description && doc.description.toLowerCase().includes(term)) return true;
+
+                // البحث في تاريخ المستند
+                if (doc.date) {
+                    const docDate = formatDate(doc.date).toLowerCase();
+                    if (docDate.includes(term)) return true;
+                }
+            }
+        }
+
+        return false;
     });
 
     renderTable(filtered);
 }
 
 /**
- * Update alerts section
+ * Update alerts section with clickable alerts
  */
 function updateAlerts(requests) {
     const alertsContent = document.getElementById('alertsContent');
@@ -432,15 +477,22 @@ function updateAlerts(requests) {
             : `الطلب رقم ${req.reqId} يقترب من الموعد النهائي`;
 
         return `
-            <div class="alert-box alert-${type}">
+            <div class="alert-box alert-${type}" onclick="showRequestDetailsFromAlert('${req.firebaseKey}')" style="cursor: pointer;">
                 <div style="display: flex; align-items: center; gap: 10px;">
                     <i class="fas ${icon}"></i>
                     <span>${message}</span>
                 </div>
-                <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+                <button class="alert-close" onclick="event.stopPropagation(); this.parentElement.remove()">×</button>
             </div>
         `;
     }).join('');
+}
+
+/**
+ * Show request details from alert click
+ */
+function showRequestDetailsFromAlert(firebaseKey) {
+    showRequestDetails(firebaseKey);
 }
 
 /**
@@ -570,7 +622,6 @@ function printRequest() {
     if (!currentSelectedRequest) return;
 
     const printWindow = window.open('', '_blank');
-    const isDark = document.body.getAttribute('data-theme') === 'dark';
 
     const printHTML = `
         <!DOCTYPE html>
@@ -663,6 +714,10 @@ function printRequest() {
             <div style="margin-top: 40px; text-align: center; color: #95a5a6; font-size: 12px;">
                 تم الطباعة في: ${new Date().toLocaleString('ar-EG')}
             </div>
+
+            <div style="margin-top: 20px; text-align: center; padding: 15px; border-top: 2px solid #eee;">
+                <strong>برمجة وتطوير: مهندس محمد حماد</strong>
+            </div>
         </body>
         </html>
     `;
@@ -699,6 +754,13 @@ function exportRequest() {
  */
 function showAlert(message, type = 'info') {
     const alertsContainer = document.getElementById('alertsContent');
+
+    // إزالة رسالة "لا توجد تنبيهات" إذا كانت موجودة
+    const noAlertsMsg = alertsContainer.querySelector('.no-alerts');
+    if (noAlertsMsg) {
+        noAlertsMsg.remove();
+    }
+
     const alertHTML = `
         <div class="alert-box alert-${type}">
             <span><i class="fas fa-info-circle"></i> ${message}</span>
@@ -711,8 +773,10 @@ function showAlert(message, type = 'info') {
     alertsContainer.insertBefore(tempDiv.firstElementChild, alertsContainer.firstChild);
 
     setTimeout(() => {
-        const alert = alertsContainer.querySelector('.alert-box');
-        if (alert) alert.remove();
+        const alert = alertsContainer.querySelector('.alert-box.alert-' + type);
+        if (alert && alert.textContent.includes(message.substring(0, 20))) {
+            alert.remove();
+        }
     }, 5000);
 }
 
