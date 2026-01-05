@@ -3,516 +3,722 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ماسح البطاقات الذكي</title>
+    <title>ستوديو البطاقات الاحترافي</title>
     <script async src="https://docs.opencv.org/4.5.4/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    
     <style>
         :root {
             --primary: #2563eb;
             --secondary: #1e40af;
-            --success: #16a34a;
-            --bg: #f3f4f6;
+            --accent: #f59e0b;
+            --bg: #f8fafc;
+            --text: #0f172a;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 
-        body { background: var(--bg); padding: 20px; min-height: 100vh; }
+        body { background: var(--bg); color: var(--text); min-height: 100vh; display: flex; flex-direction: column; }
 
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
+            flex: 1;
+            max-width: 1400px;
+            margin: 20px auto;
             background: white;
-            border-radius: 15px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            overflow: hidden;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
 
+        /* Header */
         .header {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
-            padding: 20px;
+            padding: 25px;
             text-align: center;
         }
+        .header h1 { font-size: 1.8rem; margin-bottom: 5px; }
 
-        .content-area {
+        /* Layout */
+        .main-layout {
             display: grid;
-            grid-template-columns: 1fr 300px;
-            gap: 20px;
-            padding: 20px;
+            grid-template-columns: 1fr 350px;
+            gap: 0;
+            flex: 1;
         }
 
-        /* --- منطقة الرفع والعرض --- */
-        .upload-section {
-            border: 2px dashed #cbd5e1;
-            border-radius: 10px;
+        /* Upload & Gallery Area */
+        .workspace {
             padding: 30px;
+            background: #fff;
+            overflow-y: auto;
+        }
+
+        .upload-box {
+            border: 2px dashed #cbd5e1;
+            border-radius: 12px;
+            padding: 40px;
             text-align: center;
             cursor: pointer;
             transition: 0.3s;
-            background: #f8fafc;
+            background: #f1f5f9;
+            margin-bottom: 30px;
         }
-        .upload-section:hover { border-color: var(--primary); background: #eff6ff; }
-        
-        .gallery-grid {
+        .upload-box:hover { border-color: var(--primary); background: #eff6ff; }
+        .upload-box h3 { color: var(--secondary); margin-bottom: 10px; }
+
+        .gallery {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 15px;
-            margin-top: 20px;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 20px;
         }
 
         .card-item {
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            overflow: hidden;
             background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: 0.2s;
             position: relative;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            transition: 0.2s;
         }
-        
-        .card-item:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .card-item:hover { transform: translateY(-4px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
 
-        .card-item img {
-            width: 100%;
-            height: 180px;
-            object-fit: contain;
-            background: #333; /* خلفية داكنة لتمييز البطاقة */
-            display: block;
-        }
-
-        .card-actions {
+        .card-preview {
+            height: 160px;
+            background: #334155;
             display: flex;
-            justify-content: space-around;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
             padding: 10px;
-            background: #f1f5f9;
+        }
+        .card-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
 
-        .btn-icon {
-            background: none;
+        .card-tools {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr 1fr;
+            border-top: 1px solid #e2e8f0;
+        }
+        .tool-btn {
+            background: #f8fafc;
             border: none;
+            border-right: 1px solid #e2e8f0;
+            padding: 10px;
             cursor: pointer;
-            font-size: 1.2rem;
-            padding: 5px;
-            border-radius: 4px;
+            font-size: 1.1rem;
             transition: 0.2s;
         }
-        .btn-icon:hover { background: #e2e8f0; }
+        .tool-btn:last-child { border-right: none; }
+        .tool-btn:hover { background: #e2e8f0; }
+        .btn-delete:hover { background: #fee2e2; color: #dc2626; }
+        .btn-edit:hover { background: #dbeafe; color: var(--primary); }
 
-        /* --- القائمة الجانبية --- */
+        /* Sidebar */
         .sidebar {
             background: #f8fafc;
+            border-right: 1px solid #e2e8f0;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background: white;
             padding: 20px;
-            border-radius: 10px;
-            height: fit-content;
+            border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
 
-        .control-group { margin-bottom: 20px; }
-        .control-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #334155; }
-        .control-group select, .control-group input {
-            width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px;
+        .panel h3 { font-size: 1rem; margin-bottom: 15px; color: var(--secondary); display: flex; align-items: center; gap: 8px; }
+
+        .control-row { margin-bottom: 15px; }
+        .control-row label { display: block; font-size: 0.9rem; margin-bottom: 8px; font-weight: 600; color: #475569; }
+        select, input[type="range"] {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            outline: none;
         }
 
-        .btn-primary {
+        .btn-action {
             width: 100%;
             padding: 12px;
-            background: var(--success);
-            color: white;
             border: none;
-            border-radius: 6px;
+            border-radius: 8px;
             font-weight: bold;
+            color: white;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
             margin-bottom: 10px;
             transition: 0.2s;
         }
-        .btn-primary:hover { filter: brightness(1.1); }
+        .btn-print { background: var(--success, #16a34a); }
+        .btn-img { background: var(--primary); }
+        .btn-pdf { background: #ea580c; }
+        .btn-action:hover { filter: brightness(1.1); }
 
-        .status-badge {
-            display: inline-block;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 0.8rem;
-            margin-bottom: 10px;
+        /* Footer */
+        .footer {
+            background: #1e293b;
+            color: #94a3b8;
+            padding: 15px;
+            text-align: center;
+            font-size: 0.9rem;
         }
-        .status-loading { background: #fef3c7; color: #d97706; }
-        .status-ready { background: #dcfce7; color: #15803d; }
+        .footer a { color: #60a5fa; text-decoration: none; }
+        .heart-beat { color: #ef4444; display: inline-block; animation: beat 1s infinite; }
+        @keyframes beat { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.2); } }
 
-        /* --- إعدادات الطباعة الخاصة --- */
-        #printableArea {
-            display: none; /* مخفي في العرض العادي */
+        /* --- Modal Editor (The Magic Part) --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85); z-index: 1000;
+            display: none; justify-content: center; align-items: center;
         }
-
+        .modal-content {
+            background: white; padding: 20px; border-radius: 12px;
+            width: 90%; max-width: 800px; height: 90vh;
+            display: flex; flex-direction: column;
+        }
+        .editor-canvas-container {
+            flex: 1; position: relative; background: #333;
+            overflow: hidden; display: flex; justify-content: center; align-items: center;
+            margin-bottom: 15px; border-radius: 8px;
+        }
+        .editor-canvas-container canvas { max-width: 100%; max-height: 100%; }
+        
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; }
+        
+        /* Print Styles */
+        #printableArea { position: absolute; top: -9999px; left: -9999px; }
         @media print {
-            body * {
-                visibility: hidden; /* إخفاء كل شيء */
-            }
-            
-            #printableArea {
-                display: block !important;
-                visibility: visible !important;
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-            }
-
-            #printableArea * {
-                visibility: visible !important;
-            }
-
-            .print-grid {
-                display: flex;
-                flex-wrap: wrap;
-                align-content: flex-start;
-                padding: 10mm; /* هوامش الورقة */
-                gap: 5mm; /* مسافة بين البطاقات */
-            }
-
-            .print-card {
-                /* إزالة أي حدود أو خلفيات عند الطباعة */
-                box-shadow: none;
-                border: 1px dashed #ccc; /* إطار قص خفيف */
-                break-inside: avoid;
-            }
-            
-            .print-card img {
-                width: 100%;
-                height: 100%;
-                object-fit: fill; /* ملء الإطار بالكامل */
-            }
+            body * { visibility: hidden; }
+            #printableArea, #printableArea * { visibility: visible; }
+            #printableArea { position: absolute; left: 0; top: 0; width: 100%; }
+            @page { size: A4; margin: 0; }
+            .print-page { width: 210mm; height: 297mm; page-break-after: always; padding: 10mm; background: white; }
+            .print-grid { display: grid; gap: 5mm; align-content: start; }
+            .print-item { border: 1px dashed #ccc; overflow: hidden; display: flex; justify-content: center; align-items: center; }
+            .print-item img { width: 100%; height: 100%; object-fit: fill; }
         }
 
-        @media (max-width: 768px) {
-            .content-area { grid-template-columns: 1fr; }
-        }
     </style>
 </head>
 <body>
 
 <div class="container">
     <div class="header">
-        <h1>📸 ماسح البطاقات الذكي</h1>
-        <p>استخراج البطاقة من الخلفية تلقائياً + طباعة دقيقة</p>
+        <h1>📸 ستوديو البطاقات الاحترافي</h1>
+        <p>قص ذكي وتعديل يدوي دقيق لجميع أنواع البطاقات</p>
     </div>
 
-    <div class="content-area">
-        <main>
-            <div id="cvStatus" class="status-badge status-loading">⏳ جاري تحميل نظام المعالجة الذكي...</div>
-            
-            <input type="file" id="fileInput" multiple accept="image/*" style="display: none">
-            <div class="upload-section" onclick="document.getElementById('fileInput').click()">
-                <h2>📤 اضغط هنا لرفع صور البطاقات</h2>
-                <p>يفضل تصوير البطاقة على خلفية بلون مختلف</p>
+    <div class="main-layout">
+        <div class="workspace">
+            <input type="file" id="fileInput" multiple accept="image/*" hidden>
+            <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+                <h3>📤 اضغط لرفع صور البطاقات</h3>
+                <p>يدعم JPG, PNG - يفضل صور عالية الجودة</p>
+                <div id="loadingStatus" style="color:var(--accent); margin-top:10px; font-weight:bold;">⏳ جاري تحميل الذكاء الاصطناعي...</div>
             </div>
 
-            <div class="gallery-grid" id="gallery">
+            <div class="gallery" id="gallery"></div>
+        </div>
+
+        <div class="sidebar">
+            <div class="panel">
+                <h3>🛠 إعدادات الصفحة</h3>
+                
+                <div class="control-row">
+                    <label>عدد البطاقات في الصف</label>
+                    <select id="cardsPerRow">
+                        <option value="1">1 (كبيرة)</option>
+                        <option value="2" selected>2 (قياسي)</option>
+                        <option value="3">3 (صغيرة)</option>
+                    </select>
                 </div>
-        </main>
 
-        <aside class="sidebar">
-            <div class="control-group">
-                <label>🖨️ إعدادات الطباعة</label>
-                <select id="printSize">
-                    <option value="standard">حجم البطاقة القياسي (8.6 × 5.4 سم)</option>
-                    <option value="large">حجم كبير (9 × 6 سم)</option>
-                </select>
+                <div class="control-row">
+                    <label>حجم البطاقة</label>
+                    <select id="cardSize">
+                        <option value="standard">قياسي (8.6 × 5.4 سم)</option>
+                        <option value="large">كبير (9.0 × 6.0 سم)</option>
+                    </select>
+                </div>
+
+                <div class="control-row">
+                    <label>المسافة الرأسية (ملم)</label>
+                    <input type="range" id="verticalGap" min="0" max="30" value="5">
+                </div>
             </div>
 
-            <div class="control-group">
-                <label>تخطيط الصفحة</label>
-                <select id="cardsPerRow">
-                    <option value="2">2 بطاقة في الصف</option>
-                    <option value="3">3 بطاقات في الصف</option>
-                </select>
+            <div class="panel">
+                <h3>🖨 التصدير</h3>
+                <button class="btn-action btn-print" onclick="printCards()">🖨 طباعة</button>
+                <button class="btn-action btn-img" onclick="saveImage()">🖼 حفظ صورة</button>
+                <button class="btn-action btn-pdf" onclick="savePDF()">📄 حفظ PDF</button>
+                <button class="btn-action" style="background:#ef4444;" onclick="clearAll()">🗑 حذف الكل</button>
             </div>
+        </div>
+    </div>
 
-            <button class="btn-primary" onclick="prepareAndPrint()">🖨️ طباعة الورقة</button>
-            <button class="btn-primary" style="background: #ef4444;" onclick="clearAll()">🗑️ حذف الكل</button>
-        </aside>
+    <div class="footer">
+        تمت البرمجة بكل حب <span class="heart-beat">❤</span> بواسطة 
+        <a href="https://www.facebook.com/en.mohamed.nasr" target="_blank">مهندس محمد حماد</a>
+    </div>
+</div>
+
+<div class="modal-overlay" id="editorModal">
+    <div class="modal-content">
+        <h3 style="margin-bottom:10px;">✂ تعديل حدود البطاقة يدوياً</h3>
+        <p style="font-size:0.9rem; color:#666; margin-bottom:10px;">اسحب الدوائر الحمراء الأربعة لتحديد أركان البطاقة بدقة، ثم اضغط "قص وحفظ".</p>
+        
+        <div class="editor-canvas-container">
+            <canvas id="editorCanvas"></canvas>
+        </div>
+        
+        <div class="modal-actions">
+            <button class="btn-action" style="width:auto; background:#64748b;" onclick="closeEditor()">إلغاء</button>
+            <button class="btn-action btn-print" style="width:auto;" onclick="applyManualCrop()">✓ قص وحفظ</button>
+        </div>
     </div>
 </div>
 
 <div id="printableArea"></div>
 
 <script>
-    let cardsData = []; // Store original and processed images
     let cvReady = false;
+    let cards = [];
+    let currentEditId = null;
+    
+    // Editor Variables
+    let editCanvas, editCtx;
+    let originalImage = new Image();
+    let cropPoints = []; // [TL, TR, BR, BL]
+    let isDragging = false;
+    let dragPointIndex = -1;
 
-    // 1. تهيئة مكتبة OpenCV
     function onOpenCvReady() {
         cvReady = true;
-        const status = document.getElementById('cvStatus');
-        status.textContent = "✓ النظام جاهز للمعالجة";
-        status.className = "status-badge status-ready";
+        document.getElementById('loadingStatus').innerText = "✓ النظام جاهز - يمكنك الرفع الآن";
+        document.getElementById('loadingStatus').style.color = "green";
     }
 
-    // 2. التعامل مع رفع الملفات
+    // --- File Handling ---
     document.getElementById('fileInput').addEventListener('change', async (e) => {
-        if (!cvReady) { alert("الرجاء الانتظار حتى تحميل النظام..."); return; }
-        
-        const files = Array.from(e.target.files);
-        for (const file of files) {
-            await processUploadedFile(file);
+        if(!cvReady) return alert("انتظر تحميل النظام...");
+        for (const file of e.target.files) {
+            await processFile(file);
         }
-        e.target.value = ''; // Reset input
+        e.target.value = '';
     });
 
-    async function processUploadedFile(file) {
-        const imgUrl = URL.createObjectURL(file);
+    async function processFile(file) {
+        const url = URL.createObjectURL(file);
         const img = new Image();
-        img.src = imgUrl;
-        
+        img.src = url;
         await new Promise(r => img.onload = r);
 
-        // إضافة البطاقة مبدئياً بالصورة الأصلية
-        const cardObj = {
-            id: Date.now() + Math.random(),
-            original: img,
-            processed: imgUrl, // سيتم تحديثها بعد المعالجة
-            isProcessed: false
-        };
-        cardsData.push(cardObj);
-        renderGallery();
-
-        // محاولة القص التلقائي
+        const id = Date.now() + Math.random();
+        
+        // 1. Try Auto Crop
+        let processedUrl = url;
+        let autoPoints = null;
         try {
-            const processedUrl = autoCropCard(img);
-            // تحديث البطاقة بالصورة المقصوصة
-            const index = cardsData.findIndex(c => c.id === cardObj.id);
-            if (index !== -1) {
-                cardsData[index].processed = processedUrl;
-                cardsData[index].isProcessed = true;
-                renderGallery(); // إعادة الرسم بالصورة الجديدة
-            }
-        } catch (err) {
-            console.error("فشل القص التلقائي لهذه الصورة، سيتم استخدام الأصلية", err);
+            const result = autoDetectCard(img);
+            processedUrl = result.url;
+            autoPoints = result.points; // Save detection points for later editing if needed
+        } catch (e) {
+            console.log("Auto detection failed, using original.");
         }
+
+        cards.push({
+            id: id,
+            originalUrl: url,
+            processedUrl: processedUrl,
+            rotation: 0,
+            points: autoPoints // Store points for manual editor
+        });
+        
+        renderGallery();
     }
 
-    // 3. خوارزمية اكتشاف البطاقة وقصها (OpenCV Logic)
-    function autoCropCard(imgElement) {
-        // إنشاء Canvas مؤقت للمعالجة
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        
-        // تقليص الحجم لتسريع المعالجة (Max width 1000px)
-        const scale = Math.min(1000 / imgElement.width, 1);
-        canvas.width = imgElement.width * scale;
-        canvas.height = imgElement.height * scale;
-        ctx.drawImage(imgElement, 0, 0, canvas.width, canvas.height);
-
-        // قراءة الصورة بواسطة OpenCV
-        let src = cv.imread(canvas);
+    // --- OpenCV Auto Detection ---
+    function autoDetectCard(img) {
+        let src = cv.imread(img);
         let dst = new cv.Mat();
         let gray = new cv.Mat();
         let blur = new cv.Mat();
         let edges = new cv.Mat();
 
-        // 1. تحويل للرمادي
+        // Preprocessing
         cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
-        
-        // 2. تمويه خفيف لإزالة الضوضاء
         cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
         
-        // 3. كشف الحواف (Canny)
-        // الأرقام هنا حساسة للإضاءة، 75 و 200 تعمل جيداً مع البطاقات
+        // Use Canny + Dilate to close gaps (Good for rugs/patterns)
         cv.Canny(blur, edges, 75, 200);
+        let kernel = cv.Mat.ones(3, 3, cv.CV_8U);
+        cv.dilate(edges, edges, kernel, new cv.Point(-1, -1), 1);
 
-        // 4. إيجاد الكونتور (الأشكال المغلقة)
+        // Find Contours
         let contours = new cv.MatVector();
         let hierarchy = new cv.Mat();
         cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-        // 5. البحث عن أكبر مستطيل
         let maxArea = 0;
-        let maxContourIndex = -1;
-        let approx = new cv.Mat();
+        let bestContour = null;
         let bestApprox = null;
 
         for (let i = 0; i < contours.size(); ++i) {
             let cnt = contours.get(i);
             let area = cv.contourArea(cnt);
-            
-            // تجاهل المناطق الصغيرة جداً
-            if (area < 5000) continue;
+            if (area < 5000) continue; // Ignore small noise
 
-            // تقريب الشكل إلى مضلع
             let peri = cv.arcLength(cnt, true);
+            let approx = new cv.Mat();
             cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
 
-            // إذا كان المضلع له 4 زوايا وهو الأكبر حتى الآن
             if (approx.rows === 4 && area > maxArea) {
                 maxArea = area;
-                maxContourIndex = i;
-                // نسخ النقاط
-                bestApprox = approx.clone(); 
+                bestContour = cnt;
+                if(bestApprox) bestApprox.delete();
+                bestApprox = approx.clone();
             }
+            approx.delete();
         }
 
-        // إذا لم نجد مستطيل واضح، نرجع الصورة الأصلية
-        if (maxContourIndex === -1 || !bestApprox) {
-            src.delete(); dst.delete(); gray.delete(); blur.delete(); edges.delete(); contours.delete(); hierarchy.delete(); approx.delete();
+        if (!bestApprox) {
+            // Cleanup and throw
+            src.delete(); dst.delete(); gray.delete(); blur.delete(); edges.delete(); 
+            contours.delete(); hierarchy.delete();
             throw new Error("No card found");
         }
 
-        // 6. تحويل المنظور (Perspective Warp)
-        // ترتيب النقاط الأربعة (أعلى-يسار، أعلى-يمين، أسفل-يمين، أسفل-يسار)
-        let pts = [];
+        // Prepare points for warping
+        let ptsData = [];
         for(let i=0; i<4; i++) {
-            pts.push({
-                x: bestApprox.data32S[i*2],
-                y: bestApprox.data32S[i*2+1]
-            });
+            ptsData.push({x: bestApprox.data32S[i*2], y: bestApprox.data32S[i*2+1]});
         }
-        const sortedPts = sortPoints(pts);
+        
+        // Clean memory
+        src.delete(); dst.delete(); gray.delete(); blur.delete(); edges.delete(); 
+        contours.delete(); hierarchy.delete(); bestApprox.delete();
 
-        // تحديد أبعاد البطاقة النهائية (نسبة البطاقة القياسية 8.56 : 5.4)
-        // نستخدم عرض تقريبي عالي الجودة
-        const width = 1000; 
-        const height = 1000 * (5.4 / 8.56); // الحفاظ على نسبة الأبعاد
+        // Warp
+        return performWarp(img, ptsData);
+    }
+
+    function performWarp(imgSource, pts) {
+        let src = cv.imread(imgSource);
+        
+        // Sort Points: TL, TR, BR, BL
+        pts.sort((a,b) => a.y - b.y);
+        const top = pts.slice(0, 2).sort((a,b) => a.x - b.x);
+        const bottom = pts.slice(2, 4).sort((a,b) => a.x - b.x);
+        const sortedPts = [top[0], top[1], bottom[1], bottom[0]]; // Standard Order
+
+        // Target Dimensions (High Res)
+        const width = 1000;
+        const height = 630; // Aspect Ratio for ID
 
         let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
-            sortedPts[0].x, sortedPts[0].y,
-            sortedPts[1].x, sortedPts[1].y,
-            sortedPts[2].x, sortedPts[2].y,
-            sortedPts[3].x, sortedPts[3].y
+            sortedPts[0].x, sortedPts[0].y, sortedPts[1].x, sortedPts[1].y,
+            sortedPts[2].x, sortedPts[2].y, sortedPts[3].x, sortedPts[3].y
         ]);
-
-        let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
-            0, 0,
-            width, 0,
-            width, height,
-            0, height
-        ]);
-
+        let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, width, 0, width, height, 0, height]);
+        
         let M = cv.getPerspectiveTransform(srcTri, dstTri);
         let warped = new cv.Mat();
         
-        // تطبيق القص على الصورة الأصلية (src)
         cv.warpPerspective(src, warped, M, new cv.Size(width, height), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
-
-        // عرض النتيجة
+        
+        // Create Canvas for output
+        let canvas = document.createElement('canvas');
         cv.imshow(canvas, warped);
-        const resultUrl = canvas.toDataURL('image/jpeg', 0.9);
+        
+        // Cleanup
+        src.delete(); srcTri.delete(); dstTri.delete(); M.delete(); warped.delete();
 
-        // تنظيف الذاكرة
-        src.delete(); dst.delete(); gray.delete(); blur.delete(); edges.delete(); 
-        contours.delete(); hierarchy.delete(); approx.delete(); bestApprox.delete();
-        srcTri.delete(); dstTri.delete(); M.delete(); warped.delete();
-
-        return resultUrl;
+        return {
+            url: canvas.toDataURL('image/jpeg', 0.95),
+            points: sortedPts // Return the points used
+        };
     }
 
-    // دالة مساعدة لترتيب النقاط الأربعة
-    function sortPoints(pts) {
-        // ترتيب حسب قيمة Y لإيجاد الأعلى والأسفل
-        pts.sort((a,b) => a.y - b.y);
+    // --- Manual Editor Logic ---
+    function openEditor(id) {
+        currentEditId = id;
+        const card = cards.find(c => c.id === id);
         
-        // أول نقطتين هما الأعلى، آخر نقطتين هما الأسفل
-        const top = pts.slice(0, 2).sort((a,b) => a.x - b.x); // ترتيب الأعلى حسب X (يسار ويمين)
-        const bottom = pts.slice(2, 4).sort((a,b) => a.x - b.x); // ترتيب الأسفل حسب X
+        // Setup Canvas
+        editCanvas = document.getElementById('editorCanvas');
+        editCtx = editCanvas.getContext('2d');
         
-        // الترتيب النهائي: TL, TR, BR, BL
-        return [top[0], top[1], bottom[1], bottom[0]];
+        originalImage.src = card.originalUrl;
+        originalImage.onload = () => {
+            // Resize canvas to fit screen while maintaining aspect ratio
+            const container = document.querySelector('.editor-canvas-container');
+            const scale = Math.min(container.clientWidth / originalImage.width, container.clientHeight / originalImage.height);
+            
+            editCanvas.width = originalImage.width;
+            editCanvas.height = originalImage.height;
+            
+            // Set styles for visual scaling only
+            editCanvas.style.width = (originalImage.width * scale) + 'px';
+            editCanvas.style.height = (originalImage.height * scale) + 'px';
+
+            // Initial points (Use auto-detected points if available, else corners)
+            if (card.points && card.points.length === 4) {
+                cropPoints = JSON.parse(JSON.stringify(card.points));
+            } else {
+                const w = editCanvas.width;
+                const h = editCanvas.height;
+                const p = 50; // padding
+                cropPoints = [
+                    {x: p, y: p}, {x: w-p, y: p}, 
+                    {x: w-p, y: h-p}, {x: p, y: h-p}
+                ];
+            }
+            
+            drawEditor();
+            document.getElementById('editorModal').style.display = 'flex';
+        };
+
+        // Event Listeners for Dragging
+        editCanvas.addEventListener('mousedown', onMouseDown);
+        editCanvas.addEventListener('mousemove', onMouseMove);
+        editCanvas.addEventListener('mouseup', onMouseUp);
+        // Touch support
+        editCanvas.addEventListener('touchstart', onTouchStart, {passive: false});
+        editCanvas.addEventListener('touchmove', onTouchMove, {passive: false});
+        editCanvas.addEventListener('touchend', onMouseUp);
     }
 
-    // 4. عرض المعرض
+    function drawEditor() {
+        // Clear
+        editCtx.clearRect(0, 0, editCanvas.width, editCanvas.height);
+        // Draw Image
+        editCtx.drawImage(originalImage, 0, 0);
+        
+        // Dark overlay
+        editCtx.fillStyle = 'rgba(0,0,0,0.5)';
+        editCtx.fillRect(0,0, editCanvas.width, editCanvas.height);
+
+        // Draw Polygon (Clear area)
+        editCtx.save();
+        editCtx.beginPath();
+        editCtx.moveTo(cropPoints[0].x, cropPoints[0].y);
+        editCtx.lineTo(cropPoints[1].x, cropPoints[1].y);
+        editCtx.lineTo(cropPoints[2].x, cropPoints[2].y);
+        editCtx.lineTo(cropPoints[3].x, cropPoints[3].y);
+        editCtx.closePath();
+        editCtx.clip();
+        editCtx.drawImage(originalImage, 0, 0);
+        editCtx.restore();
+
+        // Draw Lines
+        editCtx.strokeStyle = '#ef4444';
+        editCtx.lineWidth = 4;
+        editCtx.beginPath();
+        editCtx.moveTo(cropPoints[0].x, cropPoints[0].y);
+        for(let i=1; i<4; i++) editCtx.lineTo(cropPoints[i].x, cropPoints[i].y);
+        editCtx.closePath();
+        editCtx.stroke();
+
+        // Draw Circles
+        cropPoints.forEach(p => {
+            editCtx.fillStyle = '#ef4444';
+            editCtx.beginPath();
+            editCtx.arc(p.x, p.y, 15, 0, Math.PI*2);
+            editCtx.fill();
+            editCtx.strokeStyle = 'white';
+            editCtx.lineWidth = 3;
+            editCtx.stroke();
+        });
+    }
+
+    function getMousePos(evt) {
+        const rect = editCanvas.getBoundingClientRect();
+        const scaleX = editCanvas.width / rect.width;
+        const scaleY = editCanvas.height / rect.height;
+        return {
+            x: (evt.clientX - rect.left) * scaleX,
+            y: (evt.clientY - rect.top) * scaleY
+        };
+    }
+    
+    // Mouse Events
+    function onMouseDown(e) {
+        const pos = getMousePos(e);
+        checkDrag(pos);
+    }
+    function onMouseMove(e) {
+        if(isDragging) {
+            const pos = getMousePos(e);
+            cropPoints[dragPointIndex] = pos;
+            drawEditor();
+        }
+    }
+    
+    // Touch Events
+    function onTouchStart(e) {
+        e.preventDefault();
+        const rect = editCanvas.getBoundingClientRect();
+        const scaleX = editCanvas.width / rect.width;
+        const scaleY = editCanvas.height / rect.height;
+        const touch = e.touches[0];
+        const pos = {
+            x: (touch.clientX - rect.left) * scaleX,
+            y: (touch.clientY - rect.top) * scaleY
+        };
+        checkDrag(pos);
+    }
+    function onTouchMove(e) {
+        e.preventDefault();
+        if(isDragging) {
+            const rect = editCanvas.getBoundingClientRect();
+            const scaleX = editCanvas.width / rect.width;
+            const scaleY = editCanvas.height / rect.height;
+            const touch = e.touches[0];
+            cropPoints[dragPointIndex] = {
+                x: (touch.clientX - rect.left) * scaleX,
+                y: (touch.clientY - rect.top) * scaleY
+            };
+            drawEditor();
+        }
+    }
+
+    function checkDrag(pos) {
+        // Find closest point
+        for(let i=0; i<4; i++) {
+            let dx = pos.x - cropPoints[i].x;
+            let dy = pos.y - cropPoints[i].y;
+            if(Math.sqrt(dx*dx + dy*dy) < 50) { // Hit radius
+                isDragging = true;
+                dragPointIndex = i;
+                return;
+            }
+        }
+    }
+
+    function onMouseUp() { isDragging = false; }
+
+    function applyManualCrop() {
+        const result = performWarp(originalImage, JSON.parse(JSON.stringify(cropPoints)));
+        const idx = cards.findIndex(c => c.id === currentEditId);
+        if(idx !== -1) {
+            cards[idx].processedUrl = result.url;
+            cards[idx].points = result.points;
+            renderGallery();
+        }
+        closeEditor();
+    }
+    function closeEditor() { document.getElementById('editorModal').style.display = 'none'; }
+
+
+    // --- Gallery & UI ---
     function renderGallery() {
-        const gallery = document.getElementById('gallery');
-        gallery.innerHTML = '';
-        cardsData.forEach(card => {
+        const gal = document.getElementById('gallery');
+        gal.innerHTML = '';
+        cards.forEach((card, index) => {
             const div = document.createElement('div');
             div.className = 'card-item';
             div.innerHTML = `
-                <img src="${card.processed}" alt="Card">
-                <div class="card-actions">
-                    <button class="btn-icon" onclick="rotateCard(${card.id})" title="تدوير">🔄</button>
-                    <button class="btn-icon" onclick="revertCard(${card.id})" title="إلغاء القص">↩️</button>
-                    <button class="btn-icon" style="color:red" onclick="removeCard(${card.id})" title="حذف">✕</button>
+                <div class="card-preview">
+                    <img src="${card.processedUrl}" style="transform: rotate(${card.rotation}deg)">
+                </div>
+                <div class="card-tools">
+                    <button class="tool-btn btn-edit" onclick="openEditor(${card.id})" title="تعديل الحدود يدوياً">✏️</button>
+                    <button class="tool-btn" onclick="rotate(${index})" title="تدوير">🔄</button>
+                    <button class="tool-btn" onclick="reset(${index})" title="استعادة الأصل">↩️</button>
+                    <button class="tool-btn btn-delete" onclick="remove(${index})" title="حذف">✕</button>
                 </div>
             `;
-            gallery.appendChild(div);
+            gal.appendChild(div);
         });
     }
 
-    // 5. وظائف مساعدة
-    function removeCard(id) {
-        cardsData = cardsData.filter(c => c.id !== id);
-        renderGallery();
-    }
+    function rotate(index) { cards[index].rotation = (cards[index].rotation + 90) % 360; renderGallery(); }
+    function remove(index) { cards.splice(index, 1); renderGallery(); }
+    function reset(index) { cards[index].processedUrl = cards[index].originalUrl; cards[index].points = null; renderGallery(); }
+    function clearAll() { if(confirm("حذف الكل؟")) { cards = []; renderGallery(); } }
 
-    function revertCard(id) {
-        const card = cardsData.find(c => c.id === id);
-        if(card) {
-            // إعادة الصورة الأصلية للـ canvas وتحويلها لـ url
-            const canvas = document.createElement('canvas');
-            canvas.width = card.original.width;
-            canvas.height = card.original.height;
-            canvas.getContext('2d').drawImage(card.original, 0, 0);
-            card.processed = canvas.toDataURL();
-            renderGallery();
-        }
-    }
-
-    function rotateCard(id) {
-        const card = cardsData.find(c => c.id === id);
-        if(card) {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.height;
-                canvas.height = img.width;
-                const ctx = canvas.getContext('2d');
-                ctx.translate(canvas.width/2, canvas.height/2);
-                ctx.rotate(90 * Math.PI / 180);
-                ctx.drawImage(img, -img.width/2, -img.height/2);
-                card.processed = canvas.toDataURL();
-                renderGallery();
-            };
-            img.src = card.processed;
-        }
-    }
-
-    function clearAll() {
-        if(confirm("هل أنت متأكد من حذف الكل؟")) {
-            cardsData = [];
-            renderGallery();
-        }
-    }
-
-    // 6. وظيفة الطباعة (المعدلة جذرياً)
-    function prepareAndPrint() {
-        if (cardsData.length === 0) { alert("لا توجد بطاقات للطباعة"); return; }
-
-        const printableArea = document.getElementById('printableArea');
-        const sizeMode = document.getElementById('printSize').value;
+    // --- Output & Printing ---
+    function generateOutput() {
+        const area = document.getElementById('printableArea');
         const perRow = document.getElementById('cardsPerRow').value;
+        const sizeType = document.getElementById('cardSize').value;
+        const vGap = document.getElementById('verticalGap').value;
         
-        // تحديد الأبعاد بناء على الاختيار (بالمليمتر لضمان الدقة في الطباعة)
-        let widthCss = sizeMode === 'standard' ? '86mm' : '90mm';
-        let heightCss = sizeMode === 'standard' ? '54mm' : '60mm';
-
-        let html = `<div class="print-grid" style="display: grid; grid-template-columns: repeat(${perRow}, ${widthCss}); gap: 5mm;">`;
+        let width = sizeType === 'standard' ? '86mm' : '90mm';
+        let height = sizeType === 'standard' ? '54mm' : '60mm';
         
-        cardsData.forEach(card => {
-            html += `
-                <div class="print-card" style="width: ${widthCss}; height: ${heightCss}; overflow: hidden;">
-                    <img src="${card.processed}" style="width: 100%; height: 100%;">
-                </div>
-            `;
+        let html = `<div class="print-page"><div class="print-grid" style="
+            grid-template-columns: repeat(${perRow}, ${width});
+            row-gap: ${vGap}mm;">`;
+        
+        cards.forEach(card => {
+            html += `<div class="print-item" style="width:${width}; height:${height};">
+                <img src="${card.processedUrl}" style="transform: rotate(${card.rotation}deg)">
+            </div>`;
         });
-        html += `</div>`;
-
-        printableArea.innerHTML = html;
-
-        // تنفيذ الطباعة
-        window.print();
         
-        // تنظيف بعد الطباعة (اختياري)
-        // setTimeout(() => printableArea.innerHTML = '', 1000);
+        html += `</div></div>`;
+        area.innerHTML = html;
+        return area;
     }
-</script>
 
+    function printCards() {
+        if(!cards.length) return alert("لا توجد بطاقات");
+        generateOutput();
+        window.print();
+    }
+
+    function saveImage() {
+        if(!cards.length) return alert("لا توجد بطاقات");
+        generateOutput();
+        const el = document.querySelector('.print-page');
+        
+        // Hack for html2canvas to render visible element
+        const prevPos = document.getElementById('printableArea').style.position;
+        document.getElementById('printableArea').style.position = 'static';
+        
+        html2canvas(el, {scale: 2}).then(canvas => {
+            let a = document.createElement('a');
+            a.download = 'cards.png';
+            a.href = canvas.toDataURL();
+            a.click();
+            document.getElementById('printableArea').style.position = prevPos;
+        });
+    }
+
+    function savePDF() {
+        if(!cards.length) return alert("لا توجد بطاقات");
+        generateOutput();
+        const el = document.querySelector('.print-page');
+        const opt = {
+            margin: 0, filename: 'cards.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2 },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf().set(opt).from(el).save();
+    }
+
+</script>
 </body>
 </html>
