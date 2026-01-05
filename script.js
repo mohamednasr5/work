@@ -781,7 +781,8 @@ async function confirmDelete() {
 }
 
 /**
- * Print request - نسخة محسنة تعمل على جميع المتصفحات
+ * Print request - نسخة مهندس محمد حماد (المصححة)
+ * تم دمج الإصلاح الكامل هنا للعمل بدون مشاكل الحظر
  */
 function printRequest() {
     if (!currentSelectedRequest) {
@@ -789,241 +790,164 @@ function printRequest() {
         return;
     }
 
-    // إنشاء عنصر مخفي للطباعة داخل الصفحة الحالية
-    const printElement = document.createElement('div');
-    printElement.id = 'printContent';
-    printElement.style.cssText = `
-        position: fixed;
-        left: -9999px;
-        top: 0;
-        width: 800px;
-        background: white;
-        padding: 20px;
-        font-family: 'Cairo', Arial, sans-serif;
-        text-align: right;
-        direction: rtl;
-        z-index: 10000;
-    `;
-
     const dateStr = safeDateFormat(currentSelectedRequest.submissionDate);
     const deadlineStr = getDeadlineText(currentSelectedRequest.submissionDate);
     const statusStr = getStatusText(currentSelectedRequest.status);
-    const printDate = new Date().toLocaleDateString('ar-EG', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-    });
+    const statusColor = getStatusColor(currentSelectedRequest.status);
+    const printDate = new Date().toLocaleDateString('ar-EG', { year: 'numeric', month: 'long', day: 'numeric' });
     const printTime = new Date().toLocaleTimeString('ar-EG');
 
-    let printHTML = `
-        <div style="border: 2px solid #1e3c72; border-radius: 15px; padding: 30px; margin: 0 auto; max-width: 750px;">
-            <!-- الترويسة -->
-            <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #d4af37;">
-                <h1 style="color: #1e3c72; margin: 0 0 10px 0; font-size: 28px;">🏛️ نظام إدارة طلبات البرلمان</h1>
-                <h2 style="color: #2c5282; margin: 0; font-size: 22px;">نموذج طلب رسمي - نسخة للطباعة</h2>
-                <p style="color: #666; margin-top: 10px;">تاريخ الطباعة: ${printDate} - الساعة: ${printTime}</p>
+    let contentHTML = `
+        <div class="print-container">
+            <div class="header">
+                <h1>🏛️ نظام إدارة طلبات البرلمان</h1>
+                <h2>نموذج طلب رسمي</h2>
+                <p class="meta">تاريخ الطباعة: ${printDate} - الساعة: ${printTime}</p>
             </div>
 
-            <!-- معلومات الطلب -->
-            <div style="margin-bottom: 30px;">
-                <h3 style="color: #1e3c72; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">
-                    <i class="fas fa-info-circle"></i> معلومات الطلب الأساسية
-                </h3>
-                
-                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
-                    <tr style="background: #f8fafc;">
-                        <td style="padding: 12px; border: 1px solid #e2e8f0; width: 200px;"><strong>🔢 رقم الطلب:</strong></td>
-                        <td style="padding: 12px; border: 1px solid #e2e8f0;">${currentSelectedRequest.reqId || 'غير محدد'}</td>
+            <div class="section">
+                <h3><i class="fas fa-info-circle"></i> بيانات الطلب</h3>
+                <table class="info-table">
+                    <tr>
+                        <td class="label">🔢 رقم الطلب:</td>
+                        <td class="value"><strong>${currentSelectedRequest.reqId || 'غير محدد'}</strong></td>
                     </tr>
                     <tr>
-                        <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>📝 عنوان الطلب:</strong></td>
-                        <td style="padding: 12px; border: 1px solid #e2e8f0;">${currentSelectedRequest.title || 'غير محدد'}</td>
-                    </tr>
-                    <tr style="background: #f8fafc;">
-                        <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>📅 تاريخ التقديم:</strong></td>
-                        <td style="padding: 12px; border: 1px solid #e2e8f0;">${dateStr}</td>
+                        <td class="label">📝 العنوان:</td>
+                        <td class="value">${currentSelectedRequest.title || 'غير محدد'}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>🏛️ الجهة المعنية:</strong></td>
-                        <td style="padding: 12px; border: 1px solid #e2e8f0;">${currentSelectedRequest.authority || 'غير محدد'}</td>
+                        <td class="label">🏛️ الجهة:</td>
+                        <td class="value">${currentSelectedRequest.authority || 'غير محدد'}</td>
                     </tr>
-                    <tr style="background: #f8fafc;">
-                        <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>✅ حالة الطلب:</strong></td>
-                        <td style="padding: 12px; border: 1px solid #e2e8f0;">
-                            <span style="display: inline-block; padding: 5px 15px; border-radius: 20px; background: ${getStatusColor(currentSelectedRequest.status)}; color: white; font-weight: bold;">
+                    <tr>
+                        <td class="label">📅 التاريخ:</td>
+                        <td class="value">${dateStr}</td>
+                    </tr>
+                    <tr>
+                        <td class="label">✅ الحالة:</td>
+                        <td class="value">
+                            <span class="status-badge" style="background-color: ${statusColor};">
                                 ${statusStr}
                             </span>
                         </td>
                     </tr>
                     <tr>
-                        <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>⏰ الموعد النهائي:</strong></td>
-                        <td style="padding: 12px; border: 1px solid #e2e8f0;">${deadlineStr}</td>
+                        <td class="label">⏰ الموعد:</td>
+                        <td class="value">${deadlineStr}</td>
                     </tr>
                 </table>
             </div>
 
-            <!-- تفاصيل الطلب -->
-            <div style="margin-bottom: 30px;">
-                <h3 style="color: #1e3c72; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">
-                    <i class="fas fa-file-alt"></i> تفاصيل الطلب
-                </h3>
-                <div style="background: #f1f5f9; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0;">
-                    <p style="margin: 0; white-space: pre-wrap; line-height: 1.8;">${currentSelectedRequest.details || 'لا توجد تفاصيل إضافية'}</p>
+            <div class="section">
+                <h3><i class="fas fa-align-justify"></i> تفاصيل الطلب</h3>
+                <div class="details-box">
+                    ${currentSelectedRequest.details || 'لا توجد تفاصيل إضافية'}
                 </div>
             </div>
     `;
 
-    // إضافة المستندات إذا وجدت
     if (currentSelectedRequest.hasDocuments && currentSelectedRequest.documents && currentSelectedRequest.documents.length > 0) {
-        printHTML += `
-            <div style="margin-bottom: 30px;">
-                <h3 style="color: #1e3c72; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">
-                    <i class="fas fa-paperclip"></i> المستندات المرفقة (${currentSelectedRequest.documents.length})
-                </h3>
+        contentHTML += `
+            <div class="section">
+                <h3><i class="fas fa-paperclip"></i> المستندات المرفقة (${currentSelectedRequest.documents.length})</h3>
+                <div class="docs-grid">
         `;
         
         currentSelectedRequest.documents.forEach((doc, idx) => {
-            const docDate = safeDateFormat(doc.date);
-            const docType = getDocumentTypeName(doc.type);
-            
-            printHTML += `
-                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; color: #2c5282;">
-                        <span style="font-size: 18px;">📄</span>
-                        <strong style="font-size: 16px;">مستند ${idx + 1}: ${docType}</strong>
+            contentHTML += `
+                <div class="doc-card">
+                    <div class="doc-header">
+                        <span>📄 مستند ${idx + 1}</span>
+                        <span class="doc-type">${getDocumentTypeName(doc.type)}</span>
                     </div>
-                    <div style="margin-right: 30px;">
-                        <div><strong>📅 التاريخ:</strong> ${docDate}</div>
-                        <div style="margin-top: 8px;"><strong>📋 الوصف:</strong> ${doc.description || 'لا يوجد وصف'}</div>
+                    <div class="doc-body">
+                        <div><strong>التاريخ:</strong> ${safeDateFormat(doc.date)}</div>
+                        <div style="margin-top:5px"><strong>الوصف:</strong> ${doc.description || '-'}</div>
                     </div>
                 </div>
             `;
         });
         
-        printHTML += `</div>`;
+        contentHTML += `</div></div>`;
     }
 
-    // التذييل
-    printHTML += `
-            <!-- تذييل الصفحة -->
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; padding: 25px; text-align: center; color: white; margin-top: 40px;">
-                <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 15px;">
-                    <div style="width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 24px;">💻</div>
+    contentHTML += `
+            <div class="footer">
+                <div class="dev-info">
+                    <div class="icon">💻</div>
                     <div>
-                        <h4 style="margin: 0; font-size: 18px;">برمجة وتطوير</h4>
-                        <p style="margin: 5px 0 0 0; font-size: 16px; font-weight: bold;">مهندس محمد حماد</p>
+                        <h4>برمجة وتطوير</h4>
+                        <p>مهندس / محمد حماد</p>
                     </div>
                 </div>
-                <div style="font-size: 14px; opacity: 0.9; margin-top: 10px;">
-                    <a href="https://www.facebook.com/en.mohamed.nasr" style="color: white; text-decoration: none; margin: 0 10px;">
-                        <i class="fab fa-facebook"></i> facebook.com/en.mohamed.nasr
-                    </a>
-                    <br>
-                    <a href="https://github.com/mohamednasr5" style="color: white; text-decoration: none; margin: 0 10px;">
-                        <i class="fab fa-github"></i> github.com/mohamednasr5
-                    </a>
-                </div>
-                <div style="margin-top: 15px; font-size: 12px; opacity: 0.8;">
-                    تم إنشاء هذا المستند تلقائياً من نظام إدارة طلبات البرلمان
+                <div class="links">
+                    نظام إدارة غرفة العمليات والمتابعة
                 </div>
             </div>
         </div>
     `;
 
-    printElement.innerHTML = printHTML;
-    document.body.appendChild(printElement);
+    const printWindow = window.open('', '_blank', 'width=900,height=800');
 
-    // إضافة CSS للطباعة
-    const printStyles = document.createElement('style');
-    printStyles.id = 'printStyles';
-    printStyles.innerHTML = `
-        @media print {
-            body * {
-                visibility: hidden;
-            }
-            #printContent, #printContent * {
-                visibility: visible;
-            }
-            #printContent {
-                position: absolute;
-                left: 0;
-                top: 0;
-                width: 100%;
-                padding: 20px;
-            }
-        }
-        
-        .no-print {
-            display: none !important;
-        }
-        
-        @page {
-            margin: 20mm;
-            size: A4;
-        }
-    `;
-    document.head.appendChild(printStyles);
-
-    // فتح نافذة الطباعة بعد تأخير بسيط
-    setTimeout(() => {
-        const printWindow = window.open('', '_blank');
-        if (printWindow) {
-            printWindow.document.write(`
-                <!DOCTYPE html>
-                <html lang="ar" dir="rtl">
-                <head>
-                    <meta charset="UTF-8">
-                    <title>طلب رقم ${currentSelectedRequest.reqId || ''}</title>
-                    <style>
-                        body {
-                            font-family: 'Cairo', Arial, sans-serif;
-                            margin: 0;
-                            padding: 20px;
-                            text-align: right;
-                            direction: rtl;
-                        }
-                        @media print {
-                            @page {
-                                margin: 15mm;
-                            }
-                            body {
-                                padding: 0;
-                            }
-                        }
-                    </style>
-                    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-                </head>
-                <body>
-                    ${printHTML}
-                    <script>
-                        // محاولة الطباعة تلقائياً
+    if (printWindow) {
+        printWindow.document.write(`
+            <!DOCTYPE html>
+            <html lang="ar" dir="rtl">
+            <head>
+                <meta charset="UTF-8">
+                <title>طباعة طلب رقم ${currentSelectedRequest.reqId}</title>
+                <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+                <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
+                <style>
+                    body { font-family: 'Cairo', sans-serif; background: #fff; margin: 0; padding: 20px; color: #333; }
+                    .print-container { max-width: 800px; margin: 0 auto; border: 1px solid #ddd; padding: 30px; border-radius: 10px; }
+                    .header { text-align: center; border-bottom: 3px solid #1e3c72; padding-bottom: 20px; margin-bottom: 30px; }
+                    .header h1 { color: #1e3c72; margin: 0; font-size: 24px; }
+                    .header h2 { color: #555; margin: 5px 0; font-size: 18px; }
+                    .meta { font-size: 12px; color: #777; margin-top: 10px; }
+                    .section { margin-bottom: 25px; }
+                    h3 { color: #1e3c72; border-bottom: 1px solid #eee; padding-bottom: 8px; font-size: 18px; margin-bottom: 15px; }
+                    h3 i { margin-left: 8px; }
+                    .info-table { width: 100%; border-collapse: collapse; }
+                    .info-table td { padding: 10px; border: 1px solid #eee; vertical-align: middle; }
+                    .info-table .label { background: #f8f9fa; width: 150px; font-weight: bold; color: #444; }
+                    .status-badge { color: #fff; padding: 4px 12px; border-radius: 15px; font-size: 14px; font-weight: bold; display: inline-block; }
+                    .details-box { background: #f8f9fa; padding: 15px; border-radius: 8px; border: 1px solid #eee; line-height: 1.6; white-space: pre-wrap; }
+                    .doc-card { border: 1px solid #eee; border-radius: 8px; padding: 12px; margin-bottom: 10px; background: #fff; page-break-inside: avoid; }
+                    .doc-header { display: flex; justify-content: space-between; border-bottom: 1px solid #f0f0f0; padding-bottom: 8px; margin-bottom: 8px; font-weight: bold; color: #1e3c72; }
+                    .doc-type { background: #e3f2fd; color: #1976d2; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+                    .doc-body { font-size: 14px; color: #555; }
+                    .footer { margin-top: 40px; background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%); color: #fff; padding: 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .dev-info { display: flex; align-items: center; gap: 15px; }
+                    .dev-info .icon { font-size: 24px; background: rgba(255,255,255,0.2); width: 45px; height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 50%; }
+                    .dev-info h4 { margin: 0; font-size: 16px; }
+                    .dev-info p { margin: 2px 0 0; font-size: 14px; opacity: 0.9; }
+                    .links { font-size: 14px; opacity: 0.8; }
+                    @media print {
+                        body { padding: 0; }
+                        .print-container { border: none; padding: 0; max-width: 100%; }
+                        .no-print { display: none; }
+                        a { text-decoration: none; color: inherit; }
+                    }
+                </style>
+            </head>
+            <body>
+                ${contentHTML}
+                <script>
+                    window.onload = function() {
                         setTimeout(function() {
                             window.print();
-                            setTimeout(function() {
-                                window.close();
-                            }, 500);
-                        }, 1000);
-                    </script>
-                </body>
-                </html>
-            `);
-            printWindow.document.close();
-        } else {
-            // إذا فشل فتح النافذة، استخدم الطباعة المباشرة
-            window.print();
-        }
-        
-        // تنظيف بعد الطباعة
-        setTimeout(() => {
-            if (document.getElementById('printContent')) {
-                document.body.removeChild(printElement);
-            }
-            if (document.getElementById('printStyles')) {
-                document.head.removeChild(printStyles);
-            }
-        }, 2000);
-        
-    }, 100);
+                        }, 500);
+                    };
+                <\/script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
+    } else {
+        showAlert('⚠️ المتصفح قام بحظر نافذة الطباعة. يرجى السماح بالنوافذ المنبثقة.', 'warning');
+    }
 }
 
 /**
