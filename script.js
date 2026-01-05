@@ -232,6 +232,17 @@ function isRequestIdUniqueForEdit(reqId, currentRequestKey) {
 }
 
 /**
+ * Clear form validation styles
+ */
+function clearFormValidation() {
+    const reqIdField = document.getElementById('reqId');
+    if (reqIdField) {
+        reqIdField.style.borderColor = '';
+        reqIdField.style.backgroundColor = '';
+    }
+}
+
+/**
  * Handle form submission
  */
 async function handleFormSubmit(e) {
@@ -264,6 +275,14 @@ async function handleFormSubmit(e) {
         }
     } else {
         // حالة التعديل: التحقق من تكرار الرقم
+        // تأكد من أن currentSelectedRequest موجود
+        if (!currentSelectedRequest) {
+            showAlert(`❌ لم يتم تحديد طلب للتعديل!`, 'danger');
+            submitButton.innerHTML = originalText;
+            submitButton.disabled = false;
+            return;
+        }
+        
         if (!isRequestIdUniqueForEdit(reqId, currentSelectedRequest.firebaseKey)) {
             showAlert(`❌ رقم الطلب ${reqId} موجود مسبقاً في طلب آخر!`, 'danger');
             submitButton.innerHTML = originalText;
@@ -356,6 +375,9 @@ function resetForm() {
     isEditMode = false;
     currentSelectedRequest = null;
     documentCount = 0;
+    
+    // إزالة الفئات من حقل رقم الطلب
+    clearFormValidation();
 }
 
 /**
@@ -646,7 +668,10 @@ function closeModal() {
  * Edit request
  */
 function editRequest() {
-    if (!currentSelectedRequest) return;
+    if (!currentSelectedRequest) {
+        showAlert('❌ لم يتم تحديد طلب للتعديل!', 'danger');
+        return;
+    }
 
     isEditMode = true;
     
@@ -695,13 +720,19 @@ function editRequest() {
 
     closeModal();
     switchTab('register');
+    
+    // التأكد من ظهور رسالة تذكيرية
+    showAlert('تم فتح الطلب للتعديل. الرجاء مراجعة البيانات قبل التحديث ✅', 'info');
 }
 
 /**
  * Confirm delete request
  */
 async function confirmDelete() {
-    if (!currentSelectedRequest) return;
+    if (!currentSelectedRequest) {
+        showAlert('❌ لم يتم تحديد طلب للحذف!', 'danger');
+        return;
+    }
 
     if (confirm(`هل أنت متأكد من حذف الطلب رقم ${currentSelectedRequest.reqId}؟`)) {
         const success = await window.RequestManager.deleteRequest(currentSelectedRequest.firebaseKey);
@@ -719,7 +750,10 @@ async function confirmDelete() {
  * Print request
  */
 function printRequest() {
-    if (!currentSelectedRequest) return;
+    if (!currentSelectedRequest) {
+        showAlert('❌ لم يتم تحديد طلب للطباعة!', 'danger');
+        return;
+    }
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -792,7 +826,10 @@ function printRequest() {
  * Export request to JSON
  */
 function exportRequest() {
-    if (!currentSelectedRequest) return;
+    if (!currentSelectedRequest) {
+        showAlert('❌ لم يتم تحديد طلب للتصدير!', 'danger');
+        return;
+    }
 
     const dataStr = JSON.stringify(currentSelectedRequest, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
