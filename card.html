@@ -1,0 +1,2348 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منظم صور البطاقات الاحترافي | Advanced Card Organizer</title>
+    
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.6.1/cropper.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #667eea;
+            --secondary-color: #764ba2;
+            --success-color: #27ae60;
+            --danger-color: #e74c3c;
+            --warning-color: #f39c12;
+            --info-color: #3498db;
+            --dark-color: #2c3e50;
+            --light-bg: #f8f9fa;
+            --border-radius: 15px;
+            --transition: all 0.3s ease;
+            --shadow: 0 10px 30px rgba(0,0,0,0.1);
+            --shadow-hover: 0 15px 40px rgba(0,0,0,0.2);
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Cairo', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* Background Animation */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: 
+                radial-gradient(circle at 20% 50%, rgba(255,255,255,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(255,255,255,0.1) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 25px;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.3);
+            overflow: hidden;
+            position: relative;
+            z-index: 1;
+            animation: slideIn 0.5s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 50px 40px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -10%;
+            width: 400px;
+            height: 400px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 50%;
+            animation: float 6s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-20px) rotate(180deg); }
+        }
+
+        .header h1 {
+            font-size: 38px;
+            margin-bottom: 15px;
+            font-weight: 800;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+            position: relative;
+            z-index: 1;
+        }
+
+        .header p {
+            opacity: 0.95;
+            font-size: 18px;
+            position: relative;
+            z-index: 1;
+            font-weight: 500;
+        }
+
+        .developer-badge {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.2);
+            backdrop-filter: blur(10px);
+            padding: 10px 20px;
+            border-radius: 50px;
+            color: white;
+            font-size: 12px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            z-index: 2;
+        }
+
+        .developer-badge i {
+            font-size: 14px;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 35px;
+            padding: 45px;
+        }
+
+        .left-panel {
+            background: var(--light-bg);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            height: fit-content;
+            position: sticky;
+            top: 20px;
+        }
+
+        .section-title {
+            font-weight: 700;
+            color: var(--dark-color);
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid var(--primary-color);
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title i {
+            color: var(--primary-color);
+            font-size: 20px;
+        }
+
+        .upload-zone {
+            border: 3px dashed var(--primary-color);
+            border-radius: 12px;
+            padding: 50px 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: var(--transition);
+            background: linear-gradient(135deg, #f0f4ff 0%, #e8ecff 100%);
+            margin-bottom: 25px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .upload-zone::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 0;
+            height: 0;
+            background: rgba(102, 126, 234, 0.1);
+            border-radius: 50%;
+            transition: width 0.5s ease, height 0.5s ease;
+        }
+
+        .upload-zone:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .upload-zone:hover {
+            border-color: var(--secondary-color);
+            background: linear-gradient(135deg, #e8ecff 0%, #dfe7ff 100%);
+            transform: translateY(-5px);
+            box-shadow: var(--shadow);
+        }
+
+        .upload-zone.dragover {
+            border-color: var(--success-color);
+            background: linear-gradient(135deg, #d4edda 0%, #c3e6cb 100%);
+            transform: scale(1.02);
+        }
+
+        .upload-zone-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+            display: block;
+            animation: bounce 2s infinite;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .upload-zone p {
+            color: var(--primary-color);
+            font-weight: 700;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+
+        .upload-zone small {
+            color: #666;
+            font-size: 13px;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .stats-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            transition: var(--transition);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-hover);
+        }
+
+        .stat-card .stat-number {
+            font-size: 28px;
+            font-weight: 800;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .stat-card .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+            font-weight: 600;
+        }
+
+        .action-buttons-top {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .btn-icon {
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 13px;
+            transition: var(--transition);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .btn-icon i {
+            font-size: 14px;
+        }
+
+        .btn-undo {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+        }
+
+        .btn-undo:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(149, 165, 166, 0.4);
+        }
+
+        .btn-redo {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+        }
+
+        .btn-redo:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(149, 165, 166, 0.4);
+        }
+
+        .btn-icon:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .cards-gallery {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            max-height: 550px;
+            overflow-y: auto;
+            padding: 10px;
+            margin-bottom: 20px;
+        }
+
+        .card-item {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 3px solid #e0e0e0;
+            cursor: move;
+            transition: var(--transition);
+            aspect-ratio: 16 / 10;
+            background: white;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .card-item.sortable-ghost {
+            opacity: 0.4;
+        }
+
+        .card-item.sortable-drag {
+            cursor: grabbing;
+            transform: rotate(5deg);
+        }
+
+        .card-item:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+            transform: translateY(-5px) scale(1.02);
+        }
+
+        .card-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #f8f9fa;
+        }
+
+        .card-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--primary-color);
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+        }
+
+        .card-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7), rgba(0,0,0,0.9));
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            flex-wrap: wrap;
+            padding: 10px;
+        }
+
+        .card-item:hover .card-overlay {
+            opacity: 1;
+        }
+
+        .action-btn {
+            width: 42px;
+            height: 42px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .btn-crop {
+            background: var(--info-color);
+            color: white;
+        }
+
+        .btn-crop:hover {
+            background: #2980b9;
+            transform: scale(1.15) rotate(10deg);
+        }
+
+        .btn-bg-remove {
+            background: var(--success-color);
+            color: white;
+        }
+
+        .btn-bg-remove:hover {
+            background: #229954;
+            transform: scale(1.15) rotate(-10deg);
+        }
+
+        .btn-rotate {
+            background: var(--warning-color);
+            color: white;
+        }
+
+        .btn-rotate:hover {
+            background: #e67e22;
+            transform: scale(1.15) rotate(90deg);
+        }
+
+        .btn-flip {
+            background: #9b59b6;
+            color: white;
+        }
+
+        .btn-flip:hover {
+            background: #8e44ad;
+            transform: scale(1.15);
+        }
+
+        .btn-filter {
+            background: #1abc9c;
+            color: white;
+        }
+
+        .btn-filter:hover {
+            background: #16a085;
+            transform: scale(1.15);
+        }
+
+        .btn-delete {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #c0392b;
+            transform: scale(1.15) rotate(-10deg);
+        }
+
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 30px;
+        }
+
+        .settings-box {
+            background: var(--light-bg);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+        }
+
+        .settings-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        .setting-item {
+            margin-bottom: 0;
+        }
+
+        .setting-item.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .setting-item label {
+            display: block;
+            margin-bottom: 10px;
+            color: var(--dark-color);
+            font-weight: 700;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .setting-item label i {
+            color: var(--primary-color);
+        }
+
+        .setting-item input,
+        .setting-item select {
+            width: 100%;
+            padding: 14px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: var(--transition);
+            background: white;
+        }
+
+        .setting-item input:focus,
+        .setting-item select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.1);
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 30px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            right: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: var(--success-color);
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(-30px);
+        }
+
+        .preview-box {
+            background: var(--light-bg);
+            padding: 30px;
+            border-radius: var(--border-radius);
+            flex: 1;
+            overflow-y: auto;
+            border: 3px solid #e0e0e0;
+            box-shadow: var(--shadow);
+            min-height: 400px;
+        }
+
+        .preview-title {
+            text-align: center;
+            color: var(--primary-color);
+            font-weight: 700;
+            margin-bottom: 25px;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .preview-title i {
+            font-size: 22px;
+        }
+
+        #preview {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            min-height: 250px;
+        }
+
+        .cards-preview-grid {
+            display: grid;
+            gap: 15px;
+            width: 100%;
+        }
+
+        .preview-card {
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            background: white;
+            transition: var(--transition);
+        }
+
+        .preview-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+        }
+
+        .preview-card img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .empty-preview {
+            text-align: center;
+            color: #999;
+            padding: 60px 20px;
+            font-size: 18px;
+        }
+
+        .empty-preview i {
+            font-size: 64px;
+            display: block;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .control-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 15px;
+        }
+
+        .btn-main {
+            padding: 18px;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 15px;
+            transition: var(--transition);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: var(--shadow);
+        }
+
+        .btn-main i {
+            font-size: 18px;
+        }
+
+        .btn-print {
+            background: linear-gradient(135deg, var(--success-color) 0%, #229954 100%);
+        }
+
+        .btn-print:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(39, 174, 96, 0.4);
+        }
+
+        .btn-download {
+            background: linear-gradient(135deg, var(--info-color) 0%, #2980b9 100%);
+        }
+
+        .btn-download:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-pdf {
+            background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+        }
+
+        .btn-pdf:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(231, 76, 60, 0.4);
+        }
+
+        .btn-clear {
+            grid-column: 1 / -1;
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+        }
+
+        .btn-clear:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 25px rgba(149, 165, 166, 0.4);
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.8);
+            animation: fadeIn 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal.active {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 1000px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 70px rgba(0,0,0,0.5);
+            animation: slideUp 0.4s ease;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100px) scale(0.9); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 20px 20px 0 0;
+        }
+
+        .modal-header h2 {
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .modal-header h2 i {
+            font-size: 28px;
+        }
+
+        .close-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+        }
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.1) rotate(90deg);
+        }
+
+        .modal-body {
+            padding: 35px;
+        }
+
+        .cropper-wrapper {
+            max-width: 100%;
+            max-height: 500px;
+            margin-bottom: 30px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 2px solid #e0e0e0;
+        }
+
+        .cropper-wrapper img {
+            max-width: 100%;
+            display: block;
+        }
+
+        .crop-presets {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-bottom: 25px;
+        }
+
+        .preset-btn {
+            padding: 10px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: var(--transition);
+        }
+
+        .preset-btn:hover {
+            border-color: var(--primary-color);
+            background: #f0f4ff;
+            transform: translateY(-2px);
+        }
+
+        .preset-btn.active {
+            border-color: var(--primary-color);
+            background: var(--primary-color);
+            color: white;
+        }
+
+        .modal-buttons {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        .btn-modal {
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 15px;
+            transition: var(--transition);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-modal i {
+            font-size: 16px;
+        }
+
+        .btn-confirm {
+            background: linear-gradient(135deg, var(--success-color) 0%, #229954 100%);
+            color: white;
+        }
+
+        .btn-confirm:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(39, 174, 96, 0.4);
+        }
+
+        .btn-cancel {
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+            color: white;
+        }
+
+        .btn-cancel:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 20px rgba(149, 165, 166, 0.4);
+        }
+
+        .filter-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+
+        .filter-btn {
+            padding: 15px;
+            border: 2px solid #ddd;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 600;
+            transition: var(--transition);
+            text-align: center;
+        }
+
+        .filter-btn:hover {
+            border-color: var(--primary-color);
+            background: #f0f4ff;
+            transform: translateY(-3px);
+        }
+
+        .filter-preview {
+            width: 100%;
+            max-height: 400px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .processing-box {
+            text-align: center;
+            padding: 60px 40px;
+        }
+
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            width: 60px;
+            height: 60px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 25px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .processing-box p {
+            font-size: 18px;
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .success-box {
+            text-align: center;
+            padding: 60px 40px;
+        }
+
+        .success-icon {
+            font-size: 72px;
+            color: var(--success-color);
+            margin-bottom: 20px;
+            animation: scaleIn 0.5s ease;
+        }
+
+        @keyframes scaleIn {
+            from { transform: scale(0); }
+            to { transform: scale(1); }
+        }
+
+        .success-box p {
+            font-size: 20px;
+            color: var(--success-color);
+            font-weight: 700;
+            margin-bottom: 25px;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: white;
+            color: var(--dark-color);
+            padding: 18px 30px;
+            border-radius: 50px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            z-index: 3000;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-weight: 600;
+            opacity: 0;
+            transition: all 0.4s ease;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-right: 5px solid var(--success-color);
+        }
+
+        .toast.error {
+            border-right: 5px solid var(--danger-color);
+        }
+
+        .toast.info {
+            border-right: 5px solid var(--info-color);
+        }
+
+        .toast i {
+            font-size: 24px;
+        }
+
+        .toast.success i {
+            color: var(--success-color);
+        }
+
+        .toast.error i {
+            color: var(--danger-color);
+        }
+
+        .toast.info i {
+            color: var(--info-color);
+        }
+
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+
+            .container {
+                box-shadow: none;
+            }
+
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 0;
+                padding: 0;
+            }
+
+            .header,
+            .left-panel,
+            .control-buttons,
+            .settings-box {
+                display: none;
+            }
+
+            .preview-box {
+                border: none;
+                background: white;
+                overflow: visible;
+                padding: 0;
+            }
+
+            #preview {
+                padding: 0;
+                background: transparent;
+            }
+
+            .preview-card {
+                page-break-inside: avoid;
+            }
+        }
+
+        @media (max-width: 1400px) {
+            .main-content {
+                grid-template-columns: 350px 1fr;
+            }
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .left-panel {
+                position: relative;
+                top: 0;
+            }
+
+            .cards-gallery {
+                grid-template-columns: repeat(3, 1fr);
+                max-height: 400px;
+            }
+
+            .settings-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .control-buttons {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 28px;
+            }
+
+            .header p {
+                font-size: 14px;
+            }
+
+            .main-content {
+                padding: 25px;
+            }
+
+            .cards-gallery {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .stats-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .scrollbar::-webkit-scrollbar {
+            width: 10px;
+        }
+
+        .scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        .scrollbar::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 10px;
+        }
+
+        .scrollbar::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+        }
+
+        .cards-gallery,
+        .preview-box,
+        .modal-content {
+            scrollbar-color: var(--primary-color) #f1f1f1;
+            scrollbar-width: thin;
+        }
+
+        /* Loading Animation */
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px);
+            z-index: 5000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .loading-content {
+            text-align: center;
+            color: white;
+        }
+
+        .loading-spinner {
+            width: 80px;
+            height: 80px;
+            border: 6px solid rgba(255,255,255,0.2);
+            border-top: 6px solid white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        .loading-text {
+            font-size: 18px;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">جاري المعالجة...</div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <span id="toastMessage">رسالة النظام</span>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <div class="developer-badge">
+                <i class="fas fa-code"></i>
+                <span>تطوير احترافي</span>
+            </div>
+            <h1><i class="fas fa-id-card"></i> منظم صور البطاقات الاحترافي</h1>
+            <p>قص الصور، إزالة الخلفية، تطبيق الفلاتر - كل ما تحتاجه في مكان واحد</p>
+        </div>
+
+        <div class="main-content">
+            <!-- Left Panel -->
+            <div class="left-panel">
+                <div class="section-title">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    استيراد الصور
+                </div>
+
+                <div class="upload-zone" id="uploadZone">
+                    <div class="upload-zone-content">
+                        <i class="fas fa-images upload-icon"></i>
+                        <p>انقر هنا أو اسحب الصور</p>
+                        <small>JPG, PNG, WebP, GIF - حد أقصى 10 MB لكل صورة</small>
+                    </div>
+                </div>
+
+                <input type="file" id="fileInput" multiple accept="image/*">
+
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <span class="stat-number" id="cardCount">0</span>
+                        <span class="stat-label">البطاقات المحملة</span>
+                    </div>
+                    <div class="stat-card">
+                        <span class="stat-number" id="totalSize">0</span>
+                        <span class="stat-label">الحجم الكلي (MB)</span>
+                    </div>
+                </div>
+
+                <div class="action-buttons-top">
+                    <button class="btn-icon btn-undo" onclick="undo()" id="undoBtn" disabled>
+                        <i class="fas fa-undo"></i>
+                        تراجع
+                    </button>
+                    <button class="btn-icon btn-redo" onclick="redo()" id="redoBtn" disabled>
+                        <i class="fas fa-redo"></i>
+                        إعادة
+                    </button>
+                </div>
+
+                <div class="section-title">
+                    <i class="fas fa-layer-group"></i>
+                    البطاقات المرفوعة
+                </div>
+                <div class="cards-gallery scrollbar" id="cardsGallery"></div>
+
+                <button class="btn-main btn-clear" onclick="clearAllCards()">
+                    <i class="fas fa-trash-alt"></i>
+                    حذف الكل
+                </button>
+            </div>
+
+            <!-- Right Panel -->
+            <div class="right-panel">
+                <div class="settings-box">
+                    <div class="section-title">
+                        <i class="fas fa-cog"></i>
+                        إعدادات الطباعة
+                    </div>
+                    
+                    <div class="settings-grid">
+                        <div class="setting-item">
+                            <label>
+                                <i class="fas fa-table"></i>
+                                عدد البطاقات في الصف:
+                            </label>
+                            <select id="cardsPerRow" onchange="updatePreview()">
+                                <option value="1">1 بطاقة</option>
+                                <option value="2" selected>2 بطاقة</option>
+                                <option value="3">3 بطاقات</option>
+                                <option value="4">4 بطاقات</option>
+                                <option value="5">5 بطاقات</option>
+                            </select>
+                        </div>
+
+                        <div class="setting-item">
+                            <label>
+                                <i class="fas fa-arrows-alt-h"></i>
+                                عرض البطاقة (px):
+                            </label>
+                            <input type="number" id="cardWidth" value="300" min="100" max="800" step="10" onchange="updatePreview()">
+                        </div>
+
+                        <div class="setting-item">
+                            <label>
+                                <i class="fas fa-arrows-alt-v"></i>
+                                ارتفاع البطاقة (px):
+                            </label>
+                            <input type="number" id="cardHeight" value="200" min="100" max="800" step="10" onchange="updatePreview()">
+                        </div>
+
+                        <div class="setting-item">
+                            <label>
+                                <i class="fas fa-expand-arrows-alt"></i>
+                                المسافة بين البطاقات (px):
+                            </label>
+                            <input type="number" id="cardGap" value="15" min="0" max="100" step="5" onchange="updatePreview()">
+                        </div>
+
+                        <div class="setting-item full-width">
+                            <label style="display: flex; justify-content: space-between; align-items: center;">
+                                <span>
+                                    <i class="fas fa-border-style"></i>
+                                    إظهار حدود البطاقات
+                                </span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="showBorders" onchange="updatePreview()" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </label>
+                        </div>
+
+                        <div class="setting-item full-width">
+                            <label>
+                                <i class="fas fa-palette"></i>
+                                لون خلفية الطباعة:
+                            </label>
+                            <input type="color" id="bgColor" value="#ffffff" onchange="updatePreview()">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="preview-box scrollbar">
+                    <div class="preview-title">
+                        <i class="fas fa-eye"></i>
+                        معاينة الطباعة
+                    </div>
+                    <div id="preview">
+                        <div class="empty-preview">
+                            <i class="fas fa-images"></i>
+                            <div>قم باستيراد الصور لمعاينتها هنا</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="control-buttons">
+                    <button class="btn-main btn-print" onclick="printCards()">
+                        <i class="fas fa-print"></i>
+                        طباعة
+                    </button>
+                    <button class="btn-main btn-download" onclick="downloadAsImage()">
+                        <i class="fas fa-download"></i>
+                        حفظ كصورة
+                    </button>
+                    <button class="btn-main btn-pdf" onclick="downloadAsPDF()">
+                        <i class="fas fa-file-pdf"></i>
+                        تصدير PDF
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cropper Modal -->
+    <div id="cropperModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>
+                    <i class="fas fa-cut"></i>
+                    قص الصورة
+                </h2>
+                <button class="close-btn" onclick="closeCropperModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="crop-presets">
+                    <button class="preset-btn" onclick="setCropRatio(NaN)">حر</button>
+                    <button class="preset-btn" onclick="setCropRatio(1)">1:1</button>
+                    <button class="preset-btn" onclick="setCropRatio(16/9)">16:9</button>
+                    <button class="preset-btn" onclick="setCropRatio(4/3)">4:3</button>
+                    <button class="preset-btn" onclick="setCropRatio(3/2)">3:2</button>
+                </div>
+                <div class="cropper-wrapper">
+                    <img id="cropperImage" src="" alt="Image to crop">
+                </div>
+                <div class="modal-buttons">
+                    <button class="btn-modal btn-confirm" onclick="confirmCrop()">
+                        <i class="fas fa-check"></i>
+                        تأكيد القص
+                    </button>
+                    <button class="btn-modal btn-cancel" onclick="closeCropperModal()">
+                        <i class="fas fa-times"></i>
+                        إلغاء
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filter Modal -->
+    <div id="filterModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>
+                    <i class="fas fa-magic"></i>
+                    تطبيق الفلاتر
+                </h2>
+                <button class="close-btn" onclick="closeFilterModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="filter-options">
+                    <button class="filter-btn" onclick="applyFilter('none')">
+                        <i class="fas fa-ban"></i><br>بدون فلتر
+                    </button>
+                    <button class="filter-btn" onclick="applyFilter('grayscale')">
+                        <i class="fas fa-adjust"></i><br>أبيض وأسود
+                    </button>
+                    <button class="filter-btn" onclick="applyFilter('sepia')">
+                        <i class="fas fa-image"></i><br>سيبيا
+                    </button>
+                    <button class="filter-btn" onclick="applyFilter('invert')">
+                        <i class="fas fa-exchange-alt"></i><br>عكس الألوان
+                    </button>
+                    <button class="filter-btn" onclick="applyFilter('brightness')">
+                        <i class="fas fa-sun"></i><br>سطوع
+                    </button>
+                    <button class="filter-btn" onclick="applyFilter('contrast')">
+                        <i class="fas fa-circle-half-stroke"></i><br>تباين
+                    </button>
+                    <button class="filter-btn" onclick="applyFilter('blur')">
+                        <i class="fas fa-smog"></i><br>ضبابية
+                    </button>
+                    <button class="filter-btn" onclick="applyFilter('sharpen')">
+                        <i class="fas fa-star"></i><br>حدة
+                    </button>
+                </div>
+                <canvas id="filterPreview" class="filter-preview"></canvas>
+                <div class="modal-buttons">
+                    <button class="btn-modal btn-confirm" onclick="confirmFilter()">
+                        <i class="fas fa-check"></i>
+                        تطبيق الفلتر
+                    </button>
+                    <button class="btn-modal btn-cancel" onclick="closeFilterModal()">
+                        <i class="fas fa-times"></i>
+                        إلغاء
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Background Removal Modal -->
+    <div id="bgRemovalModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>
+                    <i class="fas fa-eraser"></i>
+                    إزالة الخلفية
+                </h2>
+                <button class="close-btn" onclick="closeBgRemovalModal()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body" id="bgRemovalBody">
+                <div class="processing-box">
+                    <div class="spinner"></div>
+                    <p>جاري معالجة الصورة وإزالة الخلفية...</p>
+                    <small style="color: #666; margin-top: 10px; display: block;">قد تستغرق العملية بضع ثوانٍ</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global Variables
+        let cards = [];
+        let history = [];
+        let historyIndex = -1;
+        let cropper = null;
+        let currentEditIndex = -1;
+        let currentFilter = 'none';
+        let totalFileSize = 0;
+        let sortableInstance = null;
+
+        // DOM Elements
+        const fileInput = document.getElementById('fileInput');
+        const uploadZone = document.getElementById('uploadZone');
+        const cardsGallery = document.getElementById('cardsGallery');
+        const cardCount = document.getElementById('cardCount');
+        const totalSize = document.getElementById('totalSize');
+        const preview = document.getElementById('preview');
+        const toast = document.getElementById('toast');
+        const toastMessage = document.getElementById('toastMessage');
+        const cropperModal = document.getElementById('cropperModal');
+        const filterModal = document.getElementById('filterModal');
+        const bgRemovalModal = document.getElementById('bgRemovalModal');
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        const undoBtn = document.getElementById('undoBtn');
+        const redoBtn = document.getElementById('redoBtn');
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+            loadCardsFromStorage();
+            updatePreview();
+        });
+
+        // Upload Zone Events
+        uploadZone.addEventListener('click', () => fileInput.click());
+
+        uploadZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadZone.classList.add('dragover');
+        });
+
+        uploadZone.addEventListener('dragleave', () => {
+            uploadZone.classList.remove('dragover');
+        });
+
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        // Handle Files Upload
+        function handleFiles(files) {
+            const validTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+            const maxSize = 10 * 1024 * 1024; // 10MB
+            let successCount = 0;
+            let errorCount = 0;
+
+            Array.from(files).forEach(file => {
+                if (!validTypes.includes(file.type)) {
+                    errorCount++;
+                    return;
+                }
+
+                if (file.size > maxSize) {
+                    showToast('الصورة ' + file.name + ' تتجاوز الحد الأقصى (10 MB)', 'error');
+                    errorCount++;
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (event) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        addCard({
+                            original: event.target.result,
+                            edited: event.target.result,
+                            name: file.name,
+                            size: file.size,
+                            width: img.width,
+                            height: img.height
+                        });
+                        successCount++;
+                        if (successCount === 1 && errorCount === 0) {
+                            showToast('تم إضافة ' + successCount + ' صورة بنجاح!', 'success');
+                        }
+                    };
+                    img.src = event.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+
+            fileInput.value = '';
+        }
+
+        // Add Card
+        function addCard(cardData) {
+            saveState();
+            cards.push(cardData);
+            totalFileSize += cardData.size;
+            updateStats();
+            renderGallery();
+            updatePreview();
+            saveCardsToStorage();
+        }
+
+        // Save State for Undo/Redo
+        function saveState() {
+            if (historyIndex < history.length - 1) {
+                history = history.slice(0, historyIndex + 1);
+            }
+            history.push(JSON.stringify(cards));
+            historyIndex++;
+            updateUndoRedoButtons();
+        }
+
+        // Undo
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                cards = JSON.parse(history[historyIndex]);
+                recalculateTotalSize();
+                renderGallery();
+                updatePreview();
+                updateStats();
+                updateUndoRedoButtons();
+                saveCardsToStorage();
+                showToast('تم التراجع بنجاح', 'info');
+            }
+        }
+
+        // Redo
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                cards = JSON.parse(history[historyIndex]);
+                recalculateTotalSize();
+                renderGallery();
+                updatePreview();
+                updateStats();
+                updateUndoRedoButtons();
+                saveCardsToStorage();
+                showToast('تم الإعادة بنجاح', 'info');
+            }
+        }
+
+        // Update Undo/Redo Buttons
+        function updateUndoRedoButtons() {
+            undoBtn.disabled = historyIndex <= 0;
+            redoBtn.disabled = historyIndex >= history.length - 1;
+        }
+
+        // Recalculate Total Size
+        function recalculateTotalSize() {
+            totalFileSize = cards.reduce((sum, card) => sum + (card.size || 0), 0);
+        }
+
+        // Update Stats
+        function updateStats() {
+            cardCount.textContent = cards.length;
+            totalSize.textContent = (totalFileSize / (1024 * 1024)).toFixed(2);
+        }
+
+        // Render Gallery
+        function renderGallery() {
+            cardsGallery.innerHTML = '';
+            
+            if (cards.length === 0) {
+                cardsGallery.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #999;">لا توجد بطاقات حتى الآن</div>';
+                if (sortableInstance) {
+                    sortableInstance.destroy();
+                    sortableInstance = null;
+                }
+                return;
+            }
+
+            cards.forEach((card, index) => {
+                const item = document.createElement('div');
+                item.className = 'card-item';
+                item.dataset.index = index;
+                item.innerHTML = `
+                    <img src="${card.edited}" alt="Card ${index + 1}">
+                    <div class="card-badge">${index + 1}</div>
+                    <div class="card-overlay">
+                        <button class="action-btn btn-crop" onclick="openCropperModal(${index})" title="قص">
+                            <i class="fas fa-cut"></i>
+                        </button>
+                        <button class="action-btn btn-bg-remove" onclick="removeBackground(${index})" title="إزالة خلفية">
+                            <i class="fas fa-eraser"></i>
+                        </button>
+                        <button class="action-btn btn-rotate" onclick="rotateCard(${index})" title="تدوير">
+                            <i class="fas fa-redo"></i>
+                        </button>
+                        <button class="action-btn btn-flip" onclick="flipCard(${index})" title="قلب">
+                            <i class="fas fa-exchange-alt"></i>
+                        </button>
+                        <button class="action-btn btn-filter" onclick="openFilterModal(${index})" title="فلاتر">
+                            <i class="fas fa-magic"></i>
+                        </button>
+                        <button class="action-btn btn-delete" onclick="deleteCard(${index})" title="حذف">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                cardsGallery.appendChild(item);
+            });
+
+            // Initialize Sortable for drag and drop
+            if (sortableInstance) {
+                sortableInstance.destroy();
+            }
+            
+            sortableInstance = new Sortable(cardsGallery, {
+                animation: 150,
+                ghostClass: 'sortable-ghost',
+                dragClass: 'sortable-drag',
+                onEnd: function(evt) {
+                    const movedCard = cards.splice(evt.oldIndex, 1)[0];
+                    cards.splice(evt.newIndex, 0, movedCard);
+                    saveState();
+                    renderGallery();
+                    updatePreview();
+                    saveCardsToStorage();
+                    showToast('تم إعادة ترتيب البطاقات', 'success');
+                }
+            });
+        }
+
+        // Rotate Card
+        function rotateCard(index) {
+            showLoading();
+            setTimeout(() => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.height;
+                    canvas.height = img.width;
+                    const ctx = canvas.getContext('2d');
+                    
+                    ctx.translate(canvas.width / 2, canvas.height / 2);
+                    ctx.rotate(90 * Math.PI / 180);
+                    ctx.drawImage(img, -img.width / 2, -img.height / 2);
+                    
+                    saveState();
+                    cards[index].edited = canvas.toDataURL('image/png');
+                    cards[index].width = canvas.width;
+                    cards[index].height = canvas.height;
+                    renderGallery();
+                    updatePreview();
+                    saveCardsToStorage();
+                    hideLoading();
+                    showToast('تم تدوير الصورة 90 درجة', 'success');
+                };
+                img.src = cards[index].edited;
+            }, 100);
+        }
+
+        // Flip Card
+        function flipCard(index) {
+            showLoading();
+            setTimeout(() => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    
+                    ctx.translate(canvas.width, 0);
+                    ctx.scale(-1, 1);
+                    ctx.drawImage(img, 0, 0);
+                    
+                    saveState();
+                    cards[index].edited = canvas.toDataURL('image/png');
+                    renderGallery();
+                    updatePreview();
+                    saveCardsToStorage();
+                    hideLoading();
+                    showToast('تم قلب الصورة أفقياً', 'success');
+                };
+                img.src = cards[index].edited;
+            }, 100);
+        }
+
+        // Open Cropper Modal
+        function openCropperModal(index) {
+            currentEditIndex = index;
+            const cropperImage = document.getElementById('cropperImage');
+            cropperImage.src = cards[index].edited;
+            cropperModal.classList.add('active');
+
+            setTimeout(() => {
+                if (cropper) {
+                    cropper.destroy();
+                }
+                cropper = new Cropper(cropperImage, {
+                    aspectRatio: NaN,
+                    autoCropArea: 0.9,
+                    responsive: true,
+                    guides: true,
+                    highlight: true,
+                    cropBoxMovable: true,
+                    cropBoxResizable: true,
+                    toggleDragModeOnDblclick: true,
+                    background: true,
+                    viewMode: 1,
+                });
+            }, 100);
+        }
+
+        // Set Crop Ratio
+        function setCropRatio(ratio) {
+            if (cropper) {
+                cropper.setAspectRatio(ratio);
+            }
+            
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // Close Cropper Modal
+        function closeCropperModal() {
+            cropperModal.classList.remove('active');
+            if (cropper) {
+                cropper.destroy();
+                cropper = null;
+            }
+        }
+
+        // Confirm Crop
+        function confirmCrop() {
+            if (cropper && currentEditIndex >= 0) {
+                showLoading();
+                setTimeout(() => {
+                    const canvas = cropper.getCroppedCanvas({
+                        maxWidth: 4096,
+                        maxHeight: 4096,
+                        imageSmoothingEnabled: true,
+                        imageSmoothingQuality: 'high',
+                    });
+                    
+                    saveState();
+                    cards[currentEditIndex].edited = canvas.toDataURL('image/png');
+                    cards[currentEditIndex].width = canvas.width;
+                    cards[currentEditIndex].height = canvas.height;
+                    renderGallery();
+                    updatePreview();
+                    saveCardsToStorage();
+                    closeCropperModal();
+                    hideLoading();
+                    showToast('تم قص الصورة بنجاح!', 'success');
+                }, 100);
+            }
+        }
+
+        // Open Filter Modal
+        function openFilterModal(index) {
+            currentEditIndex = index;
+            currentFilter = 'none';
+            filterModal.classList.add('active');
+            
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.getElementById('filterPreview');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+            };
+            img.src = cards[index].edited;
+        }
+
+        // Close Filter Modal
+        function closeFilterModal() {
+            filterModal.classList.remove('active');
+            currentFilter = 'none';
+        }
+
+        // Apply Filter Preview
+        function applyFilter(filterType) {
+            currentFilter = filterType;
+            const canvas = document.getElementById('filterPreview');
+            const ctx = canvas.getContext('2d');
+            
+            const img = new Image();
+            img.onload = () => {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                switch(filterType) {
+                    case 'none':
+                        ctx.filter = 'none';
+                        break;
+                    case 'grayscale':
+                        ctx.filter = 'grayscale(100%)';
+                        break;
+                    case 'sepia':
+                        ctx.filter = 'sepia(100%)';
+                        break;
+                    case 'invert':
+                        ctx.filter = 'invert(100%)';
+                        break;
+                    case 'brightness':
+                        ctx.filter = 'brightness(150%)';
+                        break;
+                    case 'contrast':
+                        ctx.filter = 'contrast(150%)';
+                        break;
+                    case 'blur':
+                        ctx.filter = 'blur(3px)';
+                        break;
+                    case 'sharpen':
+                        ctx.filter = 'contrast(200%) brightness(120%)';
+                        break;
+                }
+                
+                ctx.drawImage(img, 0, 0);
+            };
+            img.src = cards[currentEditIndex].edited;
+        }
+
+        // Confirm Filter
+        function confirmFilter() {
+            if (currentEditIndex >= 0) {
+                showLoading();
+                setTimeout(() => {
+                    const canvas = document.getElementById('filterPreview');
+                    saveState();
+                    cards[currentEditIndex].edited = canvas.toDataURL('image/png');
+                    renderGallery();
+                    updatePreview();
+                    saveCardsToStorage();
+                    closeFilterModal();
+                    hideLoading();
+                    showToast('تم تطبيق الفلتر بنجاح!', 'success');
+                }, 100);
+            }
+        }
+
+        // Remove Background - Advanced Algorithm
+        function removeBackground(index) {
+            currentEditIndex = index;
+            bgRemovalModal.classList.add('active');
+
+            setTimeout(() => {
+                processBackgroundRemoval(index);
+            }, 500);
+        }
+
+        function processBackgroundRemoval(index) {
+            try {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0);
+
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const data = imageData.data;
+
+                    // Advanced background removal using edge detection and color analysis
+                    const threshold = 220;
+                    const edgeThreshold = 30;
+
+                    for (let i = 0; i < data.length; i += 4) {
+                        const r = data[i];
+                        const g = data[i + 1];
+                        const b = data[i + 2];
+                        
+                        // Calculate brightness and color variance
+                        const brightness = (r + g + b) / 3;
+                        const variance = Math.abs(r - g) + Math.abs(g - b) + Math.abs(b - r);
+
+                        // Remove white/light backgrounds with low color variance
+                        if (brightness > threshold && variance < edgeThreshold) {
+                            data[i + 3] = 0; // Make transparent
+                        } else if (brightness > threshold - 20 && variance < edgeThreshold / 2) {
+                            // Partial transparency for edge smoothing
+                            data[i + 3] = Math.max(0, 255 - (brightness - threshold + 20) * 3);
+                        }
+                    }
+
+                    ctx.putImageData(imageData, 0, 0);
+                    
+                    saveState();
+                    cards[index].edited = canvas.toDataURL('image/png');
+                    renderGallery();
+                    updatePreview();
+                    saveCardsToStorage();
+
+                    // Show success message
+                    const bgRemovalBody = document.getElementById('bgRemovalBody');
+                    bgRemovalBody.innerHTML = `
+                        <div class="success-box">
+                            <i class="fas fa-check-circle success-icon"></i>
+                            <p>تمت إزالة الخلفية بنجاح!</p>
+                            <button class="btn-modal btn-confirm" onclick="closeBgRemovalModal()">
+                                <i class="fas fa-check"></i>
+                                إغلاق
+                            </button>
+                        </div>
+                    `;
+                    showToast('تمت إزالة الخلفية بنجاح!', 'success');
+                };
+                img.crossOrigin = 'anonymous';
+                img.src = cards[index].edited;
+            } catch (error) {
+                console.error('Error:', error);
+                closeBgRemovalModal();
+                showToast('حدث خطأ في معالجة الصورة', 'error');
+            }
+        }
+
+        function closeBgRemovalModal() {
+            bgRemovalModal.classList.remove('active');
+            document.getElementById('bgRemovalBody').innerHTML = `
+                <div class="processing-box">
+                    <div class="spinner"></div>
+                    <p>جاري معالجة الصورة وإزالة الخلفية...</p>
+                    <small style="color: #666; margin-top: 10px; display: block;">قد تستغرق العملية بضع ثوانٍ</small>
+                </div>
+            `;
+        }
+
+        // Delete Card
+        function deleteCard(index) {
+            if (confirm('هل تريد حذف هذه البطاقة؟')) {
+                saveState();
+                const deletedCard = cards.splice(index, 1)[0];
+                totalFileSize -= deletedCard.size;
+                updateStats();
+                renderGallery();
+                updatePreview();
+                saveCardsToStorage();
+                showToast('تم حذف البطاقة!', 'success');
+            }
+        }
+
+        // Clear All Cards
+        function clearAllCards() {
+            if (cards.length === 0) {
+                showToast('لا توجد بطاقات لحذفها', 'info');
+                return;
+            }
+
+            if (confirm('هل تريد حذف جميع البطاقات؟ لا يمكن التراجع عن هذا الإجراء.')) {
+                saveState();
+                cards = [];
+                totalFileSize = 0;
+                fileInput.value = '';
+                updateStats();
+                renderGallery();
+                updatePreview();
+                saveCardsToStorage();
+                showToast('تم حذف جميع البطاقات!', 'success');
+            }
+        }
+
+        // Update Preview
+        function updatePreview() {
+            if (cards.length === 0) {
+                preview.innerHTML = `
+                    <div class="empty-preview">
+                        <i class="fas fa-images"></i>
+                        <div>قم باستيراد الصور لمعاينتها هنا</div>
+                    </div>
+                `;
+                return;
+            }
+
+            const cardsPerRow = parseInt(document.getElementById('cardsPerRow').value);
+            const cardWidth = parseInt(document.getElementById('cardWidth').value);
+            const cardHeight = parseInt(document.getElementById('cardHeight').value);
+            const cardGap = parseInt(document.getElementById('cardGap').value);
+            const showBorders = document.getElementById('showBorders').checked;
+            const bgColor = document.getElementById('bgColor').value;
+
+            const borderStyle = showBorders ? '2px solid #ddd' : 'none';
+
+            let html = `<div class="cards-preview-grid" style="
+                grid-template-columns: repeat(${cardsPerRow}, ${cardWidth}px); 
+                gap: ${cardGap}px; 
+                justify-content: center;
+                background-color: ${bgColor};
+                padding: 20px;
+                border-radius: 12px;
+            ">`;
+            
+            cards.forEach((card, index) => {
+                html += `
+                    <div class="preview-card" style="
+                        width: ${cardWidth}px; 
+                        height: ${cardHeight}px;
+                        border: ${borderStyle};
+                    ">
+                        <img src="${card.edited}" alt="Card ${index + 1}" style="
+                            width: 100%; 
+                            height: 100%; 
+                            object-fit: contain;
+                        ">
+                    </div>
+                `;
+            });
+
+            html += '</div>';
+            preview.innerHTML = html;
+            
+            saveSettings();
+        }
+
+        // Print Cards
+        function printCards() {
+            if (cards.length === 0) {
+                showToast('الرجاء إضافة صور البطاقات أولاً', 'error');
+                return;
+            }
+            showToast('جاري تحضير الطباعة...', 'info');
+            setTimeout(() => {
+                window.print();
+            }, 500);
+        }
+
+        // Download as Image
+        function downloadAsImage() {
+            if (cards.length === 0) {
+                showToast('الرجاء إضافة صور البطاقات أولاً', 'error');
+                return;
+            }
+
+            showLoading();
+            const element = document.getElementById('preview');
+            
+            html2canvas(element, {
+                backgroundColor: document.getElementById('bgColor').value,
+                scale: 3,
+                useCORS: true,
+                allowTaint: true,
+                logging: false,
+                width: element.scrollWidth,
+                height: element.scrollHeight,
+            }).then(canvas => {
+                const link = document.createElement('a');
+                const timestamp = new Date().toISOString().slice(0,10);
+                link.href = canvas.toDataURL('image/png');
+                link.download = `cards_${timestamp}_${cards.length}-cards.png`;
+                link.click();
+                hideLoading();
+                showToast('تم حفظ الصورة بنجاح!', 'success');
+            }).catch(error => {
+                console.error('Error:', error);
+                hideLoading();
+                showToast('حدث خطأ في حفظ الصورة', 'error');
+            });
+        }
+
+        // Download as PDF
+        function downloadAsPDF() {
+            if (cards.length === 0) {
+                showToast('الرجاء إضافة صور البطاقات أولاً', 'error');
+                return;
+            }
+
+            showLoading();
+            const element = document.getElementById('preview');
+            
+            html2canvas(element, {
+                backgroundColor: document.getElementById('bgColor').value,
+                scale: 2,
+                useCORS: true,
+                allowTaint: true,
+                logging: false,
+                width: element.scrollWidth,
+                height: element.scrollHeight,
+            }).then(canvas => {
+                const { jsPDF } = window.jspdf;
+                const imgData = canvas.toDataURL('image/png');
+                
+                // Calculate PDF dimensions
+                const imgWidth = 210; // A4 width in mm
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                
+                const pdf = new jsPDF({
+                    orientation: imgHeight > imgWidth ? 'portrait' : 'landscape',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+                
+                pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight, '', 'FAST');
+                
+                const timestamp = new Date().toISOString().slice(0,10);
+                pdf.save(`cards_${timestamp}_${cards.length}-cards.pdf`);
+                
+                hideLoading();
+                showToast('تم حفظ ملف PDF بنجاح!', 'success');
+            }).catch(error => {
+                console.error('Error:', error);
+                hideLoading();
+                showToast('حدث خطأ في إنشاء ملف PDF', 'error');
+            });
+        }
+
+        // Show Toast Notification
+        function showToast(message, type = 'success') {
+            toastMessage.textContent = message;
+            toast.className = 'toast ' + type;
+            
+            const icon = toast.querySelector('i');
+            if (type === 'success') {
+                icon.className = 'fas fa-check-circle';
+            } else if (type === 'error') {
+                icon.className = 'fas fa-exclamation-circle';
+            } else if (type === 'info') {
+                icon.className = 'fas fa-info-circle';
+            }
+            
+            toast.classList.add('show');
+            
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3500);
+        }
+
+        // Show/Hide Loading Overlay
+        function showLoading() {
+            loadingOverlay.classList.add('active');
+        }
+
+        function hideLoading() {
+            loadingOverlay.classList.remove('active');
+        }
+
+        // Save Settings to LocalStorage
+        function saveSettings() {
+            const settings = {
+                cardsPerRow: document.getElementById('cardsPerRow').value,
+                cardWidth: document.getElementById('cardWidth').value,
+                cardHeight: document.getElementById('cardHeight').value,
+                cardGap: document.getElementById('cardGap').value,
+                showBorders: document.getElementById('showBorders').checked,
+                bgColor: document.getElementById('bgColor').value,
+            };
+            localStorage.setItem('cardOrganizerSettings', JSON.stringify(settings));
+        }
+
+        // Load Settings from LocalStorage
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('cardOrganizerSettings');
+            if (savedSettings) {
+                const settings = JSON.parse(savedSettings);
+                document.getElementById('cardsPerRow').value = settings.cardsPerRow || 2;
+                document.getElementById('cardWidth').value = settings.cardWidth || 300;
+                document.getElementById('cardHeight').value = settings.cardHeight || 200;
+                document.getElementById('cardGap').value = settings.cardGap || 15;
+                document.getElementById('showBorders').checked = settings.showBorders !== false;
+                document.getElementById('bgColor').value = settings.bgColor || '#ffffff';
+            }
+        }
+
+        // Save Cards to LocalStorage
+        function saveCardsToStorage() {
+            try {
+                // Only save if cards array is not too large
+                if (cards.length > 0 && JSON.stringify(cards).length < 5000000) { // ~5MB limit
+                    localStorage.setItem('cardOrganizerCards', JSON.stringify(cards));
+                }
+            } catch (e) {
+                console.warn('Could not save cards to localStorage:', e);
+            }
+        }
+
+        // Load Cards from LocalStorage
+        function loadCardsFromStorage() {
+            try {
+                const savedCards = localStorage.getItem('cardOrganizerCards');
+                if (savedCards) {
+                    cards = JSON.parse(savedCards);
+                    recalculateTotalSize();
+                    updateStats();
+                    renderGallery();
+                    updatePreview();
+                    saveState();
+                    if (cards.length > 0) {
+                        showToast('تم استعادة ' + cards.length + ' بطاقة من الجلسة السابقة', 'info');
+                    }
+                }
+            } catch (e) {
+                console.warn('Could not load cards from localStorage:', e);
+            }
+        }
+
+        // Close modals when clicking outside
+        window.addEventListener('click', (event) => {
+            if (event.target === cropperModal) {
+                closeCropperModal();
+            }
+            if (event.target === filterModal) {
+                closeFilterModal();
+            }
+            if (event.target === bgRemovalModal) {
+                closeBgRemovalModal();
+            }
+        });
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ctrl/Cmd + Z for Undo
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                undo();
+            }
+            // Ctrl/Cmd + Shift + Z for Redo
+            if ((e.ctrlKey || e.metaKey) && e.key === 'z' && e.shiftKey) {
+                e.preventDefault();
+                redo();
+            }
+            // Ctrl/Cmd + P for Print
+            if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                e.preventDefault();
+                printCards();
+            }
+            // ESC to close modals
+            if (e.key === 'Escape') {
+                closeCropperModal();
+                closeFilterModal();
+                closeBgRemovalModal();
+            }
+        });
+
+        // Prevent accidental page refresh
+        window.addEventListener('beforeunload', (e) => {
+            if (cards.length > 0) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        // Initialize first state
+        saveState();
+    </script>
+</body>
+</html>
