@@ -9,6 +9,31 @@ let currentSelectedRequest = null;
 let isEditMode = false;
 let documentCount = 0;
 
+// دالة تنسيق التاريخ الآمنة بدون eval
+function safeDateFormat(dateString) {
+    if (!dateString) return 'غير محدد';
+    
+    try {
+        const date = new Date(dateString);
+        
+        // التحقق من صحة التاريخ
+        if (isNaN(date.getTime())) {
+            return dateString;
+        }
+        
+        const options = { 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        };
+        
+        return new Intl.DateTimeFormat('ar-EG', options).format(date);
+    } catch (e) {
+        console.warn('Error formatting date:', e);
+        return dateString;
+    }
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     loadTheme();
@@ -45,7 +70,15 @@ function setupEventListeners() {
         if (e.target === modal) closeModal();
     });
 
-    // Prevent zoom on double tap for iOS
+    // إعدادات إضافية للأمان
+    setupSecurityListeners();
+}
+
+/**
+ * Setup security-focused listeners
+ */
+function setupSecurityListeners() {
+    // منع zoom على double tap لـ iOS بشكل آمن
     let lastTouchEnd = 0;
     document.addEventListener('touchend', (e) => {
         const now = Date.now();
@@ -53,7 +86,7 @@ function setupEventListeners() {
             e.preventDefault();
         }
         lastTouchEnd = now;
-    }, false);
+    }, { passive: false });
 }
 
 /**
@@ -182,8 +215,8 @@ function addDocumentForm() {
             </div>
             <div class="form-grid">
                 <div class="input-group">
-                    <label>نوع المستند</label>
-                    <select name="docType_${docId}" required>
+                    <label for="docType_${docId}">نوع المستند</label>
+                    <select id="docType_${docId}" name="docType_${docId}" required>
                         <option value="official-request">طلب رسمي</option>
                         <option value="response">رد الجهة</option>
                         <option value="follow-up">متابعة</option>
@@ -191,12 +224,12 @@ function addDocumentForm() {
                     </select>
                 </div>
                 <div class="input-group">
-                    <label>تاريخ المستند</label>
-                    <input type="date" name="docDate_${docId}" required>
+                    <label for="docDate_${docId}">تاريخ المستند</label>
+                    <input type="date" id="docDate_${docId}" name="docDate_${docId}" required>
                 </div>
                 <div class="input-group full-width">
-                    <label>وصف المستند</label>
-                    <textarea name="docDesc_${docId}" rows="3" placeholder="وصف مختصر للمستند"></textarea>
+                    <label for="docDesc_${docId}">وصف المستند</label>
+                    <textarea id="docDesc_${docId}" name="docDesc_${docId}" rows="3" placeholder="وصف مختصر للمستند"></textarea>
                 </div>
             </div>
         </div>
@@ -313,9 +346,9 @@ async function handleFormSubmit(e) {
         docItems.forEach(item => {
             const docId = item.getAttribute('data-doc-id');
             const doc = {
-                type: item.querySelector(`[name="docType_${docId}"]`)?.value || '',
-                date: item.querySelector(`[name="docDate_${docId}"]`)?.value || '',
-                description: item.querySelector(`[name="docDesc_${docId}"]`)?.value || ''
+                type: document.getElementById(`docType_${docId}`)?.value || '',
+                date: document.getElementById(`docDate_${docId}`)?.value || '',
+                description: document.getElementById(`docDesc_${docId}`)?.value || ''
             };
             formData.documents.push(doc);
         });
@@ -470,7 +503,7 @@ function renderTable(requests) {
             <td>${req.reqId || ''}</td>
             <td>${req.title || ''}</td>
             <td>${req.authority || ''}</td>
-            <td>${formatDate(req.submissionDate)}</td>
+            <td>${safeDateFormat(req.submissionDate)}</td>
             <td>${req.hasDocuments && req.documents ? req.documents.length : 0}</td>
             <td><span class="status-badge status-${req.status}">${getStatusText(req.status)}</span></td>
         </tr>
@@ -503,8 +536,8 @@ function searchRequests(searchTerm) {
 
         // 5. البحث في تاريخ التقديم
         if (req.submissionDate) {
-            const formattedDate = formatDate(req.submissionDate);
-            if (formattedDate.toLowerCase().includes(term)) return true;
+            const formattedDate = safeDateFormat(req.submissionDate).toLowerCase();
+            if (formattedDate.includes(term)) return true;
         }
 
         // 6. البحث في الحالة
@@ -524,7 +557,7 @@ function searchRequests(searchTerm) {
                 if (doc.description && doc.description.toLowerCase().includes(term)) return true;
 
                 if (doc.date) {
-                    const docDate = formatDate(doc.date).toLowerCase();
+                    const docDate = safeDateFormat(doc.date).toLowerCase();
                     if (docDate.includes(term)) return true;
                 }
             }
@@ -616,7 +649,7 @@ function showRequestDetails(firebaseKey) {
     let modalBodyHTML = `
         <div class="detail-row">
             <strong>📅 تاريخ التقديم:</strong>
-            <span>${formatDate(request.submissionDate)}</span>
+            <span>${safeDateFormat(request.submissionDate)}</span>
         </div>
         <div class="detail-row">
             <strong>🏛️ الجهة المعنية:</strong>
@@ -643,7 +676,7 @@ function showRequestDetails(firebaseKey) {
                 <div class="detail-row" style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 8px; margin: 8px 0;">
                     <div>
                         <strong>مستند ${idx + 1}: ${getDocumentTypeName(doc.type)}</strong><br>
-                        <small>التاريخ: ${formatDate(doc.date)}</small><br>
+                        <small>التاريخ: ${safeDateFormat(doc.date)}</small><br>
                         <small>الوصف: ${doc.description || 'لا يوجد'}</small>
                     </div>
                 </div>
@@ -705,10 +738,11 @@ function editRequest() {
             currentSelectedRequest.documents.forEach((doc, idx) => {
                 if (idx > 0) addDocumentForm();
 
+                // استخدام setTimeout بطريقة آمنة (بدون نص)
                 setTimeout(() => {
-                    const typeSelect = document.querySelector(`[name="docType_${idx}"]`);
-                    const dateInput = document.querySelector(`[name="docDate_${idx}"]`);
-                    const descTextarea = document.querySelector(`[name="docDesc_${idx}"]`);
+                    const typeSelect = document.getElementById(`docType_${idx}`);
+                    const dateInput = document.getElementById(`docDate_${idx}`);
+                    const descTextarea = document.getElementById(`docDesc_${idx}`);
 
                     if (typeSelect) typeSelect.value = doc.type || '';
                     if (dateInput) dateInput.value = doc.date || '';
@@ -747,7 +781,7 @@ async function confirmDelete() {
 }
 
 /**
- * Print request
+ * Print request - نسخة آمنة بدون eval
  */
 function printRequest() {
     if (!currentSelectedRequest) {
@@ -757,6 +791,10 @@ function printRequest() {
 
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
+
+    const dateStr = safeDateFormat(currentSelectedRequest.submissionDate);
+    const deadlineStr = getDeadlineText(currentSelectedRequest.submissionDate);
+    const statusStr = getStatusText(currentSelectedRequest.status);
 
     const printHTML = `
         <!DOCTYPE html>
@@ -771,6 +809,10 @@ function printRequest() {
                 .detail { margin: 15px 0; padding: 10px; border-right: 3px solid #d4af37; background: #f9f9f9; }
                 .detail strong { color: #1e3c72; display: inline-block; min-width: 150px; }
                 .details-box { background: #f9f9f9; padding: 20px; border-radius: 8px; margin: 20px 0; }
+                @media print {
+                    body { padding: 20px; }
+                    .no-print { display: none; }
+                }
             </style>
         </head>
         <body>
@@ -780,26 +822,41 @@ function printRequest() {
             </div>
             <div class="detail"><strong>🔢 رقم الطلب:</strong> ${currentSelectedRequest.reqId || ''}</div>
             <div class="detail"><strong>📝 العنوان:</strong> ${currentSelectedRequest.title || ''}</div>
-            <div class="detail"><strong>📅 تاريخ التقديم:</strong> ${formatDate(currentSelectedRequest.submissionDate)}</div>
+            <div class="detail"><strong>📅 تاريخ التقديم:</strong> ${dateStr}</div>
             <div class="detail"><strong>🏛️ الجهة المعنية:</strong> ${currentSelectedRequest.authority || ''}</div>
-            <div class="detail"><strong>✅ الحالة:</strong> ${getStatusText(currentSelectedRequest.status)}</div>
-            <div class="detail"><strong>⏰ الموعد النهائي:</strong> ${getDeadlineText(currentSelectedRequest.submissionDate)}</div>
+            <div class="detail"><strong>✅ الحالة:</strong> ${statusStr}</div>
+            <div class="detail"><strong>⏰ الموعد النهائي:</strong> ${deadlineStr}</div>
             <div class="details-box">
                 <strong>📋 تفاصيل الطلب:</strong>
                 <p style="margin-top: 10px;">${currentSelectedRequest.details || ''}</p>
             </div>
-            ${currentSelectedRequest.hasDocuments && currentSelectedRequest.documents ? `
-                <div class="details-box">
-                    <strong>📎 المستندات المرفقة (${currentSelectedRequest.documents.length}):</strong>
-                    ${currentSelectedRequest.documents.map((doc, idx) => `
-                        <div style="margin: 15px 0; padding: 10px; border-right: 2px solid #ccc;">
-                            <strong>مستند ${idx + 1}: ${getDocumentTypeName(doc.type)}</strong><br>
-                            التاريخ: ${formatDate(doc.date)}<br>
-                            الوصف: ${doc.description || 'لا يوجد'}
-                        </div>
-                    `).join('')}
+    `;
+
+    // إضافة المستندات إذا وجدت
+    if (currentSelectedRequest.hasDocuments && currentSelectedRequest.documents && currentSelectedRequest.documents.length > 0) {
+        let docsHTML = `
+            <div class="details-box">
+                <strong>📎 المستندات المرفقة (${currentSelectedRequest.documents.length}):</strong>
+        `;
+        
+        currentSelectedRequest.documents.forEach((doc, idx) => {
+            const docDate = safeDateFormat(doc.date);
+            const docType = getDocumentTypeName(doc.type);
+            
+            docsHTML += `
+                <div style="margin: 15px 0; padding: 10px; border-right: 2px solid #ccc;">
+                    <strong>مستند ${idx + 1}: ${docType}</strong><br>
+                    التاريخ: ${docDate}<br>
+                    الوصف: ${doc.description || 'لا يوجد'}
                 </div>
-            ` : ''}
+            `;
+        });
+        
+        docsHTML += '</div>';
+        printHTML += docsHTML;
+    }
+
+    printHTML += `
             <div style="margin-top: 40px; padding: 25px; background: linear-gradient(135deg, #667eea, #764ba2); border-radius: 15px; text-align: center; color: white;">
                 <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 10px;">
                     <div style="width: 40px; height: 40px; background: rgba(255,255,255,0.2); border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-size: 20px;">💻</div>
@@ -819,7 +876,11 @@ function printRequest() {
     printWindow.document.write(printHTML);
     printWindow.document.close();
     printWindow.focus();
-    setTimeout(() => printWindow.print(), 500);
+    
+    // استخدام setTimeout بشكل آمن
+    setTimeout(function() {
+        printWindow.print();
+    }, 500);
 }
 
 /**
@@ -877,17 +938,7 @@ function showAlert(message, type = 'info') {
  * Format date to Arabic
  */
 function formatDate(dateString) {
-    if (!dateString) return 'غير محدد';
-    try {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('ar-EG', {
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        });
-    } catch (e) {
-        return dateString;
-    }
+    return safeDateFormat(dateString);
 }
 
 /**
@@ -937,7 +988,7 @@ function getDeadlineText(submissionDate) {
         } else if (daysLeft === 0) {
             return '⚠️ اليوم هو الموعد النهائي';
         } else {
-            return `${formatDate(deadlineDate)} (${daysLeft} يوم متبقي)`;
+            return `${safeDateFormat(deadlineDate)} (${daysLeft} يوم متبقي)`;
         }
     } catch (e) {
         return 'غير محدد';
