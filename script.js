@@ -781,7 +781,7 @@ async function confirmDelete() {
 }
 
 /**
- * Print request - نسخة محسنة ومضمونة
+ * Print request - نسخة محسنة تعمل على جميع المتصفحات
  */
 function printRequest() {
     if (!currentSelectedRequest) {
@@ -789,346 +789,97 @@ function printRequest() {
         return;
     }
 
-    const printWindow = window.open('', '_blank', 'width=800,height=600,scrollbars=yes');
-    if (!printWindow) {
-        showAlert('❌ تم منع فتح نافذة الطباعة. الرجاء السماح بالنوافذ المنبثقة.', 'danger');
-        return;
-    }
+    // إنشاء عنصر مخفي للطباعة داخل الصفحة الحالية
+    const printElement = document.createElement('div');
+    printElement.id = 'printContent';
+    printElement.style.cssText = `
+        position: fixed;
+        left: -9999px;
+        top: 0;
+        width: 800px;
+        background: white;
+        padding: 20px;
+        font-family: 'Cairo', Arial, sans-serif;
+        text-align: right;
+        direction: rtl;
+        z-index: 10000;
+    `;
 
     const dateStr = safeDateFormat(currentSelectedRequest.submissionDate);
     const deadlineStr = getDeadlineText(currentSelectedRequest.submissionDate);
     const statusStr = getStatusText(currentSelectedRequest.status);
+    const printDate = new Date().toLocaleDateString('ar-EG', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+    const printTime = new Date().toLocaleTimeString('ar-EG');
 
-    const printHTML = `
-        <!DOCTYPE html>
-        <html lang="ar" dir="rtl">
-        <head>
-            <meta charset="UTF-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>طلب رقم ${currentSelectedRequest.reqId || ''}</title>
-            <link rel="preconnect" href="https://fonts.googleapis.com">
-            <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-            <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-            <style>
-                @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap');
-                
-                * {
-                    margin: 0;
-                    padding: 0;
-                    box-sizing: border-box;
-                    font-family: 'Cairo', Arial, sans-serif;
-                }
-                
-                body {
-                    background-color: #f5f7fa;
-                    color: #333;
-                    line-height: 1.8;
-                    padding: 20px;
-                    max-width: 800px;
-                    margin: 0 auto;
-                }
-                
-                .print-container {
-                    background: white;
-                    padding: 30px;
-                    border-radius: 15px;
-                    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
-                    margin-bottom: 30px;
-                }
-                
-                .header {
-                    text-align: center;
-                    margin-bottom: 40px;
-                    padding-bottom: 25px;
-                    border-bottom: 3px solid #1e3c72;
-                    position: relative;
-                }
-                
-                .header h1 {
-                    color: #1e3c72;
-                    margin-bottom: 10px;
-                    font-size: 28px;
-                    font-weight: 700;
-                }
-                
-                .header h2 {
-                    color: #2c5282;
-                    font-size: 22px;
-                    font-weight: 600;
-                    margin-bottom: 15px;
-                }
-                
-                .header::after {
-                    content: '';
-                    position: absolute;
-                    bottom: -3px;
-                    left: 30%;
-                    width: 40%;
-                    height: 3px;
-                    background: linear-gradient(90deg, transparent, #d4af37, transparent);
-                }
-                
-                .detail-section {
-                    margin-bottom: 25px;
-                }
-                
-                .detail-section h3 {
-                    color: #1e3c72;
-                    margin-bottom: 15px;
-                    padding-bottom: 8px;
-                    border-bottom: 2px solid #e2e8f0;
-                    font-size: 18px;
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                }
-                
-                .detail-row {
-                    display: flex;
-                    margin-bottom: 12px;
-                    padding: 10px;
-                    background: #f8fafc;
-                    border-radius: 8px;
-                    border-right: 3px solid #d4af37;
-                }
-                
-                .detail-row strong {
-                    color: #1e3c72;
-                    min-width: 180px;
-                    font-weight: 600;
-                }
-                
-                .detail-row span {
-                    flex: 1;
-                    color: #2d3748;
-                    word-break: break-word;
-                }
-                
-                .status-badge {
-                    display: inline-block;
-                    padding: 4px 12px;
-                    border-radius: 20px;
-                    font-size: 14px;
-                    font-weight: 600;
-                    color: white;
-                    background-color: #3498db;
-                }
-                
-                .status-execution { background-color: #f1c40f; }
-                .status-review { background-color: #3498db; }
-                .status-completed { background-color: #2ecc71; }
-                .status-rejected { background-color: #e74c3c; }
-                
-                .details-box {
-                    background: #f1f5f9;
-                    padding: 20px;
-                    border-radius: 10px;
-                    margin: 15px 0;
-                    border: 1px solid #e2e8f0;
-                }
-                
-                .details-box p {
-                    margin-top: 10px;
-                    padding: 10px;
-                    background: white;
-                    border-radius: 5px;
-                    white-space: pre-wrap;
-                }
-                
-                .documents-section {
-                    margin-top: 25px;
-                }
-                
-                .document-card {
-                    background: white;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 10px;
-                    padding: 15px;
-                    margin-bottom: 15px;
-                    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-                }
-                
-                .document-header {
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    margin-bottom: 10px;
-                    color: #2c5282;
-                }
-                
-                .footer {
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    border-radius: 15px;
-                    padding: 25px;
-                    text-align: center;
-                    color: white;
-                    margin-top: 40px;
-                }
-                
-                .developer-info {
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    gap: 15px;
-                    margin-bottom: 15px;
-                }
-                
-                .developer-icon {
-                    width: 50px;
-                    height: 50px;
-                    background: rgba(255,255,255,0.2);
-                    border-radius: 12px;
-                    display: flex;
-                    align-items: center;
-                    justify-content: center;
-                    font-size: 24px;
-                }
-                
-                .developer-text h4 {
-                    margin: 0;
-                    font-size: 18px;
-                }
-                
-                .developer-text p {
-                    margin: 5px 0 0 0;
-                    font-size: 16px;
-                    font-weight: bold;
-                }
-                
-                .links {
-                    font-size: 14px;
-                    opacity: 0.9;
-                    margin-top: 10px;
-                }
-                
-                .links a {
-                    color: white;
-                    text-decoration: none;
-                    margin: 0 10px;
-                }
-                
-                .links a:hover {
-                    text-decoration: underline;
-                }
-                
-                .print-date {
-                    text-align: left;
-                    font-size: 12px;
-                    color: #718096;
-                    margin-bottom: 20px;
-                    padding-bottom: 10px;
-                    border-bottom: 1px dashed #e2e8f0;
-                }
-                
-                @media print {
-                    body {
-                        padding: 0;
-                        background: white;
-                    }
-                    
-                    .print-container {
-                        box-shadow: none;
-                        padding: 15px;
-                    }
-                    
-                    .no-print {
-                        display: none;
-                    }
-                    
-                    .footer {
-                        -webkit-print-color-adjust: exact;
-                        color-adjust: exact;
-                    }
-                    
-                    .detail-row {
-                        break-inside: avoid;
-                    }
-                }
-                
-                .watermark {
-                    position: fixed;
-                    top: 50%;
-                    left: 50%;
-                    transform: translate(-50%, -50%) rotate(-45deg);
-                    font-size: 80px;
-                    opacity: 0.05;
-                    color: #1e3c72;
-                    z-index: -1;
-                    white-space: nowrap;
-                    pointer-events: none;
-                }
-            </style>
-        </head>
-        <body>
-            <div class="watermark">نظام إدارة الطلبات</div>
-            
-            <div class="print-date">
-                تاريخ الطباعة: ${new Date().toLocaleDateString('ar-EG', { 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                })} الساعة: ${new Date().toLocaleTimeString('ar-EG')}
+    let printHTML = `
+        <div style="border: 2px solid #1e3c72; border-radius: 15px; padding: 30px; margin: 0 auto; max-width: 750px;">
+            <!-- الترويسة -->
+            <div style="text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #d4af37;">
+                <h1 style="color: #1e3c72; margin: 0 0 10px 0; font-size: 28px;">🏛️ نظام إدارة طلبات البرلمان</h1>
+                <h2 style="color: #2c5282; margin: 0; font-size: 22px;">نموذج طلب رسمي - نسخة للطباعة</h2>
+                <p style="color: #666; margin-top: 10px;">تاريخ الطباعة: ${printDate} - الساعة: ${printTime}</p>
             </div>
-            
-            <div class="print-container">
-                <div class="header">
-                    <h1>🏛️ نظام إدارة طلبات البرلمان</h1>
-                    <h2>نموذج طلب رسمي</h2>
-                    <p>نسخة للطباعة والتوثيق</p>
-                </div>
+
+            <!-- معلومات الطلب -->
+            <div style="margin-bottom: 30px;">
+                <h3 style="color: #1e3c72; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">
+                    <i class="fas fa-info-circle"></i> معلومات الطلب الأساسية
+                </h3>
                 
-                <div class="detail-section">
-                    <h3><i class="fas fa-info-circle"></i> المعلومات الأساسية</h3>
-                    
-                    <div class="detail-row">
-                        <strong>🔢 رقم الطلب:</strong>
-                        <span>${currentSelectedRequest.reqId || 'غير محدد'}</span>
-                    </div>
-                    
-                    <div class="detail-row">
-                        <strong>📝 عنوان الطلب:</strong>
-                        <span>${currentSelectedRequest.title || 'غير محدد'}</span>
-                    </div>
-                    
-                    <div class="detail-row">
-                        <strong>📅 تاريخ التقديم:</strong>
-                        <span>${dateStr}</span>
-                    </div>
-                    
-                    <div class="detail-row">
-                        <strong>🏛️ الجهة المعنية:</strong>
-                        <span>${currentSelectedRequest.authority || 'غير محدد'}</span>
-                    </div>
-                    
-                    <div class="detail-row">
-                        <strong>✅ حالة الطلب:</strong>
-                        <span>
-                            <span class="status-badge status-${currentSelectedRequest.status}">
+                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px;">
+                    <tr style="background: #f8fafc;">
+                        <td style="padding: 12px; border: 1px solid #e2e8f0; width: 200px;"><strong>🔢 رقم الطلب:</strong></td>
+                        <td style="padding: 12px; border: 1px solid #e2e8f0;">${currentSelectedRequest.reqId || 'غير محدد'}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>📝 عنوان الطلب:</strong></td>
+                        <td style="padding: 12px; border: 1px solid #e2e8f0;">${currentSelectedRequest.title || 'غير محدد'}</td>
+                    </tr>
+                    <tr style="background: #f8fafc;">
+                        <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>📅 تاريخ التقديم:</strong></td>
+                        <td style="padding: 12px; border: 1px solid #e2e8f0;">${dateStr}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>🏛️ الجهة المعنية:</strong></td>
+                        <td style="padding: 12px; border: 1px solid #e2e8f0;">${currentSelectedRequest.authority || 'غير محدد'}</td>
+                    </tr>
+                    <tr style="background: #f8fafc;">
+                        <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>✅ حالة الطلب:</strong></td>
+                        <td style="padding: 12px; border: 1px solid #e2e8f0;">
+                            <span style="display: inline-block; padding: 5px 15px; border-radius: 20px; background: ${getStatusColor(currentSelectedRequest.status)}; color: white; font-weight: bold;">
                                 ${statusStr}
                             </span>
-                        </span>
-                    </div>
-                    
-                    <div class="detail-row">
-                        <strong>⏰ الموعد النهائي:</strong>
-                        <span>${deadlineStr}</span>
-                    </div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 12px; border: 1px solid #e2e8f0;"><strong>⏰ الموعد النهائي:</strong></td>
+                        <td style="padding: 12px; border: 1px solid #e2e8f0;">${deadlineStr}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <!-- تفاصيل الطلب -->
+            <div style="margin-bottom: 30px;">
+                <h3 style="color: #1e3c72; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">
+                    <i class="fas fa-file-alt"></i> تفاصيل الطلب
+                </h3>
+                <div style="background: #f1f5f9; padding: 20px; border-radius: 10px; border: 1px solid #e2e8f0;">
+                    <p style="margin: 0; white-space: pre-wrap; line-height: 1.8;">${currentSelectedRequest.details || 'لا توجد تفاصيل إضافية'}</p>
                 </div>
-                
-                <div class="detail-section">
-                    <h3><i class="fas fa-file-alt"></i> تفاصيل الطلب</h3>
-                    <div class="details-box">
-                        <p>${currentSelectedRequest.details || 'لا توجد تفاصيل إضافية'}</p>
-                    </div>
-                </div>
+            </div>
     `;
 
     // إضافة المستندات إذا وجدت
     if (currentSelectedRequest.hasDocuments && currentSelectedRequest.documents && currentSelectedRequest.documents.length > 0) {
         printHTML += `
-                <div class="detail-section documents-section">
-                    <h3><i class="fas fa-paperclip"></i> المستندات المرفقة (${currentSelectedRequest.documents.length})</h3>
+            <div style="margin-bottom: 30px;">
+                <h3 style="color: #1e3c72; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; margin-bottom: 20px;">
+                    <i class="fas fa-paperclip"></i> المستندات المرفقة (${currentSelectedRequest.documents.length})
+                </h3>
         `;
         
         currentSelectedRequest.documents.forEach((doc, idx) => {
@@ -1136,41 +887,39 @@ function printRequest() {
             const docType = getDocumentTypeName(doc.type);
             
             printHTML += `
-                    <div class="document-card">
-                        <div class="document-header">
-                            <span style="font-size: 18px;">📄</span>
-                            <strong>مستند ${idx + 1}: ${docType}</strong>
-                        </div>
-                        <div style="margin-top: 10px;">
-                            <div><strong>📅 التاريخ:</strong> ${docDate}</div>
-                            <div style="margin-top: 5px;"><strong>📋 الوصف:</strong> ${doc.description || 'لا يوجد وصف'}</div>
-                        </div>
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 10px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px; color: #2c5282;">
+                        <span style="font-size: 18px;">📄</span>
+                        <strong style="font-size: 16px;">مستند ${idx + 1}: ${docType}</strong>
                     </div>
+                    <div style="margin-right: 30px;">
+                        <div><strong>📅 التاريخ:</strong> ${docDate}</div>
+                        <div style="margin-top: 8px;"><strong>📋 الوصف:</strong> ${doc.description || 'لا يوجد وصف'}</div>
+                    </div>
+                </div>
             `;
         });
         
-        printHTML += `
-                </div>
-        `;
+        printHTML += `</div>`;
     }
 
+    // التذييل
     printHTML += `
-            </div>
-            
-            <div class="footer">
-                <div class="developer-info">
-                    <div class="developer-icon">💻</div>
-                    <div class="developer-text">
-                        <h4>برمجة وتطوير</h4>
-                        <p>مهندس محمد حماد</p>
+            <!-- تذييل الصفحة -->
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px; padding: 25px; text-align: center; color: white; margin-top: 40px;">
+                <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 15px;">
+                    <div style="width: 50px; height: 50px; background: rgba(255,255,255,0.2); border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; font-size: 24px;">💻</div>
+                    <div>
+                        <h4 style="margin: 0; font-size: 18px;">برمجة وتطوير</h4>
+                        <p style="margin: 5px 0 0 0; font-size: 16px; font-weight: bold;">مهندس محمد حماد</p>
                     </div>
                 </div>
-                <div class="links">
-                    <a href="https://www.facebook.com/en.mohamed.nasr" target="_blank">
+                <div style="font-size: 14px; opacity: 0.9; margin-top: 10px;">
+                    <a href="https://www.facebook.com/en.mohamed.nasr" style="color: white; text-decoration: none; margin: 0 10px;">
                         <i class="fab fa-facebook"></i> facebook.com/en.mohamed.nasr
                     </a>
                     <br>
-                    <a href="https://github.com/mohamednasr5" target="_blank">
+                    <a href="https://github.com/mohamednasr5" style="color: white; text-decoration: none; margin: 0 10px;">
                         <i class="fab fa-github"></i> github.com/mohamednasr5
                     </a>
                 </div>
@@ -1178,40 +927,116 @@ function printRequest() {
                     تم إنشاء هذا المستند تلقائياً من نظام إدارة طلبات البرلمان
                 </div>
             </div>
-            
-            <script>
-                // طباعة المستند بعد تحميله
-                window.addEventListener('load', function() {
-                    setTimeout(function() {
-                        window.print();
-                    }, 1000);
-                });
-            </script>
-        </body>
-        </html>
+        </div>
     `;
 
-    try {
-        printWindow.document.open();
-        printWindow.document.write(printHTML);
-        printWindow.document.close();
+    printElement.innerHTML = printHTML;
+    document.body.appendChild(printElement);
+
+    // إضافة CSS للطباعة
+    const printStyles = document.createElement('style');
+    printStyles.id = 'printStyles';
+    printStyles.innerHTML = `
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printContent, #printContent * {
+                visibility: visible;
+            }
+            #printContent {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                padding: 20px;
+            }
+        }
         
-        // طباعة تلقائية بعد تحميل الصفحة
-        printWindow.addEventListener('load', function() {
-            setTimeout(function() {
-                try {
-                    printWindow.print();
-                } catch (err) {
-                    console.warn('لم يتمكن من الطباعة تلقائياً:', err);
-                    printWindow.focus();
-                }
-            }, 1500);
-        });
+        .no-print {
+            display: none !important;
+        }
         
-    } catch (error) {
-        console.error('خطأ في إنشاء صفحة الطباعة:', error);
-        showAlert('❌ حدث خطأ أثناء إنشاء صفحة الطباعة', 'danger');
-    }
+        @page {
+            margin: 20mm;
+            size: A4;
+        }
+    `;
+    document.head.appendChild(printStyles);
+
+    // فتح نافذة الطباعة بعد تأخير بسيط
+    setTimeout(() => {
+        const printWindow = window.open('', '_blank');
+        if (printWindow) {
+            printWindow.document.write(`
+                <!DOCTYPE html>
+                <html lang="ar" dir="rtl">
+                <head>
+                    <meta charset="UTF-8">
+                    <title>طلب رقم ${currentSelectedRequest.reqId || ''}</title>
+                    <style>
+                        body {
+                            font-family: 'Cairo', Arial, sans-serif;
+                            margin: 0;
+                            padding: 20px;
+                            text-align: right;
+                            direction: rtl;
+                        }
+                        @media print {
+                            @page {
+                                margin: 15mm;
+                            }
+                            body {
+                                padding: 0;
+                            }
+                        }
+                    </style>
+                    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+                </head>
+                <body>
+                    ${printHTML}
+                    <script>
+                        // محاولة الطباعة تلقائياً
+                        setTimeout(function() {
+                            window.print();
+                            setTimeout(function() {
+                                window.close();
+                            }, 500);
+                        }, 1000);
+                    </script>
+                </body>
+                </html>
+            `);
+            printWindow.document.close();
+        } else {
+            // إذا فشل فتح النافذة، استخدم الطباعة المباشرة
+            window.print();
+        }
+        
+        // تنظيف بعد الطباعة
+        setTimeout(() => {
+            if (document.getElementById('printContent')) {
+                document.body.removeChild(printElement);
+            }
+            if (document.getElementById('printStyles')) {
+                document.head.removeChild(printStyles);
+            }
+        }, 2000);
+        
+    }, 100);
+}
+
+/**
+ * الحصول على لون الحالة
+ */
+function getStatusColor(status) {
+    const colors = {
+        'execution': '#f1c40f',
+        'review': '#3498db',
+        'completed': '#2ecc71',
+        'rejected': '#e74c3c'
+    };
+    return colors[status] || '#3498db';
 }
 
 /**
