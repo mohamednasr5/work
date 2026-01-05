@@ -1,4 +1,4 @@
-// script.js - Enhanced Parliament Requests Management System - Mobile Optimized
+// script.js - Enhanced Parliament Requests Management System with Alerts & Documents
 
 let allRequests = [];
 let myChart = null;
@@ -29,24 +29,14 @@ function loadTheme() {
 function setupEventListeners() {
     const form = document.getElementById('requestForm');
     if (form) form.addEventListener('submit', handleFormSubmit);
-
+    
     const themeIcon = document.getElementById('theme-icon');
     if (themeIcon) themeIcon.addEventListener('click', toggleTheme);
-
+    
     window.addEventListener('click', (e) => {
         const modal = document.getElementById('detailsModal');
         if (e.target === modal) closeModal();
     });
-
-    // Prevent zoom on double tap for iOS
-    let lastTouchEnd = 0;
-    document.addEventListener('touchend', (e) => {
-        const now = Date.now();
-        if (now - lastTouchEnd <= 300) {
-            e.preventDefault();
-        }
-        lastTouchEnd = now;
-    }, false);
 }
 
 /**
@@ -60,7 +50,6 @@ function initializeFirebase() {
                 const dateB = new Date(b.submissionDate);
                 return dateB - dateA;
             });
-
             updateDashboard(allRequests);
             renderTable(allRequests);
             updateAlerts(allRequests);
@@ -72,38 +61,16 @@ function initializeFirebase() {
 }
 
 /**
- * Switch between tabs
- */
-function switchTab(tabName) {
-    const tabs = document.querySelectorAll('.tab-content');
-    tabs.forEach(tab => tab.classList.remove('active'));
-
-    const navItems = document.querySelectorAll('.nav-links li');
-    navItems.forEach(item => item.classList.remove('active'));
-
-    const activeTab = document.getElementById(tabName);
-    if (activeTab) activeTab.classList.add('active');
-
-    const activeNav = event?.currentTarget;
-    if (activeNav) activeNav.classList.add('active');
-
-    // Scroll to top on mobile
-    if (window.innerWidth < 768) {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-}
-
-/**
  * Toggle theme between light and dark
  */
 function toggleTheme() {
     const currentTheme = document.body.getAttribute('data-theme');
     const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-
+    
     document.body.setAttribute('data-theme', newTheme);
     localStorage.setItem('app-theme', newTheme);
     updateThemeIcon(newTheme);
-
+    
     if (myChart) {
         const chartCtx = document.getElementById('requestsChart').getContext('2d');
         myChart.destroy();
@@ -131,7 +98,7 @@ function updateThemeIcon(theme) {
 function toggleDocumentsSection() {
     const checkbox = document.getElementById('hasDocuments');
     const section = document.getElementById('documentsSection');
-
+    
     if (checkbox.checked) {
         section.classList.add('active');
         if (document.getElementById('documentsContainer').children.length === 0) {
@@ -150,37 +117,44 @@ function toggleDocumentsSection() {
 function addDocumentForm() {
     const container = document.getElementById('documentsContainer');
     const docId = documentCount++;
-
+    
     const docHTML = `
-        <div class="document-item" data-doc-id="${docId}">
+        <div class="document-item" id="doc-${docId}">
             <div class="document-header">
-                <h4>📄 مستند ${docId + 1}</h4>
-                <button type="button" class="remove-document" onclick="removeDocument(${docId})">
-                    <i class="fas fa-trash"></i> إزالة
+                <span class="document-type">مستند #${docId + 1}</span>
+                <button type="button" class="remove-doc-btn" onclick="removeDocument(${docId})">
+                    <i class="fa-solid fa-trash"></i> حذف
                 </button>
             </div>
-            <div class="form-grid">
-                <div class="input-group">
-                    <label>نوع المستند</label>
-                    <select name="docType_${docId}" required>
-                        <option value="official-request">طلب رسمي</option>
-                        <option value="response">رد الجهة</option>
-                        <option value="follow-up">متابعة</option>
-                        <option value="other">أخرى</option>
+            
+            <div class="document-field">
+                <div>
+                    <label style="font-size: 13px; font-weight: 600; color: var(--primary);">نوع المستند</label>
+                    <select class="doc-type-select" data-doc-id="${docId}">
+                        <option value="">-- اختر نوع المستند --</option>
+                        <option value="letter">📬 خطاب</option>
+                        <option value="paper">📄 ورقة رسمية</option>
+                        <option value="form">📋 نموذج</option>
+                        <option value="booklet">📚 كتيب</option>
+                        <option value="certificate">🏆 شهادة</option>
+                        <option value="report">📊 تقرير</option>
+                        <option value="evidence">🔍 دليل/إثبات</option>
+                        <option value="other">📎 أخرى</option>
                     </select>
                 </div>
-                <div class="input-group">
-                    <label>تاريخ المستند</label>
-                    <input type="date" name="docDate_${docId}" required>
+                <div>
+                    <label style="font-size: 13px; font-weight: 600; color: var(--primary);">التاريخ</label>
+                    <input type="date" class="doc-date-input" data-doc-id="${docId}">
                 </div>
-                <div class="input-group full-width">
-                    <label>وصف المستند</label>
-                    <textarea name="docDesc_${docId}" rows="3" placeholder="وصف مختصر للمستند"></textarea>
-                </div>
+            </div>
+            
+            <div class="document-field full">
+                <label style="font-size: 13px; font-weight: 600; color: var(--primary);">وصف المستند</label>
+                <textarea style="height: 80px;" class="doc-description-input" data-doc-id="${docId}" placeholder="اشرح محتوى المستند والمعلومات الهامة فيه..."></textarea>
             </div>
         </div>
     `;
-
+    
     container.insertAdjacentHTML('beforeend', docHTML);
 }
 
@@ -188,10 +162,539 @@ function addDocumentForm() {
  * Remove document form
  */
 function removeDocument(docId) {
-    const docElement = document.querySelector(`[data-doc-id="${docId}"]`);
+    const docElement = document.getElementById(`doc-${docId}`);
     if (docElement) {
         docElement.remove();
+        
+        // Check if any documents left
+        if (document.getElementById('documentsContainer').children.length === 0) {
+            document.getElementById('hasDocuments').checked = false;
+            document.getElementById('documentsSection').classList.remove('active');
+        }
     }
+}
+
+/**
+ * Collect documents from form
+ */
+function collectDocuments() {
+    const documents = [];
+    const docItems = document.querySelectorAll('.document-item');
+    
+    docItems.forEach((item, index) => {
+        const typeSelect = item.querySelector('.doc-type-select');
+        const dateInput = item.querySelector('.doc-date-input');
+        const descInput = item.querySelector('.doc-description-input');
+        
+        if (typeSelect.value) {
+            documents.push({
+                id: index,
+                type: typeSelect.value,
+                date: dateInput.value || new Date().toISOString().split('T')[0],
+                description: descInput.value,
+                addedAt: new Date().toISOString()
+            });
+        }
+    });
+    
+    return documents;
+}
+
+/**
+ * Load documents into form for editing
+ */
+function loadDocumentsIntoForm(documents) {
+    if (!documents || documents.length === 0) {
+        document.getElementById('hasDocuments').checked = false;
+        document.getElementById('documentsSection').classList.remove('active');
+        return;
+    }
+    
+    document.getElementById('hasDocuments').checked = true;
+    document.getElementById('documentsSection').classList.add('active');
+    
+    const container = document.getElementById('documentsContainer');
+    container.innerHTML = '';
+    documentCount = 0;
+    
+    documents.forEach(doc => {
+        addDocumentForm();
+        const docId = documentCount - 1;
+        const docElement = document.getElementById(`doc-${docId}`);
+        
+        docElement.querySelector('.doc-type-select').value = doc.type;
+        docElement.querySelector('.doc-date-input').value = doc.date;
+        docElement.querySelector('.doc-description-input').value = doc.description;
+    });
+}
+
+/**
+ * Get type icon for document
+ */
+function getDocumentTypeIcon(type) {
+    const icons = {
+        'letter': '📬',
+        'paper': '📄',
+        'form': '📋',
+        'booklet': '📚',
+        'certificate': '🏆',
+        'report': '📊',
+        'evidence': '🔍',
+        'other': '📎'
+    };
+    return icons[type] || '📎';
+}
+
+/**
+ * Get type name for document
+ */
+function getDocumentTypeName(type) {
+    const names = {
+        'letter': 'خطاب',
+        'paper': 'ورقة رسمية',
+        'form': 'نموذج',
+        'booklet': 'كتيب',
+        'certificate': 'شهادة',
+        'report': 'تقرير',
+        'evidence': 'دليل/إثبات',
+        'other': 'أخرى'
+    };
+    return names[type] || type;
+}
+
+/**
+ * Update alerts based on requests
+ */
+function updateAlerts(requests) {
+    const alertsContainer = document.getElementById('alertsContainer');
+    const alerts = generateAlerts(requests);
+    
+    let alertsHTML = '<h3 style="margin-bottom: 15px; color: var(--primary); font-weight: 700;">🔔 التنبيهات الهامة</h3>';
+    
+    if (alerts.length === 0) {
+        alertsHTML += '<div style="text-align: center; padding: 30px; opacity: 0.6;"><i class="fa-solid fa-check-circle" style="font-size: 40px; color: var(--success);"></i><p style="margin-top: 10px;">لا توجد تنبيهات حالية</p></div>';
+    } else {
+        alerts.forEach(alert => {
+            alertsHTML += `
+                <div class="alert-item ${alert.priority}">
+                    <div class="alert-content">
+                        <div class="alert-title">${alert.icon} ${alert.title}</div>
+                        <div class="alert-description">${alert.message}</div>
+                    </div>
+                    <div class="alert-time">${alert.time}</div>
+                </div>
+            `;
+        });
+    }
+    
+    alertsContainer.innerHTML = alertsHTML;
+    
+    // Update badge
+    const badge = document.getElementById('dashboard-badge');
+    if (alerts.length > 0) {
+        badge.textContent = alerts.length;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
+
+/**
+ * Generate alerts from requests
+ */
+function generateAlerts(requests) {
+    const alerts = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    requests.forEach(req => {
+        const daysLeft = calculateDaysLeft(req.submissionDate);
+        
+        // Alert 1: Requests requiring action
+        if (req.status === 'review') {
+            alerts.push({
+                title: `طلب ${req.reqId} قيد المراجعة`,
+                message: `الطلب "${req.title}" يتطلب مراجعة وإجراء`,
+                priority: 'high',
+                icon: '⚠️',
+                time: formatDate(req.submissionDate)
+            });
+        }
+        
+        // Alert 2: Requests nearing deadline (30 days)
+        if (daysLeft > 0 && daysLeft <= 30 && req.status !== 'completed' && req.status !== 'rejected') {
+            alerts.push({
+                title: `انتباه: الطلب ${req.reqId} يقترب موعده`,
+                message: `${daysLeft} يوم متبقي لانتهاء الموعد المتوقع`,
+                priority: 'medium',
+                icon: '⏱️',
+                time: `${daysLeft} أيام متبقية`
+            });
+        }
+        
+        // Alert 3: Overdue requests
+        if (daysLeft < 0 && req.status !== 'completed' && req.status !== 'rejected') {
+            alerts.push({
+                title: `تأخير حرج: الطلب ${req.reqId}`,
+                message: `الطلب متأخر عن الموعد المقرر بـ ${Math.abs(daysLeft)} أيام`,
+                priority: 'high',
+                icon: '🔴',
+                time: `متأخر`
+            });
+        }
+        
+        // Alert 4: Requests with documents
+        if (req.documents && req.documents.length > 0) {
+            const hasRecentDocs = req.documents.some(doc => {
+                const docDate = new Date(doc.date);
+                const daysDiff = Math.floor((today - docDate) / (1000 * 60 * 60 * 24));
+                return daysDiff <= 7;
+            });
+            
+            if (hasRecentDocs && req.status === 'execution') {
+                alerts.push({
+                    title: `مستندات جديدة: الطلب ${req.reqId}`,
+                    message: `تم إضافة مستندات جديدة، قد تتطلب متابعة`,
+                    priority: 'low',
+                    icon: '📎',
+                    time: 'جديد'
+                });
+            }
+        }
+    });
+    
+    // Sort by priority
+    const priorityMap = { 'high': 0, 'medium': 1, 'low': 2 };
+    alerts.sort((a, b) => priorityMap[a.priority] - priorityMap[b.priority]);
+    
+    return alerts.slice(0, 10); // Show top 10 alerts
+}
+
+/**
+ * Calculate days left from submission date
+ */
+function calculateDaysLeft(submissionDate) {
+    const submissionDateObj = new Date(submissionDate);
+    submissionDateObj.setDate(submissionDateObj.getDate() + 90); // 90 days deadline
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const timeDiff = submissionDateObj - today;
+    return Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
+}
+
+/**
+ * Render requests table
+ */
+function renderTable(requests) {
+    const tbody = document.getElementById('tableBody');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+
+    if (!requests || requests.length === 0) {
+        tbody.innerHTML = `
+            <tr>
+                <td colspan="6" class="text-center" style="padding: 40px;">
+                    <i class="fa-solid fa-inbox" style="font-size: 40px; opacity: 0.5;"></i>
+                    <p style="margin-top: 15px; opacity: 0.7;">لا توجد طلبات للعرض</p>
+                </td>
+            </tr>
+        `;
+        return;
+    }
+
+    requests.forEach(req => {
+        const tr = document.createElement('tr');
+        const statusClass = `status-${req.status}`;
+        const statusText = getStatusText(req.status);
+        const hasDocsBadge = req.documents && req.documents.length > 0 
+            ? `<span style="color: var(--success);">✅ ${req.documents.length}</span>` 
+            : '<span style="opacity: 0.5;">❌</span>';
+        
+        tr.innerHTML = `
+            <td style="font-weight: 700; color: var(--primary);">${req.reqId || 'N/A'}</td>
+            <td>${req.title || 'بدون عنوان'}</td>
+            <td>${req.authority || '-'}</td>
+            <td>${formatDate(req.submissionDate) || '-'}</td>
+            <td>${hasDocsBadge}</td>
+            <td><span class="status-badge ${statusClass}">${statusText}</span></td>
+        `;
+        
+        tr.addEventListener('click', () => openModal(req));
+        tr.style.cursor = 'pointer';
+        
+        tbody.appendChild(tr);
+    });
+}
+
+/**
+ * Get status text in Arabic
+ */
+function getStatusText(status) {
+    const statusMap = {
+        'review': '🔍 قيد المراجعة',
+        'execution': '⚙️ تحت التنفيذ',
+        'completed': '✅ مكتمل',
+        'rejected': '❌ مرفوض'
+    };
+    return statusMap[status] || 'غير محدد';
+}
+
+/**
+ * Format date to Arabic format
+ */
+function formatDate(dateString) {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString + 'T00:00:00');
+    const formatter = new Intl.DateTimeFormat('ar-EG', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+    return formatter.format(date);
+}
+
+/**
+ * Live search functionality
+ */
+function liveSearch() {
+    const term = document.getElementById('searchInput').value.toLowerCase().trim();
+    
+    if (!term) {
+        renderTable(allRequests);
+        return;
+    }
+    
+    const filtered = allRequests.filter(req => {
+        const searchText = `
+            ${req.reqId || ''} 
+            ${req.title || ''} 
+            ${req.details || ''} 
+            ${req.authority || ''}
+            ${getStatusText(req.status) || ''}
+        `.toLowerCase();
+        
+        return searchText.includes(term);
+    });
+
+    renderTable(filtered);
+}
+
+/**
+ * Open request details modal
+ */
+function openModal(req) {
+    currentSelectedRequest = req;
+    isEditMode = false;
+    
+    document.getElementById('modalTitle').textContent = req.title || 'تفاصيل الطلب';
+    document.getElementById('mId').textContent = req.reqId || '-';
+    document.getElementById('mAuth').textContent = req.authority || '-';
+    document.getElementById('mDate').textContent = formatDate(req.submissionDate) || '-';
+    document.getElementById('mDetails').textContent = req.details || 'لا توجد تفاصيل إضافية';
+    
+    const statusBadge = document.getElementById('modalStatus');
+    statusBadge.textContent = getStatusText(req.status);
+    statusBadge.className = `status-badge status-${req.status}`;
+    
+    // Display documents
+    const docsListContainer = document.getElementById('docsListContainer');
+    const docsList = document.getElementById('docsList');
+    
+    if (req.documents && req.documents.length > 0) {
+        let docsHTML = '';
+        req.documents.forEach(doc => {
+            docsHTML += `
+                <div class="doc-item-view">
+                    <strong>${getDocumentTypeIcon(doc.type)} ${getDocumentTypeName(doc.type)}</strong>
+                    <div style="margin-top: 8px; opacity: 0.8; font-size: 14px;">
+                        <p><strong>التاريخ:</strong> ${formatDate(doc.date)}</p>
+                        <p><strong>الوصف:</strong> ${doc.description}</p>
+                    </div>
+                </div>
+            `;
+        });
+        docsList.innerHTML = docsHTML;
+        docsListContainer.style.display = 'block';
+    } else {
+        docsListContainer.style.display = 'none';
+    }
+    
+    document.getElementById('detailsModal').classList.add('show');
+    document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Close modal
+ */
+function closeModal() {
+    document.getElementById('detailsModal').classList.remove('show');
+    document.body.style.overflow = 'auto';
+    currentSelectedRequest = null;
+}
+
+/**
+ * Delete request with confirmation
+ */
+async function deleteRequest() {
+    if (!currentSelectedRequest) return;
+    
+    if (confirm('⚠️ هل أنت متأكد من حذف هذا الطلب نهائياً؟')) {
+        try {
+            const result = await window.RequestManager.deleteRequest(currentSelectedRequest.firebaseKey);
+            if (result) {
+                showAlert('✅ تم حذف الطلب بنجاح', 'success');
+                closeModal();
+            } else {
+                showAlert('❌ فشل حذف الطلب', 'danger');
+            }
+        } catch (error) {
+            console.error('Delete error:', error);
+            showAlert('❌ حدث خطأ أثناء الحذف', 'danger');
+        }
+    }
+}
+
+/**
+ * Switch to edit mode
+ */
+function editRequest() {
+    if (!currentSelectedRequest) return;
+    
+    closeModal();
+    switchTab('add-request');
+    
+    isEditMode = true;
+    document.getElementById('firebaseKey').value = currentSelectedRequest.firebaseKey;
+    document.getElementById('reqId').value = currentSelectedRequest.reqId;
+    document.getElementById('reqTitle').value = currentSelectedRequest.title;
+    document.getElementById('reqDetails').value = currentSelectedRequest.details;
+    document.getElementById('reqAuthority').value = currentSelectedRequest.authority;
+    document.getElementById('reqDate').value = currentSelectedRequest.submissionDate;
+    document.getElementById('reqStatus').value = currentSelectedRequest.status;
+    
+    // Load documents
+    loadDocumentsIntoForm(currentSelectedRequest.documents);
+    
+    document.getElementById('saveBtn').innerHTML = '<i class="fa-solid fa-pen"></i> تحديث البيانات';
+    document.getElementById('cancelEditBtn').classList.remove('hidden');
+    
+    window.scrollTo(0, 0);
+}
+
+/**
+ * Print request
+ */
+function printRequest() {
+    if (!currentSelectedRequest) return;
+    
+    const req = currentSelectedRequest;
+    let docsHTML = '';
+    
+    if (req.documents && req.documents.length > 0) {
+        docsHTML = '<h3 style="margin-top: 30px; margin-bottom: 15px;">المستندات المرفقة:</h3>';
+        req.documents.forEach((doc, idx) => {
+            docsHTML += `
+                <div style="margin-bottom: 15px; padding: 10px; background: #f5f5f5; border-right: 3px solid #1e3c72;">
+                    <p><strong>مستند ${idx + 1}: ${getDocumentTypeName(doc.type)}</strong></p>
+                    <p>التاريخ: ${formatDate(doc.date)}</p>
+                    <p style="white-space: pre-wrap;">الوصف: ${doc.description}</p>
+                </div>
+            `;
+        });
+    }
+    
+    const printContent = `
+        <!DOCTYPE html>
+        <html lang="ar" dir="rtl">
+        <head>
+            <meta charset="UTF-8">
+            <title>طباعة طلب</title>
+            <style>
+                body { font-family: 'Arial', sans-serif; direction: rtl; text-align: right; }
+                .container { max-width: 800px; margin: 40px auto; padding: 30px; border: 2px solid #1e3c72; }
+                .header { text-align: center; border-bottom: 2px solid #1e3c72; padding-bottom: 20px; margin-bottom: 30px; }
+                .header h1 { margin: 0; color: #1e3c72; font-size: 24px; }
+                .row { display: flex; margin-bottom: 20px; border-bottom: 1px dashed #ccc; padding-bottom: 15px; }
+                .row label { font-weight: bold; color: #1e3c72; min-width: 120px; }
+                .row span { flex: 1; text-align: left; }
+                .details-section { background: #f5f7fa; padding: 15px; border-radius: 8px; margin: 20px 0; }
+                .footer { text-align: center; margin-top: 40px; color: #666; font-size: 11px; }
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>مكتب النائب أحمد الحديدي</h1>
+                    <p>نموذج طلب رسمي</p>
+                </div>
+                <div class="row">
+                    <label>رقم الطلب:</label>
+                    <span>${req.reqId}</span>
+                </div>
+                <div class="row">
+                    <label>العنوان:</label>
+                    <span>${req.title}</span>
+                </div>
+                <div class="row">
+                    <label>الجهة:</label>
+                    <span>${req.authority}</span>
+                </div>
+                <div class="row">
+                    <label>التاريخ:</label>
+                    <span>${formatDate(req.submissionDate)}</span>
+                </div>
+                <div class="row">
+                    <label>الحالة:</label>
+                    <span>${getStatusText(req.status)}</span>
+                </div>
+                <div class="details-section">
+                    <label style="display: block; margin-bottom: 10px; font-weight: bold;">التفاصيل:</label>
+                    <p style="margin: 0; line-height: 1.8; white-space: pre-wrap;">${req.details}</p>
+                </div>
+                ${docsHTML}
+                <div class="footer">
+                    <p>تم طباعة هذا المستند في: ${new Date().toLocaleString('ar-EG')}</p>
+                </div>
+            </div>
+        </body>
+        </html>
+    `;
+    
+    const printWindow = window.open('', '', 'height=600,width=800');
+    printWindow.document.write(printContent);
+    printWindow.document.close();
+    setTimeout(() => printWindow.print(), 250);
+}
+
+/**
+ * Export request as CSV
+ */
+function exportRequest() {
+    if (!currentSelectedRequest) return;
+    
+    const req = currentSelectedRequest;
+    let csvContent = "\uFEFF" + 
+        `رقم الطلب,العنوان,الجهة,التاريخ,الحالة,التفاصيل\n` + 
+        `"${req.reqId}","${req.title}","${req.authority}","${formatDate(req.submissionDate)}","${getStatusText(req.status)}","${req.details.replace(/"/g, '""')}"`;
+    
+    if (req.documents && req.documents.length > 0) {
+        csvContent += '\n\nالمستندات:\nنوع المستند,التاريخ,الوصف\n';
+        req.documents.forEach(doc => {
+            csvContent += `"${getDocumentTypeName(doc.type)}","${formatDate(doc.date)}","${doc.description.replace(/"/g, '""')}"\n`;
+        });
+    }
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `request_${req.reqId}_${new Date().getTime()}.csv`;
+    link.click();
+    
+    showAlert('✅ تم تصدير الطلب بنجاح', 'success');
 }
 
 /**
@@ -199,135 +702,140 @@ function removeDocument(docId) {
  */
 async function handleFormSubmit(e) {
     e.preventDefault();
-
-    const submitButton = e.target.querySelector('button[type="submit"]');
-    const originalText = submitButton.innerHTML;
-    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> جاري الحفظ...';
-    submitButton.disabled = true;
-
-    const formData = {
+    
+    const firebaseKey = document.getElementById('firebaseKey').value;
+    const documents = document.getElementById('hasDocuments').checked ? collectDocuments() : [];
+    
+    const requestData = {
         reqId: document.getElementById('reqId').value.trim(),
         title: document.getElementById('reqTitle').value.trim(),
         details: document.getElementById('reqDetails').value.trim(),
         authority: document.getElementById('reqAuthority').value.trim(),
         submissionDate: document.getElementById('reqDate').value,
         status: document.getElementById('reqStatus').value,
-        hasDocuments: document.getElementById('hasDocuments').checked,
-        documents: []
+        documents: documents
     };
 
-    // Collect documents if any
-    if (formData.hasDocuments) {
-        const docItems = document.querySelectorAll('.document-item');
-        docItems.forEach(item => {
-            const docId = item.getAttribute('data-doc-id');
-            const doc = {
-                type: item.querySelector(`[name="docType_${docId}"]`).value,
-                date: item.querySelector(`[name="docDate_${docId}"]`).value,
-                description: item.querySelector(`[name="docDesc_${docId}"]`).value
-            };
-            formData.documents.push(doc);
-        });
+    if (!requestData.reqId || !requestData.title || !requestData.details) {
+        showAlert('❌ يرجى ملء جميع الحقول المطلوبة', 'danger');
+        return;
     }
 
     try {
-        let success;
-        if (isEditMode && currentSelectedRequest) {
-            success = await window.RequestManager.updateRequest(currentSelectedRequest.firebaseKey, formData);
-            if (success) {
-                showAlert('تم تحديث الطلب بنجاح ✅', 'success');
+        if (firebaseKey) {
+            const result = await window.RequestManager.updateRequest(firebaseKey, requestData);
+            if (result) {
+                showAlert('✅ تم تحديث الطلب بنجاح', 'success');
             }
         } else {
-            success = await window.RequestManager.addRequest(formData);
-            if (success) {
-                showAlert('تم إضافة الطلب بنجاح ✅', 'success');
+            const result = await window.RequestManager.addRequest(requestData);
+            if (result) {
+                showAlert('✅ تم حفظ الطلب بنجاح', 'success');
             }
         }
-
-        if (success) {
-            resetForm();
-            switchTab('dashboard');
-        } else {
-            showAlert('حدث خطأ أثناء الحفظ ❌', 'danger');
-        }
+        resetForm();
+        switchTab('view-requests');
     } catch (error) {
-        console.error('Error submitting form:', error);
-        showAlert('حدث خطأ غير متوقع ❌', 'danger');
-    } finally {
-        submitButton.innerHTML = originalText;
-        submitButton.disabled = false;
+        console.error('Form submit error:', error);
+        showAlert('❌ حدث خطأ أثناء الحفظ', 'danger');
     }
 }
 
 /**
- * Reset form to initial state
+ * Reset form
  */
 function resetForm() {
-    document.getElementById('requestForm').reset();
+    const form = document.getElementById('requestForm');
+    if (form) form.reset();
+    
+    document.getElementById('firebaseKey').value = '';
+    document.getElementById('saveBtn').innerHTML = '<i class="fa-solid fa-save"></i> حفظ الطلب';
+    document.getElementById('cancelEditBtn').classList.add('hidden');
     document.getElementById('reqDate').valueAsDate = new Date();
     document.getElementById('hasDocuments').checked = false;
     document.getElementById('documentsSection').classList.remove('active');
     document.getElementById('documentsContainer').innerHTML = '';
-    document.getElementById('submitButtonText').textContent = 'حفظ الطلب';
-
-    isEditMode = false;
-    currentSelectedRequest = null;
     documentCount = 0;
+    
+    isEditMode = false;
 }
 
 /**
- * Update dashboard statistics and chart
+ * Switch between tabs
+ */
+function switchTab(tabId) {
+    document.querySelectorAll('.tab-content').forEach(el => {
+        el.classList.remove('active');
+    });
+    
+    document.querySelectorAll('.nav-links li').forEach(el => {
+        el.classList.remove('active');
+    });
+    
+    const tab = document.getElementById(tabId);
+    if (tab) {
+        tab.classList.add('active');
+    }
+    
+    const navItems = document.querySelectorAll('.nav-links li');
+    const navMap = {
+        'dashboard': 0,
+        'add-request': 1,
+        'view-requests': 2
+    };
+    
+    if (navMap[tabId] !== undefined) {
+        navItems[navMap[tabId]].classList.add('active');
+    }
+}
+
+/**
+ * Update dashboard statistics
  */
 function updateDashboard(requests) {
     const total = requests.length;
     const completed = requests.filter(r => r.status === 'completed').length;
-    const pending = requests.filter(r => r.status === 'execution' || r.status === 'review').length;
+    const pending = requests.filter(r => 
+        r.status === 'execution' || r.status === 'review'
+    ).length;
     const rejected = requests.filter(r => r.status === 'rejected').length;
 
-    document.getElementById('totalRequests').textContent = total;
-    document.getElementById('completedRequests').textContent = completed;
-    document.getElementById('pendingRequests').textContent = pending;
-    document.getElementById('rejectedRequests').textContent = rejected;
+    document.getElementById('total-count').textContent = total;
+    document.getElementById('completed-count').textContent = completed;
+    document.getElementById('pending-count').textContent = pending;
+    document.getElementById('rejected-count').textContent = rejected;
 
-    // Create or update chart
-    const chartCtx = document.getElementById('requestsChart');
-    if (chartCtx) {
-        createChart(chartCtx.getContext('2d'), requests);
+    const ctx = document.getElementById('requestsChart');
+    if (ctx) {
+        createChart(ctx.getContext('2d'), requests);
     }
 }
 
 /**
- * Create Chart.js chart
+ * Create or update chart
  */
 function createChart(ctx, requests) {
-    const statusCounts = {
-        'قيد التنفيذ': requests.filter(r => r.status === 'execution').length,
-        'قيد المراجعة': requests.filter(r => r.status === 'review').length,
-        'مكتمل': requests.filter(r => r.status === 'completed').length,
-        'مرفوض': requests.filter(r => r.status === 'rejected').length
-    };
+    const completed = requests.filter(r => r.status === 'completed').length;
+    const pending = requests.filter(r => 
+        r.status === 'execution' || r.status === 'review'
+    ).length;
+    const rejected = requests.filter(r => r.status === 'rejected').length;
 
+    if (myChart) myChart.destroy();
+    
     const isDark = document.body.getAttribute('data-theme') === 'dark';
     const textColor = isDark ? '#ecf0f1' : '#2c3e50';
-
-    if (myChart) {
-        myChart.destroy();
-    }
-
+    
     myChart = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: Object.keys(statusCounts),
+            labels: ['مكتملة', 'قيد التنفيذ', 'مرفوضة'],
             datasets: [{
-                data: Object.values(statusCounts),
-                backgroundColor: [
-                    '#f1c40f',
-                    '#3498db',
-                    '#2ecc71',
-                    '#e74c3c'
-                ],
-                borderWidth: 2,
-                borderColor: isDark ? '#0f2027' : '#ffffff'
+                data: [completed, pending, rejected],
+                backgroundColor: ['#2ecc71', '#f39c12', '#e74c3c'],
+                borderColor: isDark ? '#203a43' : '#fff',
+                borderWidth: 3,
+                hoverOffset: 10
             }]
         },
         options: {
@@ -338,27 +846,8 @@ function createChart(ctx, requests) {
                     position: 'bottom',
                     labels: {
                         color: textColor,
-                        font: {
-                            family: 'Cairo',
-                            size: 12
-                        },
-                        padding: 15
-                    }
-                },
-                tooltip: {
-                    backgroundColor: isDark ? 'rgba(0,0,0,0.8)' : 'rgba(255,255,255,0.9)',
-                    titleColor: textColor,
-                    bodyColor: textColor,
-                    borderColor: '#ddd',
-                    borderWidth: 1,
-                    rtl: true,
-                    titleFont: {
-                        family: 'Cairo',
-                        size: 14
-                    },
-                    bodyFont: {
-                        family: 'Cairo',
-                        size: 13
+                        font: { size: 14, weight: '600' },
+                        padding: 20
                     }
                 }
             }
@@ -367,494 +856,29 @@ function createChart(ctx, requests) {
 }
 
 /**
- * Render requests table
- */
-function renderTable(requests) {
-    const tbody = document.getElementById('requestsTableBody');
-
-    if (requests.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="text-center">لا توجد طلبات للعرض</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = requests.map(req => `
-        <tr onclick="showRequestDetails('${req.firebaseKey}')">
-            <td>${req.reqId}</td>
-            <td>${req.title}</td>
-            <td>${req.authority}</td>
-            <td>${formatDate(req.submissionDate)}</td>
-            <td>${req.hasDocuments && req.documents ? req.documents.length : 0}</td>
-            <td><span class="status-badge status-${req.status}">${getStatusText(req.status)}</span></td>
-        </tr>
-    `).join('');
-}
-
-/**
- * Enhanced Search - يبحث في كل محتوى الطلب
- */
-function searchRequests(searchTerm) {
-    if (!searchTerm.trim()) {
-        renderTable(allRequests);
-        return;
-    }
-
-    const term = searchTerm.toLowerCase();
-
-    const filtered = allRequests.filter(req => {
-        // البحث في رقم الطلب
-        if (req.reqId && req.reqId.toLowerCase().includes(term)) return true;
-
-        // البحث في العنوان
-        if (req.title && req.title.toLowerCase().includes(term)) return true;
-
-        // البحث في الجهة المعنية
-        if (req.authority && req.authority.toLowerCase().includes(term)) return true;
-
-        // البحث في التفاصيل
-        if (req.details && req.details.toLowerCase().includes(term)) return true;
-
-        // البحث في تاريخ التقديم
-        if (req.submissionDate) {
-            const formattedDate = formatDate(req.submissionDate);
-            if (formattedDate.toLowerCase().includes(term)) return true;
-        }
-
-        // البحث في الحالة
-        const statusText = getStatusText(req.status).toLowerCase();
-        if (statusText.includes(term)) return true;
-
-        // البحث في الموعد النهائي
-        const deadlineText = getDeadlineText(req.submissionDate).toLowerCase();
-        if (deadlineText.includes(term)) return true;
-
-        // البحث في المستندات
-        if (req.hasDocuments && req.documents && Array.isArray(req.documents)) {
-            for (const doc of req.documents) {
-                // البحث في نوع المستند
-                const docTypeName = getDocumentTypeName(doc.type).toLowerCase();
-                if (docTypeName.includes(term)) return true;
-
-                // البحث في وصف المستند
-                if (doc.description && doc.description.toLowerCase().includes(term)) return true;
-
-                // البحث في تاريخ المستند
-                if (doc.date) {
-                    const docDate = formatDate(doc.date).toLowerCase();
-                    if (docDate.includes(term)) return true;
-                }
-            }
-        }
-
-        return false;
-    });
-
-    renderTable(filtered);
-}
-
-/**
- * Update alerts section with clickable alerts
- */
-function updateAlerts(requests) {
-    const alertsContent = document.getElementById('alertsContent');
-    const urgentRequests = requests.filter(req => {
-        if (req.status === 'completed' || req.status === 'rejected') return false;
-
-        const deadlineStatus = getDeadlineStatus(req.submissionDate);
-        return deadlineStatus === 'urgent' || deadlineStatus === 'overdue';
-    });
-
-    if (urgentRequests.length === 0) {
-        alertsContent.innerHTML = '<p class="no-alerts">لا توجد تنبيهات حالية</p>';
-        return;
-    }
-
-    alertsContent.innerHTML = urgentRequests.map(req => {
-        const deadlineStatus = getDeadlineStatus(req.submissionDate);
-        const type = deadlineStatus === 'overdue' ? 'danger' : 'warning';
-        const icon = deadlineStatus === 'overdue' ? 'fa-exclamation-circle' : 'fa-clock';
-        const message = deadlineStatus === 'overdue' 
-            ? `تجاوز الموعد النهائي للطلب رقم ${req.reqId}` 
-            : `الطلب رقم ${req.reqId} يقترب من الموعد النهائي`;
-
-        return `
-            <div class="alert-box alert-${type}" onclick="showRequestDetailsFromAlert('${req.firebaseKey}')" style="cursor: pointer;">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <i class="fas ${icon}"></i>
-                    <span>${message}</span>
-                </div>
-                <button class="alert-close" onclick="event.stopPropagation(); this.parentElement.remove()">×</button>
-            </div>
-        `;
-    }).join('');
-}
-
-/**
- * Show request details from alert click
- */
-function showRequestDetailsFromAlert(firebaseKey) {
-    showRequestDetails(firebaseKey);
-}
-
-/**
- * Show request details in modal
- */
-function showRequestDetails(firebaseKey) {
-    const request = allRequests.find(r => r.firebaseKey === firebaseKey);
-    if (!request) return;
-
-    currentSelectedRequest = request;
-
-    document.getElementById('modalTitle').textContent = request.title;
-    document.getElementById('modalReqId').textContent = `رقم الطلب: ${request.reqId}`;
-
-    let modalBodyHTML = `
-        <div class="detail-row">
-            <strong>📅 تاريخ التقديم:</strong>
-            <span>${formatDate(request.submissionDate)}</span>
-        </div>
-        <div class="detail-row">
-            <strong>🏛️ الجهة المعنية:</strong>
-            <span>${request.authority}</span>
-        </div>
-        <div class="detail-row">
-            <strong>✅ الحالة:</strong>
-            <span class="status-badge status-${request.status}">${getStatusText(request.status)}</span>
-        </div>
-        <div class="detail-row">
-            <strong>⏰ الموعد النهائي:</strong>
-            <span>${getDeadlineText(request.submissionDate)}</span>
-        </div>
-        <div class="detail-row full">
-            <strong>📝 تفاصيل الطلب:</strong>
-            <p>${request.details}</p>
-        </div>
-    `;
-
-    if (request.hasDocuments && request.documents && request.documents.length > 0) {
-        modalBodyHTML += '<div class="detail-row full"><strong>📎 المستندات المرفقة:</strong></div>';
-        request.documents.forEach((doc, idx) => {
-            modalBodyHTML += `
-                <div class="detail-row" style="background: rgba(0,0,0,0.03); padding: 12px; border-radius: 8px; margin: 8px 0;">
-                    <div>
-                        <strong>مستند ${idx + 1}: ${getDocumentTypeName(doc.type)}</strong><br>
-                        <small>التاريخ: ${formatDate(doc.date)}</small><br>
-                        <small>الوصف: ${doc.description || 'لا يوجد'}</small>
-                    </div>
-                </div>
-            `;
-        });
-    }
-
-    document.getElementById('modalBody').innerHTML = modalBodyHTML;
-    document.getElementById('detailsModal').classList.add('show');
-}
-
-/**
- * Close modal
- */
-function closeModal() {
-    document.getElementById('detailsModal').classList.remove('show');
-    currentSelectedRequest = null;
-}
-
-/**
- * Edit request
- */
-function editRequest() {
-    if (!currentSelectedRequest) return;
-
-    isEditMode = true;
-
-    document.getElementById('reqId').value = currentSelectedRequest.reqId;
-    document.getElementById('reqTitle').value = currentSelectedRequest.title;
-    document.getElementById('reqDetails').value = currentSelectedRequest.details;
-    document.getElementById('reqAuthority').value = currentSelectedRequest.authority;
-    document.getElementById('reqDate').value = currentSelectedRequest.submissionDate;
-    document.getElementById('reqStatus').value = currentSelectedRequest.status;
-    document.getElementById('submitButtonText').textContent = 'تحديث الطلب';
-
-    if (currentSelectedRequest.hasDocuments && currentSelectedRequest.documents) {
-        document.getElementById('hasDocuments').checked = true;
-        toggleDocumentsSection();
-
-        currentSelectedRequest.documents.forEach((doc, idx) => {
-            if (idx > 0) addDocumentForm();
-
-            const docId = idx;
-            setTimeout(() => {
-                const typeSelect = document.querySelector(`[name="docType_${docId}"]`);
-                const dateInput = document.querySelector(`[name="docDate_${docId}"]`);
-                const descTextarea = document.querySelector(`[name="docDesc_${docId}"]`);
-
-                if (typeSelect) typeSelect.value = doc.type;
-                if (dateInput) dateInput.value = doc.date;
-                if (descTextarea) descTextarea.value = doc.description || '';
-            }, 100);
-        });
-    }
-
-    closeModal();
-    switchTab('register');
-}
-
-/**
- * Confirm delete request
- */
-async function confirmDelete() {
-    if (!currentSelectedRequest) return;
-
-    if (confirm(`هل أنت متأكد من حذف الطلب رقم ${currentSelectedRequest.reqId}؟`)) {
-        const success = await window.RequestManager.deleteRequest(currentSelectedRequest.firebaseKey);
-
-        if (success) {
-            showAlert('تم حذف الطلب بنجاح ✅', 'success');
-            closeModal();
-        } else {
-            showAlert('حدث خطأ أثناء الحذف ❌', 'danger');
-        }
-    }
-}
-
-/**
- * Print request
- */
-function printRequest() {
-    if (!currentSelectedRequest) return;
-
-    const printWindow = window.open('', '_blank');
-
-    const printHTML = `
-        <!DOCTYPE html>
-        <html lang="ar" dir="rtl">
-        <head>
-            <meta charset="UTF-8">
-            <title>طلب رقم ${currentSelectedRequest.reqId}</title>
-            <style>
-                body {
-                    font-family: 'Cairo', Arial, sans-serif;
-                    padding: 30px;
-                    line-height: 1.8;
-                    color: #333;
-                }
-                .header {
-                    text-align: center;
-                    margin-bottom: 30px;
-                    padding-bottom: 20px;
-                    border-bottom: 3px solid #1e3c72;
-                }
-                .header h1 {
-                    color: #1e3c72;
-                    margin-bottom: 10px;
-                }
-                .detail {
-                    margin: 15px 0;
-                    padding: 10px;
-                    border-right: 3px solid #d4af37;
-                    background: #f9f9f9;
-                }
-                .detail strong {
-                    color: #1e3c72;
-                    display: inline-block;
-                    min-width: 150px;
-                }
-                .details-box {
-                    background: #f9f9f9;
-                    padding: 20px;
-                    border-radius: 8px;
-                    margin: 20px 0;
-                }
-                @media print {
-                    body { padding: 15px; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class="header">
-                <h1>🏛️ نظام إدارة طلبات البرلمان</h1>
-                <h2>نموذج طلب رسمي</h2>
-            </div>
-
-            <div class="detail">
-                <strong>🔢 رقم الطلب:</strong> ${currentSelectedRequest.reqId}
-            </div>
-            <div class="detail">
-                <strong>📝 العنوان:</strong> ${currentSelectedRequest.title}
-            </div>
-            <div class="detail">
-                <strong>📅 تاريخ التقديم:</strong> ${formatDate(currentSelectedRequest.submissionDate)}
-            </div>
-            <div class="detail">
-                <strong>🏛️ الجهة المعنية:</strong> ${currentSelectedRequest.authority}
-            </div>
-            <div class="detail">
-                <strong>✅ الحالة:</strong> ${getStatusText(currentSelectedRequest.status)}
-            </div>
-            <div class="detail">
-                <strong>⏰ الموعد النهائي:</strong> ${getDeadlineText(currentSelectedRequest.submissionDate)}
-            </div>
-
-            <div class="details-box">
-                <strong>📋 تفاصيل الطلب:</strong>
-                <p style="margin-top: 10px;">${currentSelectedRequest.details}</p>
-            </div>
-
-            ${currentSelectedRequest.hasDocuments && currentSelectedRequest.documents ? `
-                <div class="details-box">
-                    <strong>📎 المستندات المرفقة (${currentSelectedRequest.documents.length}):</strong>
-                    ${currentSelectedRequest.documents.map((doc, idx) => `
-                        <div style="margin: 15px 0; padding: 10px; border-right: 2px solid #ccc;">
-                            <strong>مستند ${idx + 1}: ${getDocumentTypeName(doc.type)}</strong><br>
-                            التاريخ: ${formatDate(doc.date)}<br>
-                            الوصف: ${doc.description || 'لا يوجد'}
-                        </div>
-                    `).join('')}
-                </div>
-            ` : ''}
-
-            <div style="margin-top: 40px; text-align: center; color: #95a5a6; font-size: 12px;">
-                تم الطباعة في: ${new Date().toLocaleString('ar-EG')}
-            </div>
-
-            <div style="margin-top: 20px; text-align: center; padding: 15px; border-top: 2px solid #eee;">
-                <strong>برمجة وتطوير: مهندس محمد حماد</strong>
-            </div>
-        </body>
-        </html>
-    `;
-
-    printWindow.document.write(printHTML);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-        printWindow.print();
-    }, 500);
-}
-
-/**
- * Export request to JSON
- */
-function exportRequest() {
-    if (!currentSelectedRequest) return;
-
-    const dataStr = JSON.stringify(currentSelectedRequest, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `request_${currentSelectedRequest.reqId}_${Date.now()}.json`;
-    link.click();
-
-    URL.revokeObjectURL(url);
-    showAlert('تم تصدير الطلب بنجاح ✅', 'success');
-}
-
-/**
- * Show alert message
+ * Show alert notification
  */
 function showAlert(message, type = 'info') {
-    const alertsContainer = document.getElementById('alertsContent');
-
-    // إزالة رسالة "لا توجد تنبيهات" إذا كانت موجودة
-    const noAlertsMsg = alertsContainer.querySelector('.no-alerts');
-    if (noAlertsMsg) {
-        noAlertsMsg.remove();
-    }
-
-    const alertHTML = `
-        <div class="alert-box alert-${type}">
-            <span><i class="fas fa-info-circle"></i> ${message}</span>
-            <button class="alert-close" onclick="this.parentElement.remove()">×</button>
+    const container = document.querySelector('.alerts-section') || document.querySelector('.form-container');
+    if (!container) return;
+    
+    const alert = document.createElement('div');
+    alert.className = `alert-box alert-${type}`;
+    alert.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
+            <i class="fa-solid fa-circle-info"></i>
+            <span>${message}</span>
         </div>
+        <button class="alert-close" onclick="this.parentElement.remove()">
+            <i class="fa-solid fa-times"></i>
+        </button>
     `;
-
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = alertHTML;
-    alertsContainer.insertBefore(tempDiv.firstElementChild, alertsContainer.firstChild);
-
+    
+    container.insertAdjacentElement('afterbegin', alert);
+    
     setTimeout(() => {
-        const alert = alertsContainer.querySelector('.alert-box.alert-' + type);
-        if (alert && alert.textContent.includes(message.substring(0, 20))) {
+        if (alert.parentElement) {
             alert.remove();
         }
     }, 5000);
-}
-
-/**
- * Format date to Arabic
- */
-function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('ar-EG', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
-}
-
-/**
- * Get status text in Arabic
- */
-function getStatusText(status) {
-    const statusMap = {
-        'execution': 'قيد التنفيذ',
-        'review': 'قيد المراجعة',
-        'completed': 'مكتمل',
-        'rejected': 'مرفوض'
-    };
-    return statusMap[status] || status;
-}
-
-/**
- * Get document type name in Arabic
- */
-function getDocumentTypeName(type) {
-    const typeMap = {
-        'official-request': 'طلب رسمي',
-        'response': 'رد الجهة',
-        'follow-up': 'متابعة',
-        'other': 'أخرى'
-    };
-    return typeMap[type] || type;
-}
-
-/**
- * Get deadline text
- */
-function getDeadlineText(submissionDate) {
-    const deadlineDate = new Date(submissionDate);
-    deadlineDate.setDate(deadlineDate.getDate() + 90);
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const timeDiff = deadlineDate - today;
-    const daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-
-    if (daysLeft < 0) {
-        return `⚠️ تجاوز الموعد بـ ${Math.abs(daysLeft)} يوم`;
-    } else if (daysLeft === 0) {
-        return '⚠️ اليوم هو الموعد النهائي';
-    } else {
-        return `${formatDate(deadlineDate)} (${daysLeft} يوم متبقي)`;
-    }
-}
-
-/**
- * Get deadline status for a request
- */
-function getDeadlineStatus(submissionDate) {
-    const submissionDateObj = new Date(submissionDate);
-    submissionDateObj.setDate(submissionDateObj.getDate() + 90);
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const timeDiff = submissionDateObj - today;
-    const daysLeft = Math.ceil(timeDiff / (1000 * 60 * 60 * 24));
-
-    if (daysLeft < 0) return 'overdue';
-    if (daysLeft <= 30) return 'urgent';
-    if (daysLeft <= 60) return 'warning';
-    return 'normal';
 }
