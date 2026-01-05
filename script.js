@@ -1,5 +1,7 @@
 // script.js - Enhanced Parliament Requests Management System
 // برمجة وتطوير: مهندس محمد حماد
+// Facebook: facebook.com/en.mohamed.nasr
+// GitHub: github.com/mohamednasr5
 
 let allRequests = [];
 let myChart = null;
@@ -77,7 +79,7 @@ function initializeFirebase() {
 }
 
 /**
- * Switch between tabs - مع دعم التنقل من الكود والـ HTML
+ * Switch between tabs
  */
 function switchTab(tabName, element) {
     const tabs = document.querySelectorAll('.tab-content');
@@ -89,7 +91,6 @@ function switchTab(tabName, element) {
     const activeTab = document.getElementById(tabName);
     if (activeTab) activeTab.classList.add('active');
 
-    // تفعيل العنصر في القائمة
     if (element) {
         element.classList.add('active');
     } else {
@@ -100,7 +101,6 @@ function switchTab(tabName, element) {
         if (targetNav) targetNav.classList.add('active');
     }
 
-    // Scroll to top on mobile
     if (window.innerWidth < 768) {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -239,7 +239,6 @@ async function handleFormSubmit(e) {
         documents: []
     };
 
-    // Collect documents if any
     if (formData.hasDocuments) {
         const docItems = document.querySelectorAll('.document-item');
         docItems.forEach(item => {
@@ -407,7 +406,7 @@ function renderTable(requests) {
 }
 
 /**
- * 🔍 البحث الموسع الشامل - يبحث في كل شيء!
+ * 🔍 البحث الموسع الشامل - يبحث في 8 أماكن مختلفة
  */
 function searchRequests(searchTerm) {
     if (!searchTerm.trim()) {
@@ -418,43 +417,40 @@ function searchRequests(searchTerm) {
     const term = searchTerm.toLowerCase();
 
     const filtered = allRequests.filter(req => {
-        // 1️⃣ البحث في رقم الطلب
+        // 1. البحث في رقم الطلب
         if (req.reqId && req.reqId.toLowerCase().includes(term)) return true;
 
-        // 2️⃣ البحث في العنوان
+        // 2. البحث في العنوان
         if (req.title && req.title.toLowerCase().includes(term)) return true;
 
-        // 3️⃣ البحث في الجهة المعنية
+        // 3. البحث في الجهة المعنية
         if (req.authority && req.authority.toLowerCase().includes(term)) return true;
 
-        // 4️⃣ البحث في التفاصيل
+        // 4. البحث في التفاصيل
         if (req.details && req.details.toLowerCase().includes(term)) return true;
 
-        // 5️⃣ البحث في تاريخ التقديم
+        // 5. البحث في تاريخ التقديم
         if (req.submissionDate) {
             const formattedDate = formatDate(req.submissionDate);
             if (formattedDate.toLowerCase().includes(term)) return true;
         }
 
-        // 6️⃣ البحث في الحالة
+        // 6. البحث في الحالة
         const statusText = getStatusText(req.status).toLowerCase();
         if (statusText.includes(term)) return true;
 
-        // 7️⃣ البحث في الموعد النهائي
+        // 7. البحث في الموعد النهائي
         const deadlineText = getDeadlineText(req.submissionDate).toLowerCase();
         if (deadlineText.includes(term)) return true;
 
-        // 8️⃣ البحث في المستندات
+        // 8. البحث في المستندات (النوع، الوصف، التاريخ)
         if (req.hasDocuments && req.documents && Array.isArray(req.documents)) {
             for (const doc of req.documents) {
-                // البحث في نوع المستند
                 const docTypeName = getDocumentTypeName(doc.type).toLowerCase();
                 if (docTypeName.includes(term)) return true;
 
-                // البحث في وصف المستند
                 if (doc.description && doc.description.toLowerCase().includes(term)) return true;
 
-                // البحث في تاريخ المستند
                 if (doc.date) {
                     const docDate = formatDate(doc.date).toLowerCase();
                     if (docDate.includes(term)) return true;
@@ -496,12 +492,17 @@ function updateAlerts(requests) {
             : `الطلب رقم ${req.reqId} يقترب من الموعد النهائي`;
 
         return `
-            <div class="alert-box alert-${type}" onclick="showRequestDetailsFromAlert('${req.firebaseKey}')" style="cursor: pointer;" title="اضغط لعرض تفاصيل الطلب">
+            <div class="alert-box alert-${type}" 
+                 onclick="showRequestDetailsFromAlert('${req.firebaseKey}')" 
+                 style="cursor: pointer;" 
+                 title="اضغط لعرض تفاصيل الطلب">
                 <div style="display: flex; align-items: center; gap: 10px; flex: 1;">
                     <i class="fas ${icon}"></i>
                     <span>${message}</span>
                 </div>
-                <button class="alert-close" onclick="event.stopPropagation(); this.parentElement.remove()" title="إغلاق التنبيه">×</button>
+                <button class="alert-close" 
+                        onclick="event.stopPropagation(); this.parentElement.remove()" 
+                        title="إغلاق التنبيه">×</button>
             </div>
         `;
     }).join('');
@@ -880,3 +881,5 @@ function getDeadlineStatus(submissionDate) {
 
 console.log('✅ نظام إدارة طلبات البرلمان - جاهز للعمل');
 console.log('💻 برمجة وتطوير: مهندس محمد حماد');
+console.log('🔗 Facebook: facebook.com/en.mohamed.nasr');
+console.log('🔗 GitHub: github.com/mohamednasr5');
