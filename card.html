@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ستوديو البطاقات الاحترافي - V5</title>
+    <title>ستوديو البطاقات الذكي - V7 (Final Export Fix)</title>
     <script async src="https://docs.opencv.org/4.5.4/opencv.js" onload="onOpenCvReady();" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -12,19 +12,20 @@
         :root {
             --primary: #2563eb;
             --secondary: #1e40af;
-            --accent: #f59e0b;
+            --success: #16a34a;
+            --warning: #f59e0b;
+            --danger: #dc2626;
             --bg: #f1f5f9;
             --text: #0f172a;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 
-        /* --- تصميم الشاشة الثابتة (Desktop App Style) --- */
         body { 
             background: var(--bg); 
             color: var(--text); 
-            height: 100vh; /* ارتفاع الشاشة بالكامل */
-            overflow: hidden; /* منع نزول الصفحة بالكامل */
+            height: 100vh; 
+            overflow: hidden; 
             display: flex; 
             flex-direction: column; 
         }
@@ -36,7 +37,7 @@
             background: white;
         }
 
-        /* --- الهيدر --- */
+        /* --- Header --- */
         .header {
             background: linear-gradient(135deg, var(--primary), var(--secondary));
             color: white;
@@ -49,20 +50,19 @@
             z-index: 10;
         }
         .header h1 { font-size: 1.4rem; display: flex; align-items: center; gap: 10px; }
-
-        /* --- التقسيم الداخلي --- */
-        .main-layout {
-            display: flex;
-            flex: 1;
-            overflow: hidden; /* مهم جداً */
+        
+        #statusBadge {
+            background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; font-size: 0.85rem; display:flex; align-items:center; gap:5px;
         }
 
-        /* --- منطقة العمل (التي تقبل الاسكرول) --- */
+        /* --- Layout --- */
+        .main-layout { display: flex; flex: 1; overflow: hidden; }
+
         .workspace {
             flex: 1;
             padding: 20px;
             background: #f8fafc;
-            overflow-y: auto; /* الاسكرول هنا فقط */
+            overflow-y: auto;
             position: relative;
         }
 
@@ -78,9 +78,8 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.05);
         }
         .upload-area:hover { border-color: var(--primary); background: #eff6ff; }
-        .upload-area h3 { color: var(--secondary); margin-bottom: 5px; }
 
-        /* --- معرض البطاقات --- */
+        /* --- Gallery --- */
         .gallery {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
@@ -96,11 +95,10 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
             transition: 0.2s;
             position: relative;
-            cursor: grab; /* مؤشر السحب */
+            cursor: grab;
         }
         .card-item:active { cursor: grabbing; }
         .card-item.dragging { opacity: 0.4; border: 2px dashed var(--primary); transform: scale(0.95); }
-        .card-item:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
 
         .card-preview {
             height: 150px;
@@ -114,68 +112,32 @@
             background-size: 10px 10px;
         }
         .card-preview img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-            pointer-events: none; /* لمنع سحب الصورة بالخطأ */
+            max-width: 100%; max-height: 100%; object-fit: contain; pointer-events: none;
         }
 
-        /* شارات الحالة */
-        .status-badge {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            font-size: 0.7rem;
-            padding: 3px 8px;
-            border-radius: 12px;
-            color: white;
-            font-weight: bold;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            z-index: 2;
+        .status-badge-card {
+            position: absolute; top: 8px; right: 8px; font-size: 0.7rem; padding: 3px 8px;
+            border-radius: 4px; color: white; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 2;
         }
-        .badge-auto { background: #16a34a; }
-        .badge-manual { background: #ea580c; }
+        .badge-auto { background: var(--success); }
+        .badge-manual { background: var(--warning); }
 
-        .card-tools {
-            display: flex;
-            border-top: 1px solid #e2e8f0;
-            background: white;
-        }
+        .card-tools { display: flex; border-top: 1px solid #e2e8f0; background: white; }
         .tool-btn {
-            flex: 1;
-            background: transparent;
-            border: none;
-            border-right: 1px solid #f1f5f9;
-            padding: 10px;
-            cursor: pointer;
-            font-size: 1.1rem;
-            transition: 0.2s;
-            color: #475569;
+            flex: 1; background: transparent; border: none; border-right: 1px solid #f1f5f9;
+            padding: 10px; cursor: pointer; font-size: 1.1rem; transition: 0.2s; color: #475569;
         }
         .tool-btn:hover { background: #f1f5f9; color: var(--primary); }
-        .tool-btn.delete:hover { background: #fee2e2; color: #dc2626; }
+        .tool-btn.delete:hover { background: #fee2e2; color: var(--danger); }
 
-        /* --- القائمة الجانبية (ثابتة) --- */
+        /* --- Sidebar --- */
         .sidebar {
-            width: 320px;
-            background: white;
-            border-right: 1px solid #e2e8f0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            overflow-y: auto;
-            flex-shrink: 0;
-            box-shadow: -4px 0 15px rgba(0,0,0,0.03);
-            z-index: 5;
+            width: 320px; background: white; border-right: 1px solid #e2e8f0; padding: 20px;
+            display: flex; flex-direction: column; gap: 20px; overflow-y: auto; flex-shrink: 0;
+            box-shadow: -4px 0 15px rgba(0,0,0,0.03); z-index: 5;
         }
 
-        .panel-box {
-            background: #f8fafc;
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid #e2e8f0;
-        }
+        .panel-box { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; }
         .panel-title { font-weight: bold; margin-bottom: 10px; color: var(--secondary); font-size: 0.95rem; }
 
         .control-group { margin-bottom: 12px; }
@@ -187,31 +149,23 @@
             font-weight: bold; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px;
             margin-bottom: 8px; font-size: 0.9rem; transition: 0.2s;
         }
-        .btn-print { background: #16a34a; }
+        .btn-print { background: var(--success); }
         .btn-img { background: var(--primary); }
         .btn-pdf { background: #ea580c; }
-        .btn-danger { background: #ef4444; }
+        .btn-danger { background: var(--danger); }
         .btn-action:hover { filter: brightness(1.1); transform: translateY(-1px); }
 
-        /* --- الفوتر --- */
         .footer {
-            background: #1e293b;
-            color: #94a3b8;
-            padding: 10px;
-            text-align: center;
-            font-size: 0.85rem;
-            flex-shrink: 0;
-            border-top: 1px solid #334155;
+            background: #1e293b; color: #94a3b8; padding: 10px; text-align: center;
+            font-size: 0.85rem; flex-shrink: 0; border-top: 1px solid #334155;
         }
         .footer a { color: #60a5fa; text-decoration: none; font-weight: bold; }
-        .footer a:hover { color: white; }
 
-        /* --- المحرر اليدوي (Modal) --- */
+        /* --- Modal Editor --- */
         .modal-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.92); z-index: 2000;
-            display: none; justify-content: center; align-items: center;
-            backdrop-filter: blur(5px);
+            display: none; justify-content: center; align-items: center; backdrop-filter: blur(5px);
         }
         .modal-overlay.active { display: flex; }
 
@@ -224,22 +178,35 @@
         .editor-header { padding: 15px 20px; background: #1e293b; color: white; display: flex; justify-content: space-between; align-items: center; }
         .editor-canvas-wrapper { 
             flex: 1; position: relative; background: #000; 
-            display: flex; justify-content: center; align-items: center; 
-            overflow: hidden; cursor: crosshair; 
+            display: flex; justify-content: center; align-items: center; overflow: hidden; cursor: crosshair; 
         }
         canvas { box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1); max-width: 100%; max-height: 100%; }
-        
         .editor-footer { padding: 15px 20px; background: #1e293b; display: flex; justify-content: flex-end; gap: 12px; }
 
-        /* --- إعدادات الطباعة --- */
-        #printableArea { position: absolute; top: -9999px; left: -9999px; }
+        /* --- Loading Overlay for Export --- */
+        #exportOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.9); z-index: 9999;
+            display: none; justify-content: center; align-items: center; flex-direction: column;
+        }
+
+        /* --- Print CSS --- */
+        /* هذا الجزء مهم جداً للطباعة الحقيقية والتصدير */
+        #printableArea { 
+            position: fixed; 
+            top: 0; left: 0; 
+            z-index: -100; /* خلفية */
+            visibility: hidden; /* مخفي مبدئياً */
+            background: white;
+        }
+        
         @media print {
             body * { visibility: hidden; }
             #printableArea, #printableArea * { visibility: visible; }
-            #printableArea { position: absolute; left: 0; top: 0; width: 100%; height: 100%; }
+            #printableArea { position: absolute; left: 0; top: 0; width: 100%; height: 100%; z-index: 100; }
             @page { size: A4; margin: 0; }
             .print-page { width: 210mm; height: 297mm; page-break-after: always; padding: 10mm; background: white; }
-            .print-grid { display: grid; gap: 5mm; align-content: start; }
+            .print-grid { display: grid; align-content: start; }
             .print-item { border: 1px dashed #e5e7eb; overflow: hidden; display: flex; justify-content: center; align-items: center; }
             .print-item img { width: 100%; height: 100%; object-fit: fill; }
         }
@@ -247,11 +214,16 @@
 </head>
 <body>
 
+<div id="exportOverlay">
+    <div style="font-size:2rem;">⚙️</div>
+    <h3>جاري المعالجة والحفظ...</h3>
+</div>
+
 <div class="app-container">
     <div class="header">
-        <h1>📸 ستوديو البطاقات <span style="font-size:0.8rem; opacity:0.8; margin-right:10px;">Pro V5</span></h1>
-        <div id="statusBadge" style="background: rgba(255,255,255,0.2); padding: 5px 15px; border-radius: 20px; font-size: 0.85rem; display:flex; align-items:center; gap:5px;">
-            <span>جاري تحميل النظام...</span> <span class="spinner">⏳</span>
+        <h1>📸 ستوديو البطاقات <span style="font-size:0.8rem; opacity:0.8; margin-right:10px;">V7</span></h1>
+        <div id="statusBadge">
+            <span>جاري تحميل الذكاء الاصطناعي...</span> ⏳
         </div>
     </div>
 
@@ -261,9 +233,8 @@
             <div class="upload-area" onclick="document.getElementById('fileInput').click()">
                 <div style="font-size: 2.5rem; margin-bottom: 10px;">📤</div>
                 <h3>اضغط لرفع البطاقات</h3>
-                <p style="color:#64748b; font-size:0.9rem;">سيتم القص تلقائياً. يمكنك التعديل والترتيب بالسحب والإفلات.</p>
+                <p style="color:#64748b; font-size:0.9rem;">القص التلقائي يعمل فوراً + يمكنك السحب والترتيب</p>
             </div>
-            
             <div class="gallery" id="gallery"></div>
         </div>
 
@@ -329,11 +300,8 @@
     let cards = [];
     let currentEditId = null;
     let dragSrcIndex = null;
-
-    // Editor Global Vars
     let canvas, ctx, originalImg = new Image(), points = [], isDragging = false, dragPoint = -1;
 
-    // 1. تهيئة النظام
     function onOpenCvReady() {
         cvReady = true;
         const badge = document.getElementById('statusBadge');
@@ -341,7 +309,6 @@
         badge.style.background = '#22c55e';
     }
 
-    // 2. إدارة الملفات
     document.getElementById('fileInput').addEventListener('change', async (e) => {
         if(!cvReady) return alert("يرجى الانتظار لحين تحميل ملفات النظام...");
         for (const file of e.target.files) {
@@ -357,68 +324,42 @@
         await new Promise(r => img.onload = r);
 
         const id = Date.now() + Math.random();
-        
-        // --- منطق الأولوية (Priority Logic) ---
-        // نحاول القص التلقائي، إذا نجح نعتمد عليه، إذا فشل نعود للأصل
         let processed = url;
         let detectedPoints = null;
-        let method = 'manual';
+        let cropStatus = 'manual';
 
         try {
-            const res = autoDetect(img);
-            processed = res.url;
-            detectedPoints = res.points;
-            method = 'auto';
-        } catch(e) {
-            console.log("فشل القص التلقائي، التبديل للوضع اليدوي");
-            // تبقى الصورة كما هي (url) وتكون الحالة manual
+            const result = autoCropCard(img);
+            processed = result.url;
+            detectedPoints = result.points;
+            cropStatus = 'auto';
+        } catch (err) {
+            console.warn("Auto crop failed", err);
         }
 
-        cards.push({
-            id: id,
-            original: url, 
-            processed: processed,
-            rotation: 0,
-            points: detectedPoints,
-            method: method
-        });
+        cards.push({ id: id, original: url, processed: processed, rotation: 0, points: detectedPoints, status: cropStatus });
         renderGallery();
     }
 
-    // 3. خوارزمية القص التلقائي (OpenCV)
-    function autoDetect(imgElement) {
+    function autoCropCard(imgElement) {
         let src = cv.imread(imgElement);
-        let dst = new cv.Mat();
-        let gray = new cv.Mat();
-        let blur = new cv.Mat();
-        let edges = new cv.Mat();
-
-        // معالجة أولية
+        let gray = new cv.Mat(), blur = new cv.Mat(), edges = new cv.Mat();
         cv.cvtColor(src, gray, cv.COLOR_RGBA2GRAY, 0);
         cv.GaussianBlur(gray, blur, new cv.Size(5, 5), 0);
-        cv.Canny(blur, edges, 75, 200); // قيم مناسبة للبطاقات
-
-        // إغلاق الفجوات
+        cv.Canny(blur, edges, 75, 200);
         let kernel = cv.Mat.ones(3, 3, cv.CV_8U);
         cv.dilate(edges, edges, kernel, new cv.Point(-1, -1), 1);
-
-        // البحث عن الكونتور
-        let contours = new cv.MatVector();
-        let hierarchy = new cv.Mat();
+        let contours = new cv.MatVector(), hierarchy = new cv.Mat();
         cv.findContours(edges, contours, hierarchy, cv.RETR_EXTERNAL, cv.CHAIN_APPROX_SIMPLE);
 
-        let maxArea = 0;
-        let bestApprox = null;
-
+        let maxArea = 0, bestApprox = null;
         for (let i = 0; i < contours.size(); ++i) {
             let cnt = contours.get(i);
             let area = cv.contourArea(cnt);
-            if (area < 5000) continue; // تجاهل الضوضاء
-
+            if (area < 5000) continue;
             let peri = cv.arcLength(cnt, true);
             let approx = new cv.Mat();
             cv.approxPolyDP(cnt, approx, 0.02 * peri, true);
-
             if (approx.rows === 4 && area > maxArea) {
                 maxArea = area;
                 if(bestApprox) bestApprox.delete();
@@ -427,74 +368,49 @@
             approx.delete();
         }
 
-        // تنظيف الذاكرة إذا فشل
         if (!bestApprox) {
-            src.delete(); dst.delete(); gray.delete(); blur.delete(); edges.delete(); contours.delete(); hierarchy.delete();
-            throw new Error("لم يتم العثور على بطاقة");
+            src.delete(); gray.delete(); blur.delete(); edges.delete(); contours.delete(); hierarchy.delete();
+            throw new Error("No card found");
         }
 
-        // استخراج النقاط
         let ptsData = [];
-        for(let i=0; i<4; i++) {
-            ptsData.push({x: bestApprox.data32S[i*2], y: bestApprox.data32S[i*2+1]});
-        }
-
-        // تنظيف نهائي
-        src.delete(); dst.delete(); gray.delete(); blur.delete(); edges.delete(); contours.delete(); hierarchy.delete(); bestApprox.delete();
-
+        for(let i=0; i<4; i++) ptsData.push({x: bestApprox.data32S[i*2], y: bestApprox.data32S[i*2+1]});
+        src.delete(); gray.delete(); blur.delete(); edges.delete(); contours.delete(); hierarchy.delete(); bestApprox.delete();
         return warpImage(imgElement, ptsData);
     }
 
     function warpImage(imgSource, rawPoints) {
-        // ترتيب النقاط (TL, TR, BR, BL)
         rawPoints.sort((a,b) => a.y - b.y);
         const top = rawPoints.slice(0, 2).sort((a,b) => a.x - b.x);
         const bottom = rawPoints.slice(2, 4).sort((a,b) => a.x - b.x);
         const sorted = [top[0], top[1], bottom[1], bottom[0]];
 
         let src = cv.imread(imgSource);
-        const width = 1000;
-        const height = 630; // نسبة البطاقة القياسية
-
-        let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [
-            sorted[0].x, sorted[0].y, sorted[1].x, sorted[1].y,
-            sorted[2].x, sorted[2].y, sorted[3].x, sorted[3].y
-        ]);
+        const width = 1000, height = 630;
+        let srcTri = cv.matFromArray(4, 1, cv.CV_32FC2, [sorted[0].x, sorted[0].y, sorted[1].x, sorted[1].y, sorted[2].x, sorted[2].y, sorted[3].x, sorted[3].y]);
         let dstTri = cv.matFromArray(4, 1, cv.CV_32FC2, [0, 0, width, 0, width, height, 0, height]);
-        
         let M = cv.getPerspectiveTransform(srcTri, dstTri);
         let warped = new cv.Mat();
         cv.warpPerspective(src, warped, M, new cv.Size(width, height), cv.INTER_LINEAR, cv.BORDER_CONSTANT, new cv.Scalar());
-
         let outCanvas = document.createElement('canvas');
         cv.imshow(outCanvas, warped);
-        
-        // Cleanup
         src.delete(); srcTri.delete(); dstTri.delete(); M.delete(); warped.delete();
-
-        return {
-            url: outCanvas.toDataURL('image/jpeg', 0.95),
-            points: sorted
-        };
+        return { url: outCanvas.toDataURL('image/jpeg', 0.95), points: sorted };
     }
 
-    // 4. عرض المعرض + الترتيب (Drag & Drop)
     function renderGallery() {
         const gal = document.getElementById('gallery');
         gal.innerHTML = '';
-        
         cards.forEach((card, index) => {
-            const badgeClass = card.method === 'auto' ? 'badge-auto' : 'badge-manual';
-            const badgeText = card.method === 'auto' ? '✓ تلقائي' : '⚠️ يدوي';
-
+            const badgeClass = card.status === 'auto' ? 'badge-auto' : 'badge-manual';
+            const badgeText = card.status === 'auto' ? '✓ تلقائي' : '⚠️ يدوي';
             const div = document.createElement('div');
             div.className = 'card-item';
-            div.draggable = true; // تفعيل السحب
+            div.draggable = true;
             div.dataset.index = index;
-
             div.innerHTML = `
                 <div class="card-preview">
-                    <span class="status-badge ${badgeClass}">${badgeText}</span>
+                    <span class="status-badge-card ${badgeClass}">${badgeText}</span>
                     <img src="${card.processed}" style="transform: rotate(${card.rotation}deg)">
                 </div>
                 <div class="card-tools">
@@ -503,7 +419,6 @@
                     <button class="tool-btn delete" onclick="remove(${index})" title="حذف">✕</button>
                 </div>
             `;
-            
             addDragEvents(div);
             gal.appendChild(div);
         });
@@ -525,10 +440,11 @@
         item.addEventListener('drop', function(e) {
             e.stopPropagation();
             if (dragSrcIndex !== this.dataset.index) {
-                // تبديل العناصر
-                const temp = cards[dragSrcIndex];
-                cards[dragSrcIndex] = cards[this.dataset.index];
-                cards[this.dataset.index] = temp;
+                const srcIdx = parseInt(dragSrcIndex);
+                const targetIdx = parseInt(this.dataset.index);
+                const temp = cards[srcIdx];
+                cards[srcIdx] = cards[targetIdx];
+                cards[targetIdx] = temp;
                 renderGallery();
             }
             return false;
@@ -543,22 +459,17 @@
     function remove(idx) { cards.splice(idx, 1); renderGallery(); }
     function clearAll() { if(confirm("حذف جميع البطاقات؟")) { cards = []; renderGallery(); } }
 
-    // 5. المحرر اليدوي (The Perfect Logic)
     function openEditor(id) {
         currentEditId = id;
         const card = cards.find(c => c.id === id);
-        
         const modal = document.getElementById('editorModal');
         modal.classList.add('active');
-
         canvas = document.getElementById('editorCanvas');
         ctx = canvas.getContext('2d');
-
         originalImg.src = card.original;
         originalImg.onload = () => {
             canvas.width = originalImg.width;
             canvas.height = originalImg.height;
-
             if (card.points && card.points.length === 4) {
                 points = JSON.parse(JSON.stringify(card.points));
             } else {
@@ -573,10 +484,8 @@
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         ctx.drawImage(originalImg, 0, 0);
-        
         ctx.fillStyle = 'rgba(0,0,0,0.6)';
         ctx.fillRect(0,0, canvas.width, canvas.height);
-
         ctx.save();
         ctx.beginPath();
         ctx.moveTo(points[0].x, points[0].y);
@@ -587,7 +496,6 @@
         ctx.clip();
         ctx.drawImage(originalImg, 0, 0);
         ctx.restore();
-
         ctx.strokeStyle = '#22c55e';
         ctx.lineWidth = Math.max(3, canvas.width * 0.005);
         ctx.beginPath();
@@ -595,7 +503,6 @@
         for(let i=1; i<4; i++) ctx.lineTo(points[i].x, points[i].y);
         ctx.closePath();
         ctx.stroke();
-
         points.forEach(p => {
             ctx.beginPath();
             ctx.arc(p.x, p.y, Math.max(12, canvas.width * 0.015), 0, Math.PI*2);
@@ -613,25 +520,16 @@
             const cy = e.touches ? e.touches[0].clientY : e.clientY;
             return { x: (cx - rect.left) * scaleX, y: (cy - rect.top) * scaleY };
         };
-
         const start = (e) => {
             const pos = getPos(e);
-            const r = Math.max(60, canvas.width * 0.06); // منطقة لمس أكبر
+            const r = Math.max(60, canvas.width * 0.06); 
             for(let i=0; i<4; i++) {
                 const dx = pos.x - points[i].x, dy = pos.y - points[i].y;
-                if(Math.sqrt(dx*dx + dy*dy) < r) {
-                    isDragging = true; dragPoint = i; e.preventDefault(); return;
-                }
+                if(Math.sqrt(dx*dx + dy*dy) < r) { isDragging = true; dragPoint = i; e.preventDefault(); return; }
             }
         };
-        const move = (e) => {
-            if(!isDragging) return;
-            e.preventDefault();
-            points[dragPoint] = getPos(e);
-            draw();
-        };
+        const move = (e) => { if(!isDragging) return; e.preventDefault(); points[dragPoint] = getPos(e); draw(); };
         const end = () => { isDragging = false; };
-
         canvas.onmousedown = start; canvas.onmousemove = move; canvas.onmouseup = end;
         canvas.ontouchstart = start; canvas.ontouchmove = move; canvas.ontouchend = end;
     }
@@ -642,15 +540,14 @@
         if(idx !== -1) {
             cards[idx].processed = res.url;
             cards[idx].points = res.points;
-            cards[idx].method = 'manual';
+            cards[idx].status = 'manual';
             renderGallery();
         }
         closeEditor();
     }
-
     function closeEditor() { document.getElementById('editorModal').classList.remove('active'); }
 
-    // 6. الطباعة والتصدير
+    // --- Output Generation (The Fix) ---
     function generateOutput() {
         const area = document.getElementById('printableArea');
         const perRow = document.getElementById('cardsPerRow').value;
@@ -659,9 +556,19 @@
         const w = size === 'standard' ? '86mm' : '90mm';
         const h = size === 'standard' ? '54mm' : '60mm';
 
-        let html = `<div class="print-page"><div class="print-grid" style="grid-template-columns: repeat(${perRow}, ${w}); row-gap: ${gap}mm;">`;
+        // إضافة الهيكل الداخلي للصفحة
+        let html = `<div class="print-page">
+            <div class="print-grid" style="
+                display: grid;
+                grid-template-columns: repeat(${perRow}, ${w});
+                row-gap: ${gap}mm;
+                column-gap: 5mm;
+            ">`;
+        
         cards.forEach(card => {
-            html += `<div class="print-item" style="width:${w}; height:${h};"><img src="${card.processed}" style="transform: rotate(${card.rotation}deg)"></div>`;
+            html += `<div class="print-item" style="width:${w}; height:${h};">
+                <img src="${card.processed}" style="width:100%; height:100%; object-fit:fill; transform: rotate(${card.rotation}deg)">
+            </div>`;
         });
         html += `</div></div>`;
         area.innerHTML = html;
@@ -674,26 +581,71 @@
         window.print();
     }
 
-    function saveImage() {
+    // --- Save Image with Gap Fix ---
+    async function saveImage() {
         if(!cards.length) return alert("لا توجد بطاقات");
-        generateOutput();
-        const element = document.querySelector('.print-page');
-        const prevPos = document.getElementById('printableArea').style.position;
-        document.getElementById('printableArea').style.position = 'static'; // إظهار مؤقت للرسم
+        document.getElementById('exportOverlay').style.display = 'flex';
         
-        html2canvas(element, { scale: 2 }).then(canvas => {
+        // 1. Generate Content
+        generateOutput();
+        const element = document.querySelector('.print-page'); // Capture page div
+        const printableArea = document.getElementById('printableArea');
+
+        // 2. Make it momentarily visible for html2canvas
+        const originalPos = printableArea.style.position;
+        const originalZ = printableArea.style.zIndex;
+        const originalVis = printableArea.style.visibility;
+        
+        printableArea.style.position = 'fixed';
+        printableArea.style.top = '0';
+        printableArea.style.left = '0';
+        printableArea.style.zIndex = '-100'; // Behind everything but visible to DOM
+        printableArea.style.visibility = 'visible';
+
+        try {
+            const canvas = await html2canvas(element, { 
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff'
+            });
+            
             const link = document.createElement('a');
             link.download = `cards-${Date.now()}.png`;
             link.href = canvas.toDataURL();
             link.click();
-            document.getElementById('printableArea').style.position = prevPos;
-        });
+        } catch(e) {
+            console.error(e);
+            alert("حدث خطأ أثناء الحفظ");
+        } finally {
+            // Restore hidden state
+            printableArea.style.position = originalPos;
+            printableArea.style.zIndex = originalZ;
+            printableArea.style.visibility = originalVis;
+            document.getElementById('exportOverlay').style.display = 'none';
+        }
     }
 
-    function savePDF() {
+    // --- Save PDF with Gap Fix ---
+    async function savePDF() {
         if(!cards.length) return alert("لا توجد بطاقات");
+        document.getElementById('exportOverlay').style.display = 'flex';
+
         generateOutput();
         const element = document.querySelector('.print-page');
+        const printableArea = document.getElementById('printableArea');
+
+        // Force visible logic
+        const originalPos = printableArea.style.position;
+        const originalZ = printableArea.style.zIndex;
+        const originalVis = printableArea.style.visibility;
+
+        printableArea.style.position = 'fixed';
+        printableArea.style.top = '0';
+        printableArea.style.left = '0';
+        printableArea.style.zIndex = '-100';
+        printableArea.style.visibility = 'visible';
+
         const opt = {
             margin: 0,
             filename: `cards-${Date.now()}.pdf`,
@@ -701,7 +653,16 @@
             html2canvas: { scale: 2 },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
         };
-        html2pdf().set(opt).from(element).save();
+
+        try {
+            await html2pdf().set(opt).from(element).save();
+        } finally {
+             // Restore
+            printableArea.style.position = originalPos;
+            printableArea.style.zIndex = originalZ;
+            printableArea.style.visibility = originalVis;
+            document.getElementById('exportOverlay').style.display = 'none';
+        }
     }
 </script>
 </body>
