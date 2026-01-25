@@ -16,11 +16,11 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Firebase SDKs (مطلوبة لعمل الربط) -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-    <!-- ملف الإعدادات الخاص بك (يجب أن يكون في نفس المجلد) -->
+    <!-- Config File -->
     <script src="firebase-config.js"></script>
 
     <style>
@@ -148,6 +148,84 @@
         .facebook { background: #1877f2; }
         .github { background: #333; }
 
+        /* --- PRINT STYLES (A4 Professional) --- */
+        #printArea { display: none; } /* Hidden on screen */
+
+        @media print {
+            body { 
+                background: white; 
+                height: auto; 
+                overflow: visible; 
+                display: block; 
+                margin: 0; 
+                padding: 0;
+            }
+            
+            /* Hide everything */
+            aside, nav.mobile-nav, .header-3d, .modal-overlay, .btn-action, .btn-3d, .stats-grid, .no-print, .close-modal, #searchInput {
+                display: none !important;
+            }
+
+            /* Show Print Area */
+            #printArea {
+                display: block !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                visibility: visible;
+                background: white;
+                color: black;
+                padding: 20px;
+                direction: rtl;
+                font-size: 12pt;
+            }
+
+            /* Print Specific Styles */
+            .print-header {
+                text-align: center;
+                border-bottom: 2px solid #000;
+                padding-bottom: 10px;
+                margin-bottom: 20px;
+            }
+            .print-header h1 { font-size: 18pt; margin: 0; color: #000; }
+            .print-header p { margin: 5px 0; font-size: 11pt; }
+            
+            .print-details-grid {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                gap: 15px;
+                margin-bottom: 20px;
+                border: 1px solid #ddd;
+                padding: 15px;
+                background: #f9f9f9;
+            }
+            
+            .print-field { margin-bottom: 10px; }
+            .print-field strong { display: block; color: #333; }
+            .print-field span { color: #000; }
+
+            .print-table {
+                width: 100%;
+                border-collapse: collapse;
+                margin-top: 10px;
+            }
+            .print-table th, .print-table td {
+                border: 1px solid #333;
+                padding: 8px;
+                text-align: right;
+                font-size: 10pt;
+                white-space: normal;
+            }
+            .print-table th { background-color: #eee !important; color: #000; }
+
+            /* A4 Page Settings */
+            @page {
+                size: A4;
+                margin: 10mm;
+            }
+        }
+
         /* --- Responsive Queries --- */
         @media (max-width: 768px) {
             .sidebar { display: none; }
@@ -157,20 +235,11 @@
             .footer-content { flex-direction: column; gap: 10px; }
             th:nth-child(5), td:nth-child(5) { display: none; } 
         }
-
-        /* --- PRINT STYLES (No Scrollbars/Frame) --- */
-        @media print {
-            body * { visibility: hidden; }
-            #printArea, #printArea * { visibility: visible; }
-            #printArea { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
-            body { height: auto; overflow: visible; background: white; }
-            @page { margin: 0; }
-        }
     </style>
 </head>
 <body>
     <!-- Sidebar (Desktop) -->
-    <aside class="sidebar">
+    <aside class="sidebar no-print">
         <div class="logo">
             <i class="fas fa-landmark"></i>
             <h2>نظام إدارة<br>طلبات البرلمان</h2>
@@ -198,7 +267,7 @@
     </aside>
 
     <!-- Mobile Bottom Navigation -->
-    <nav class="mobile-nav">
+    <nav class="mobile-nav no-print">
         <div class="mobile-nav-item active" onclick="switchTab('dashboard', this)">
             <i class="fas fa-chart-pie"></i>
             <span>الرئيسية</span>
@@ -221,16 +290,16 @@
     <main class="main-content">
         <!-- Dashboard Tab -->
         <section id="dashboard" class="tab-content active">
-            <div class="header-3d">
+            <div class="header-3d no-print">
                 <h1><i class="fas fa-chart-line"></i> 📊 لوحة المعلومات والتنبيهات</h1>
             </div>
-            <div class="glass-panel">
+            <div class="glass-panel no-print">
                 <h2 style="margin-bottom: 20px; color: var(--primary); font-weight: 800;"><i class="fas fa-bell"></i> 🔔 التنبيهات الهامة</h2>
                 <div id="alertsContent">
                     <p class="no-alerts">لا توجد تنبيهات حالية</p>
                 </div>
             </div>
-            <div class="stats-grid">
+            <div class="stats-grid no-print">
                 <div class="stat-card total">
                     <div class="icon">📊</div>
                     <h3>إجمالي الطلبات</h3>
@@ -252,17 +321,17 @@
                     <span class="number" id="rejectedRequests">0</span>
                 </div>
             </div>
-            <div class="glass-panel">
+            <div class="glass-panel no-print">
                 <canvas id="requestsChart"></canvas>
             </div>
         </section>
 
         <!-- Reports & AI Tab -->
         <section id="reports" class="tab-content">
-            <div class="header-3d">
+            <div class="header-3d no-print">
                 <h1><i class="fas fa-file-invoice"></i> 📑 التقارير والتحليل الذكي</h1>
             </div>
-            <div class="glass-panel">
+            <div class="glass-panel no-print">
                 <h3 style="margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">
                     <i class="fas fa-calendar-alt"></i> تقرير بفترة زمنية محددة
                 </h3>
@@ -287,7 +356,7 @@
                     </div>
                 </div>
             </div>
-            <div class="glass-panel">
+            <div class="glass-panel no-print">
                 <h3 style="margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">
                     <i class="fas fa-brain"></i> الذكاء الاصطناعي: طلبات الاحاطة
                 </h3>
@@ -310,8 +379,8 @@
                     <p style="font-size: 0.8rem; color: #64748b;">(اضغط على الرقم لعرض التفاصيل)</p>
                 </div>
             </div>
-            <div class="glass-panel">
-                 <button class="btn-3d" style="width: 100%; background: var(--secondary);" onclick="window.print()">
+            <div class="glass-panel no-print">
+                 <button class="btn-3d" style="width: 100%; background: var(--secondary);" onclick="printFullReport()">
                     <i class="fas fa-print"></i> طباعة تقرير كامل للنظام
                  </button>
             </div>
@@ -319,7 +388,7 @@
 
         <!-- Register Tab -->
         <section id="register" class="tab-content">
-            <div class="header-3d">
+            <div class="header-3d no-print">
                 <h1><i class="fas fa-plus-circle"></i> ➕ تسجيل / تعديل طلب</h1>
             </div>
             <div class="glass-panel form-container">
@@ -373,7 +442,7 @@
                         </button>
                     </div>
 
-                    <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px;">
+                    <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px;" class="no-print">
                         <button type="submit" class="btn-3d" style="flex: 1;">
                             <i class="fas fa-save"></i> <span id="submitButtonText">حفظ الطلب</span>
                         </button>
@@ -387,7 +456,7 @@
 
         <!-- Archive Tab -->
         <section id="archive" class="tab-content">
-            <div class="header-3d">
+            <div class="header-3d no-print">
                 <h1><i class="fas fa-archive"></i> 📋 سجل الطلبات والأرشيف</h1>
             </div>
             <div class="glass-panel">
@@ -418,7 +487,7 @@
                     </table>
                 </div>
             </div>
-            <footer class="app-footer">
+            <footer class="app-footer no-print">
                 <div class="footer-card">
                     <div class="footer-content">
                         <div style="display: flex; align-items: center; gap: 10px;">
@@ -481,17 +550,9 @@
                 <h2><i class="fas fa-brain"></i> تقرير طلبات الاحاطة التفصيلي</h2>
             </div>
             <div class="modal-body">
-                <!-- Printable Area -->
+                <!-- Printable Area (Hidden on screen, used for print preview inside modal or direct print) -->
                 <div id="printArea">
-                    <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
-                        <h3 style="color: var(--primary); margin-bottom: 5px;">نظام إدارة طلبات البرلمان</h3>
-                        <p>تقرير شامل لطلبات الاحاطة</p>
-                        <p style="font-size: 0.8rem; color: #888;">تاريخ التقرير: <span id="aiReportDate"></span></p>
-                    </div>
-                    
-                    <div id="aiReportContent">
-                        <!-- Table or List injected here -->
-                    </div>
+                    <!-- Content Injected by JS -->
                 </div>
             </div>
             <div class="modal-actions">
@@ -763,26 +824,17 @@
                 return;
             }
 
-            // Populate Modal
+            // Populate Modal (Visual Preview)
             const container = document.getElementById('aiReportContent');
             const dateSpan = document.getElementById('aiReportDate');
             
-            dateSpan.innerText = new Date().toLocaleDateString('ar-EG');
+            // Note: We use #printArea for actual printing logic
+            // But we might want to show a preview inside #aiReportContent (visible inside modal)
+            // However, the user wants A4 print. So we rely on the Print functions to populate #printArea.
             
-            let html = '<table style="width:100%; border-collapse: collapse; margin-top: 15px;"><thead><tr style="background:#f1f5f9;"><th style="padding:10px; border:1px solid #ddd;">رقم الطلب</th><th style="padding:10px; border:1px solid #ddd;">العنوان</th><th style="padding:10px; border:1px solid #ddd;">التفاصيل</th></tr></thead><tbody>';
-
-            window.currentAiResults.forEach(req => {
-                html += `
-                    <tr>
-                        <td style="padding:10px; border:1px solid #ddd; text-align:center;">${req.reqId}</td>
-                        <td style="padding:10px; border:1px solid #ddd; font-weight:bold;">${req.title}</td>
-                        <td style="padding:10px; border:1px solid #ddd;">${req.details}</td>
-                    </tr>
-                `;
-            });
-            html += '</tbody></table>';
+            // Let's just show a message in the modal body for now, the print action does the work.
+            container.innerHTML = `<p style="text-align:center; padding:20px; color:var(--text-light);">تم العثور على ${window.currentAiResults.length} طلب احاطة. اضغط على طباعة لعرض التقرير الكامل.</p>`;
             
-            container.innerHTML = html;
             document.getElementById('aiModal').style.display = 'flex';
         }
 
@@ -790,7 +842,156 @@
             document.getElementById('aiModal').style.display = 'none';
         }
 
+        // --- PRINTING LOGIC ---
+
+        function generatePrintHeader(title) {
+            const now = new Date();
+            return `
+                <div class="print-header">
+                    <h1>نظام إدارة طلبات البرلمان</h1>
+                    <p>${title}</p>
+                    <p>تاريخ الطباعة: ${now.toLocaleDateString('ar-EG')} - ${now.toLocaleTimeString('ar-EG')}</p>
+                </div>
+                <hr style="border: 0; border-top: 2px solid #000; margin-bottom: 20px;">
+            `;
+        }
+
+        // 1. Print Single Request
+        function printRequest() {
+            const req = requestsData.find(r => r.firebaseKey === currentRequestKey);
+            if (!req) return;
+
+            const printArea = document.getElementById('printArea');
+            
+            let docsHtml = 'لا يوجد مستندات';
+            if (req.hasDocuments) {
+                if (req.documentsList && req.documentsList.length > 0) {
+                    docsHtml = '<ul style="margin-right: 20px;">' + req.documentsList.map(d => `<li>${d}</li>`).join('') + '</ul>';
+                } else {
+                    docsHtml = 'نعم، يوجد مستندات مرفقة';
+                }
+            }
+
+            printArea.innerHTML = `
+                ${generatePrintHeader('تفاصيل الطلب رقم: ' + req.reqId)}
+                
+                <div class="print-details-grid">
+                    <div class="print-field"><strong>رقم الطلب:</strong> <span>${req.reqId}</span></div>
+                    <div class="print-field"><strong>التاريخ:</strong> <span>${req.reqDate}</span></div>
+                    <div class="print-field"><strong>العنوان:</strong> <span>${req.title}</span></div>
+                    <div class="print-field"><strong>الجهة المعنية:</strong> <span>${req.authority}</span></div>
+                    <div class="print-field"><strong>الحالة:</strong> <span>${req.status}</span></div>
+                    <div class="print-field"><strong>مرفقات:</strong> <span>${docsHtml}</span></div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <strong>وصف الطلب:</strong>
+                    <p style="padding: 15px; background: #fff; border: 1px solid #ccc; margin-top: 5px; line-height: 1.6;">
+                        ${req.details}
+                    </p>
+                </div>
+
+                <div style="margin-top: 50px; display: flex; justify-content: space-between;">
+                    <div style="border-top: 1px solid #000; width: 200px; text-align: center;">توقيع مدير النظام</div>
+                    <div style="border-top: 1px solid #000; width: 200px; text-align: center;">ختم النظام</div>
+                </div>
+            `;
+
+            window.print();
+        }
+
+        // 2. Print AI Report
         function printAiReport() {
+            if (!window.currentAiResults || window.currentAiResults.length === 0) {
+                showToast('لا توجد بيانات للطباعة', 'warning');
+                return;
+            }
+
+            const printArea = document.getElementById('printArea');
+            let tableRows = '';
+
+            window.currentAiResults.forEach(req => {
+                tableRows += `
+                    <tr>
+                        <td>${req.reqId}</td>
+                        <td>${req.title}</td>
+                        <td>${req.authority}</td>
+                        <td>${req.reqDate}</td>
+                        <td>${req.status}</td>
+                    </tr>
+                `;
+            });
+
+            printArea.innerHTML = `
+                ${generatePrintHeader('تقرير طلبات الاحاطة (الذكاء الاصطناعي)')}
+                <p style="margin-bottom: 15px;">إجمالي الطلبات: <strong>${window.currentAiResults.length}</strong></p>
+                
+                <table class="print-table">
+                    <thead>
+                        <tr>
+                            <th>رقم الطلب</th>
+                            <th>العنوان</th>
+                            <th>الجهة</th>
+                            <th>التاريخ</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+            `;
+
+            window.print();
+        }
+
+        // 3. Print Full Report
+        function printFullReport() {
+            if (requestsData.length === 0) {
+                showToast('لا توجد طلبات للطباعة', 'warning');
+                return;
+            }
+
+            const printArea = document.getElementById('printArea');
+            let tableRows = '';
+
+            requestsData.forEach(req => {
+                const statusMap = {
+                    'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة',
+                    'completed': 'مكتمل', 'rejected': 'مرفوض'
+                };
+                
+                tableRows += `
+                    <tr>
+                        <td>${req.reqId}</td>
+                        <td>${req.title}</td>
+                        <td>${req.authority}</td>
+                        <td>${req.reqDate}</td>
+                        <td>${statusMap[req.status]}</td>
+                    </tr>
+                `;
+            });
+
+            printArea.innerHTML = `
+                ${generatePrintHeader('التقرير الشامل لجميع الطلبات')}
+                <p style="margin-bottom: 15px;">إجمالي الطلبات: <strong>${requestsData.length}</strong></p>
+                
+                <table class="print-table">
+                    <thead>
+                        <tr>
+                            <th>رقم الطلب</th>
+                            <th>العنوان</th>
+                            <th>الجهة</th>
+                            <th>التاريخ</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+            `;
+
             window.print();
         }
 
@@ -828,17 +1029,11 @@
         }
 
         function checkPasscode(action) {
-            // Secure Logic
             const code = prompt("الرجاء إدخال الرمز السري للقيام بهذا الإجراء:");
-            
-            if (code === null) return; // User cancelled
-
+            if (code === null) return;
             if (code === SECURE_CODE) {
-                if (action === 'edit') {
-                    performEdit();
-                } else if (action === 'delete') {
-                    performDelete();
-                }
+                if (action === 'edit') performEdit();
+                else if (action === 'delete') performDelete();
             } else {
                 showToast("الرمز السري غير صحيح", "error");
             }
@@ -847,7 +1042,6 @@
         async function performEdit() {
             const req = requestsData.find(r => r.firebaseKey === currentRequestKey);
             if (!req) return;
-
             closeModal();
             switchTab('register', document.querySelectorAll('.mobile-nav-item')[2]);
             
@@ -872,7 +1066,6 @@
                     addDocumentField();
                 }
             }
-
             document.getElementById('submitButtonText').innerText = 'تحديث الطلب';
         }
 
@@ -888,13 +1081,9 @@
             }
         }
 
-        // Kept for compatibility if user clicks direct function (but buttons now use checkPasscode)
+        // Kept for compatibility if user clicks direct function
         async function editRequest() { checkPasscode('edit'); }
         async function confirmDelete() { checkPasscode('delete'); }
-
-        function printRequest() {
-            window.print();
-        }
 
         // --- Utilities ---
         function showToast(msg, type='success') {
