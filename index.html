@@ -162,7 +162,7 @@
             }
             
             /* Hide everything */
-            aside, nav.mobile-nav, .header-3d, .modal-overlay, .btn-action, .btn-3d, .stats-grid, .no-print, .close-modal, #searchInput {
+            aside, nav.mobile-nav, .header-3d, .modal-overlay, .btn-action, .btn-3d, .stats-grid, .no-print, .close-modal, #searchInput, .report-controls, .ai-result-box, #alertsContent {
                 display: none !important;
             }
 
@@ -179,6 +179,7 @@
                 padding: 20px;
                 direction: rtl;
                 font-size: 12pt;
+                z-index: 9999;
             }
 
             /* Print Specific Styles */
@@ -230,7 +231,7 @@
         @media (max-width: 768px) {
             .sidebar { display: none; }
             .mobile-nav { display: flex; }
-            .form-grid { grid-template-columns: 1fr; }
+            .form-grid { grid-template-columns:1fr; }
             .report-controls { flex-direction: column; align-items: stretch; }
             .footer-content { flex-direction: column; gap: 10px; }
             th:nth-child(5), td:nth-child(5) { display: none; } 
@@ -375,7 +376,8 @@
                         </div>
                     </div>
                     <p style="margin-bottom: 5px;">تم العثور على: </p>
-                    <span id="ihtiaCount" class="ai-number-display" onclick="openAiModal()">0</span>
+                    <!-- Ensuring click event is explicit -->
+                    <span id="ihtiaCount" class="ai-number-display" onclick="openAiModal()" title="اضغط لعرض التفاصيل">0</span>
                     <p style="font-size: 0.8rem; color: #64748b;">(اضغط على الرقم لعرض التفاصيل)</p>
                 </div>
             </div>
@@ -550,9 +552,9 @@
                 <h2><i class="fas fa-brain"></i> تقرير طلبات الاحاطة التفصيلي</h2>
             </div>
             <div class="modal-body">
-                <!-- Printable Area (Hidden on screen, used for print preview inside modal or direct print) -->
-                <div id="printArea">
-                    <!-- Content Injected by JS -->
+                <!-- Placeholder for visual preview if needed, print logic handles content injection -->
+                <div id="aiPreviewArea" style="padding: 20px; text-align: center; color: var(--text-light);">
+                    اضغط على زر "طباعة التقرير" أدناه لعرض التقرير الكامل جاهزاً للطباعة.
                 </div>
             </div>
             <div class="modal-actions">
@@ -812,38 +814,37 @@
                 resultBox.classList.add('active');
                 animateValue("ihtiaCount", 0, ihtiaRequests.length, 1000);
 
-                // Store results in global for modal
+                // Store results globally
                 window.currentAiResults = ihtiaRequests;
 
             }, 1500);
         }
 
         function openAiModal() {
+            // Explicitly check data
             if (!window.currentAiResults || window.currentAiResults.length === 0) {
-                showToast('لا توجد نتائج لعرضها', 'warning');
+                showToast('لا توجد بيانات للعرض', 'warning');
                 return;
             }
 
-            // Populate Modal (Visual Preview)
-            const container = document.getElementById('aiReportContent');
-            const dateSpan = document.getElementById('aiReportDate');
+            // Just open the modal, content injected during print
+            const modal = document.getElementById('aiModal');
+            const previewArea = document.getElementById('aiPreviewArea');
             
-            // Note: We use #printArea for actual printing logic
-            // But we might want to show a preview inside #aiReportContent (visible inside modal)
-            // However, the user wants A4 print. So we rely on the Print functions to populate #printArea.
+            previewArea.innerHTML = `
+                <h3>نتائج التحليل</h3>
+                <p>تم العثور على <strong>${window.currentAiResults.length}</strong> طلب احاطة.</p>
+                <p>اضغط على "طباعة التقرير" لعرض الكشف الكامل وتفاصيل الطلبات.</p>
+            `;
             
-            // Let's just show a message in the modal body for now, the print action does the work.
-            container.innerHTML = `<p style="text-align:center; padding:20px; color:var(--text-light);">تم العثور على ${window.currentAiResults.length} طلب احاطة. اضغط على طباعة لعرض التقرير الكامل.</p>`;
-            
-            document.getElementById('aiModal').style.display = 'flex';
+            modal.style.display = 'flex';
         }
 
         function closeAiModal() {
             document.getElementById('aiModal').style.display = 'none';
         }
 
-        // --- PRINTING LOGIC ---
-
+        // --- 8. PRINTING LOGIC (FIXED) ---
         function generatePrintHeader(title) {
             const now = new Date();
             return `
@@ -856,7 +857,6 @@
             `;
         }
 
-        // 1. Print Single Request
         function printRequest() {
             const req = requestsData.find(r => r.firebaseKey === currentRequestKey);
             if (!req) return;
@@ -872,6 +872,7 @@
                 }
             }
 
+            // 1. Inject Content
             printArea.innerHTML = `
                 ${generatePrintHeader('تفاصيل الطلب رقم: ' + req.reqId)}
                 
@@ -897,10 +898,12 @@
                 </div>
             `;
 
-            window.print();
+            // 2. Delay for Render then Print
+            setTimeout(() => {
+                window.print();
+            }, 300);
         }
 
-        // 2. Print AI Report
         function printAiReport() {
             if (!window.currentAiResults || window.currentAiResults.length === 0) {
                 showToast('لا توجد بيانات للطباعة', 'warning');
@@ -922,6 +925,7 @@
                 `;
             });
 
+            // 1. Inject Content
             printArea.innerHTML = `
                 ${generatePrintHeader('تقرير طلبات الاحاطة (الذكاء الاصطناعي)')}
                 <p style="margin-bottom: 15px;">إجمالي الطلبات: <strong>${window.currentAiResults.length}</strong></p>
@@ -942,10 +946,12 @@
                 </table>
             `;
 
-            window.print();
+            // 2. Delay then Print
+            setTimeout(() => {
+                window.print();
+            }, 300);
         }
 
-        // 3. Print Full Report
         function printFullReport() {
             if (requestsData.length === 0) {
                 showToast('لا توجد طلبات للطباعة', 'warning');
@@ -972,6 +978,7 @@
                 `;
             });
 
+            // 1. Inject Content
             printArea.innerHTML = `
                 ${generatePrintHeader('التقرير الشامل لجميع الطلبات')}
                 <p style="margin-bottom: 15px;">إجمالي الطلبات: <strong>${requestsData.length}</strong></p>
@@ -992,10 +999,13 @@
                 </table>
             `;
 
-            window.print();
+            // 2. Delay then Print
+            setTimeout(() => {
+                window.print();
+            }, 300);
         }
 
-        // --- 8. Modal Actions & Security ---
+        // --- 9. Modal Actions & Security ---
         function openModal(key) {
             const req = requestsData.find(r => r.firebaseKey === key);
             if (!req) return;
@@ -1042,6 +1052,7 @@
         async function performEdit() {
             const req = requestsData.find(r => r.firebaseKey === currentRequestKey);
             if (!req) return;
+
             closeModal();
             switchTab('register', document.querySelectorAll('.mobile-nav-item')[2]);
             
@@ -1066,6 +1077,7 @@
                     addDocumentField();
                 }
             }
+
             document.getElementById('submitButtonText').innerText = 'تحديث الطلب';
         }
 
@@ -1081,7 +1093,7 @@
             }
         }
 
-        // Kept for compatibility if user clicks direct function
+        // Compatibility wrappers
         async function editRequest() { checkPasscode('edit'); }
         async function confirmDelete() { checkPasscode('delete'); }
 
@@ -1117,5 +1129,8 @@
             }, stepTime > 0 ? stepTime : 10);
         }
     </script>
+    
+    <!-- Hidden Print Area Container -->
+    <div id="printArea"></div>
 </body>
 </html>
