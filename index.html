@@ -16,247 +16,396 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Firebase -->
+    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-    <!-- Styles -->
-    <link rel="stylesheet" href="style.css">
+    <!-- Config File -->
+    <script src="firebase-config.js"></script>
+
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1e40af;
+            --secondary: #64748b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --background: #f1f5f9;
+            --surface: #ffffff;
+            --text-main: #1e293b;
+            --text-light: #64748b;
+            --glass-bg: rgba(255, 255, 255, 0.95);
+            --glass-border: 1px solid rgba(255, 255, 255, 0.5);
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --radius: 16px;
+            --nav-height-mobile: 65px;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
+        body { font-family: 'Cairo', sans-serif; background-color: var(--background); color: var(--text-main); height: 100vh; overflow: hidden; display: flex; }
+
+        /* --- Sidebar (Desktop) --- */
+        .sidebar { width: 280px; background: var(--surface); height: 100%; display: flex; flex-direction: column; padding: 20px; box-shadow: var(--shadow); z-index: 100; transition: transform 0.3s ease; }
+        .logo { display: flex; align-items: center; gap: 15px; margin-bottom: 40px; padding-bottom: 20px; border-bottom: 1px solid #e2e8f0; }
+        .logo i { font-size: 2rem; color: var(--primary); }
+        .logo h2 { font-size: 1.1rem; font-weight: 800; line-height: 1.4; color: var(--text-main); }
+        .nav-links { list-style: none; flex: 1; }
+        .nav-links li { margin-bottom: 10px; padding: 12px 15px; border-radius: 12px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 12px; color: var(--text-light); font-weight: 600; }
+        .nav-links li:hover { background-color: #eff6ff; color: var(--primary); }
+        .nav-links li.active { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3); transform: scale(1.02); }
+        .nav-links li i { font-size: 1.2rem; width: 24px; text-align: center; }
+
+        /* --- Main Content --- */
+        .main-content { flex: 1; height: 100%; overflow-y: auto; padding: 20px; padding-bottom: calc(var(--nav-height-mobile) + 20px); position: relative; scroll-behavior: smooth; }
+        .header-3d h1 { font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg, var(--text-main), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 5px; }
+        .glass-panel { background: var(--glass-bg); border: var(--glass-border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow); backdrop-filter: blur(10px); }
+
+        /* --- Tabs Logic (Crucial Fix) --- */
+        .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
+        .tab-content.active { display: block; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- Stats Grid --- */
+        .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: var(--surface); padding: 20px; border-radius: var(--radius); box-shadow: var(--shadow); text-align: center; position: relative; overflow: hidden; }
+        .stat-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 4px; }
+        .stat-card.total::before { background: var(--primary); }
+        .stat-card.success::before { background: var(--success); }
+        .stat-card.warning::before { background: var(--warning); }
+        .stat-card.danger::before { background: var(--danger); }
+        .stat-card .icon { font-size: 2rem; margin-bottom: 10px; display: block; }
+        .stat-card h3 { font-size: 0.9rem; color: var(--text-light); margin-bottom: 5px; }
+        .stat-card .number { font-size: 1.8rem; font-weight: 800; color: var(--text-main); }
+
+        /* --- Forms --- */
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .input-group { margin-bottom: 15px; }
+        .input-group.full-width { grid-column: 1 / -1; }
+        .input-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-main); font-size: 0.9rem; }
+        .input-group input, .input-group select, .input-group textarea { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-family: inherit; transition: border-color 0.2s; }
+        .input-group input:focus, .input-group select:focus, .input-group textarea:focus { border-color: var(--primary); }
+
+        /* --- Buttons --- */
+        .btn-3d { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border: none; padding: 12px 25px; border-radius: 10px; font-family: inherit; font-weight: 700; cursor: pointer; box-shadow: 0 4px 0 #1e3a8a; transition: all 0.1s; display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; }
+        .btn-3d:active { transform: translateY(4px); box-shadow: none; }
+        .btn-3d.secondary { background: linear-gradient(135deg, #64748b, #475569); box-shadow: 0 4px 0 #334155; }
+
+        /* --- Table --- */
+        .table-responsive { overflow-x: auto; border-radius: 12px; }
+        table { width: 100%; border-collapse: collapse; background: var(--surface); min-width: 600px; }
+        th, td { padding: 15px; text-align: right; border-bottom: 1px solid #f1f5f9; }
+        th { background-color: #f8fafc; color: var(--text-light); font-weight: 700; }
+        .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
+        .status-execution { background: #fff7ed; color: #c2410c; }
+        .status-review { background: #eff6ff; color: #1d4ed8; }
+        .status-completed { background: #ecfdf5; color: #047857; }
+        .status-rejected { background: #fef2f2; color: #b91c1c; }
+
+        /* --- Reports & AI --- */
+        .report-controls { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 12px; align-items: end; }
+        .ai-badge { background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; margin-right: 5px; }
+        .ai-result-box { background: #f5f3ff; border: 1px solid #ddd6fe; padding: 15px; border-radius: 12px; margin-top: 15px; display: none; }
+        .ai-result-box.active { display: block; animation: fadeIn 0.5s; }
+
+        /* --- Mobile Navigation --- */
+        .mobile-nav { display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height-mobile); background: var(--surface); box-shadow: 0 -5px 20px rgba(0,0,0,0.05); z-index: 1000; justify-content: space-around; align-items: center; padding-bottom: env(safe-area-inset-bottom); }
+        .mobile-nav-item { display: flex; flex-direction: column; align-items: center; justify-content: center; color: var(--text-light); font-size: 0.7rem; gap: 4px; width: 100%; height: 100%; cursor: pointer; transition: all 0.2s; }
+        .mobile-nav-item.active { color: var(--primary); transform: translateY(-2px); }
+        .mobile-nav-item i { font-size: 1.3rem; }
+
+        /* --- Modal --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
+        .modal-content { background: var(--surface); border-radius: var(--radius); width: 100%; max-width: 500px; overflow: hidden; position: relative; }
+        .close-modal { position: absolute; top: 15px; left: 15px; font-size: 1.5rem; cursor: pointer; color: var(--text-light); }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e2e8f0; }
+        .modal-body { padding: 20px; }
+        .modal-actions { display: flex; gap: 10px; padding: 20px; border-top: 1px solid #e2e8f0; }
+        .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 5px; }
+
+        /* --- Footer --- */
+        .app-footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: var(--text-light); font-size: 0.9rem; }
+        .footer-content { display: flex; align-items: center; justify-content: center; gap: 15px; flex-wrap: wrap; }
+        .footer-social-btn { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; }
+        .facebook { background: #1877f2; }
+        .github { background: #333; }
+
+        /* --- Responsive Queries --- */
+        @media (max-width: 768px) {
+            .sidebar { display: none; }
+            .mobile-nav { display: flex; }
+            .form-grid { grid-template-columns: 1fr; }
+            .report-controls { flex-direction: column; align-items: stretch; }
+            .footer-content { flex-direction: column; gap: 10px; }
+            th:nth-child(5), td:nth-child(5) { display: none; }
+        }
+    </style>
 </head>
 <body>
-    <div class="app-container">
-        <!-- Sidebar Navigation -->
-        <aside class="sidebar">
-            <div class="logo">
-                <i class="fas fa-landmark"></i>
-                <h2>نظام إدارة<br>طلبات البرلمان</h2>
+    <!-- Sidebar (Desktop) -->
+    <aside class="sidebar">
+        <div class="logo">
+            <i class="fas fa-landmark"></i>
+            <h2>نظام إدارة<br>طلبات البرلمان</h2>
+        </div>
+        <nav>
+            <ul class="nav-links">
+                <li class="active" onclick="switchTab('dashboard', this)">
+                    <i class="fas fa-chart-line"></i>
+                    <span>لوحة التحكم</span>
+                </li>
+                <li onclick="switchTab('reports', this)">
+                    <i class="fas fa-file-invoice-dollar"></i>
+                    <span>التقارير والذكاء الاصطناعي</span>
+                </li>
+                <li onclick="switchTab('register', this)">
+                    <i class="fas fa-plus-circle"></i>
+                    <span>تسجيل طلب</span>
+                </li>
+                <li onclick="switchTab('archive', this)">
+                    <i class="fas fa-archive"></i>
+                    <span>الأرشيف</span>
+                </li>
+            </ul>
+        </nav>
+    </aside>
+
+    <!-- Mobile Bottom Navigation -->
+    <nav class="mobile-nav">
+        <div class="mobile-nav-item active" onclick="switchTab('dashboard', this)">
+            <i class="fas fa-chart-pie"></i>
+            <span>الرئيسية</span>
+        </div>
+        <div class="mobile-nav-item" onclick="switchTab('reports', this)">
+            <i class="fas fa-robot"></i>
+            <span>التقارير AI</span>
+        </div>
+        <div class="mobile-nav-item" onclick="switchTab('register', this)">
+            <i class="fas fa-plus-circle"></i>
+            <span>إضافة</span>
+        </div>
+        <div class="mobile-nav-item" onclick="switchTab('archive', this)">
+            <i class="fas fa-list"></i>
+            <span>الأرشيف</span>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Dashboard Tab -->
+        <section id="dashboard" class="tab-content active">
+            <div class="header-3d">
+                <h1><i class="fas fa-chart-line"></i> 📊 لوحة المعلومات والتنبيهات</h1>
             </div>
-
-            <nav>
-                <ul class="nav-links">
-                    <li class="active" onclick="switchTab('dashboard', this)">
-                        <i class="fas fa-chart-line"></i>
-                        <span>لوحة التحكم</span>
-                    </li>
-                    <li onclick="switchTab('register', this)">
-                        <i class="fas fa-plus-circle"></i>
-                        <span>تسجيل طلب</span>
-                    </li>
-                    <li onclick="switchTab('archive', this)">
-                        <i class="fas fa-archive"></i>
-                        <span>الأرشيف</span>
-                    </li>
-                </ul>
-            </nav>
-
-            <div class="theme-toggle">
-                <i class="fas fa-moon" id="theme-icon"></i>
+            <div class="glass-panel">
+                <h2 style="margin-bottom: 20px; color: var(--primary); font-weight: 800;"><i class="fas fa-bell"></i> 🔔 التنبيهات الهامة</h2>
+                <div id="alertsContent">
+                    <p class="no-alerts">لا توجد تنبيهات حالية</p>
+                </div>
             </div>
-        </aside>
-
-        <!-- Main Content -->
-        <main class="main-content">
-            <!-- Dashboard Tab -->
-            <section id="dashboard" class="tab-content active">
-                <div class="header-3d">
-                    <h1><i class="fas fa-chart-line"></i> 📊 لوحة المعلومات والتنبيهات</h1>
+            <div class="stats-grid">
+                <div class="stat-card total">
+                    <div class="icon">📊</div>
+                    <h3>إجمالي الطلبات</h3>
+                    <span class="number" id="totalRequests">0</span>
                 </div>
+                <div class="stat-card success">
+                    <div class="icon">✅</div>
+                    <h3>مكتملة</h3>
+                    <span class="number" id="completedRequests">0</span>
+                </div>
+                <div class="stat-card warning">
+                    <div class="icon">⏳</div>
+                    <h3>قيد التنفيذ</h3>
+                    <span class="number" id="pendingRequests">0</span>
+                </div>
+                <div class="stat-card danger">
+                    <div class="icon">❌</div>
+                    <h3>مرفوضة</h3>
+                    <span class="number" id="rejectedRequests">0</span>
+                </div>
+            </div>
+            <div class="glass-panel">
+                <canvas id="requestsChart"></canvas>
+            </div>
+        </section>
 
-                <!-- Alerts Section -->
-                <div class="glass-panel">
-                    <h2 style="margin-bottom: 20px; color: var(--primary); font-weight: 800;">
-                        <i class="fas fa-bell"></i> 🔔 التنبيهات الهامة
-                    </h2>
-                    <div id="alertsContent">
-                        <p class="no-alerts">لا توجد تنبيهات حالية</p>
+        <!-- Reports & AI Tab -->
+        <section id="reports" class="tab-content">
+            <div class="header-3d">
+                <h1><i class="fas fa-file-invoice"></i> 📑 التقارير والتحليل الذكي</h1>
+            </div>
+            <div class="glass-panel">
+                <h3 style="margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">
+                    <i class="fas fa-calendar-alt"></i> تقرير بفترة زمنية محددة
+                </h3>
+                <div class="report-controls">
+                    <div class="input-group" style="flex: 1;">
+                        <label>من تاريخ:</label>
+                        <input type="date" id="reportStartDate">
+                    </div>
+                    <div class="input-group" style="flex: 1;">
+                        <label>إلى تاريخ:</label>
+                        <input type="date" id="reportEndDate">
+                    </div>
+                    <button class="btn-3d" onclick="generateDateReport()">
+                        <i class="fas fa-search"></i> عرض التقرير
+                    </button>
+                </div>
+                <div id="dateReportResult" class="ai-result-box">
+                    <h4>نتائج التقرير للفترة المحددة:</h4>
+                    <div class="stat-card" style="margin-top: 10px; padding: 10px;">
+                        <span class="number" id="reportCount" style="font-size: 1.5rem;">0</span>
+                        <h3>عدد الطلبات</h3>
                     </div>
                 </div>
-
-                <!-- Statistics Cards -->
-                <div class="stats-grid" style="margin-top: 30px;">
-                    <div class="stat-card total">
-                        <div class="icon">📊</div>
-                        <h3>إجمالي الطلبات</h3>
-                        <span class="number" id="totalRequests">0</span>
-                    </div>
-                    <div class="stat-card success">
-                        <div class="icon">✅</div>
-                        <h3>مكتملة</h3>
-                        <span class="number" id="completedRequests">0</span>
-                    </div>
-                    <div class="stat-card warning">
-                        <div class="icon">⏳</div>
-                        <h3>قيد التنفيذ</h3>
-                        <span class="number" id="pendingRequests">0</span>
-                    </div>
-                    <div class="stat-card danger">
-                        <div class="icon">❌</div>
-                        <h3>مرفوضة</h3>
-                        <span class="number" id="rejectedRequests">0</span>
-                    </div>
-                </div>
-
-                <!-- Charts -->
-                <div class="glass-panel charts-container" style="margin-top: 30px;">
-                    <canvas id="requestsChart"></canvas>
-                </div>
-            </section>
-
-            <!-- Register Tab -->
-            <section id="register" class="tab-content">
-                <div class="header-3d">
-                    <h1><i class="fas fa-plus-circle"></i> ➕ تسجيل / تعديل طلب</h1>
-                </div>
-
-                <div class="glass-panel form-container">
-                    <form id="requestForm">
-                        <div class="form-grid">
-                            <div class="input-group">
-                                <label><i class="fas fa-hashtag"></i> رقم الطلب</label>
-                                <input type="text" id="reqId" required placeholder="مثال: 2024/001">
-                            </div>
-
-                            <div class="input-group">
-                                <label><i class="fas fa-calendar"></i> تاريخ التقديم</label>
-                                <input type="date" id="reqDate" required>
-                            </div>
-
-                            <div class="input-group full-width">
-                                <label><i class="fas fa-heading"></i> عنوان الطلب</label>
-                                <input type="text" id="reqTitle" required placeholder="عنوان مختصر للطلب">
-                            </div>
-
-                            <div class="input-group full-width">
-                                <label><i class="fas fa-building"></i> الجهة المعنية</label>
-                                <input type="text" id="reqAuthority" required placeholder="الوزارة أو المؤسسة">
-                            </div>
-
-                            <div class="input-group full-width">
-                                <label><i class="fas fa-align-right"></i> تفاصيل الطلب</label>
-                                <textarea id="reqDetails" rows="5" required placeholder="اكتب تفاصيل الطلب هنا..."></textarea>
-                            </div>
-
-                            <div class="input-group">
-                                <label><i class="fas fa-tasks"></i> حالة الطلب</label>
-                                <select id="reqStatus" required>
-                                    <option value="execution">قيد التنفيذ</option>
-                                    <option value="review">قيد المراجعة</option>
-                                    <option value="completed">مكتمل</option>
-                                    <option value="rejected">مرفوض</option>
-                                </select>
-                            </div>
-
-                            <div class="input-group">
-                                <label>
-                                    <input type="checkbox" id="hasDocuments" onchange="toggleDocumentsSection()" style="width: auto; margin-left: 10px;">
-                                    <i class="fas fa-paperclip"></i> يوجد مستندات مرفقة
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- Documents Section -->
-                        <div id="documentsSection" class="documents-section">
-                            <h3 style="margin: 20px 0; color: var(--primary);">
-                                <i class="fas fa-folder-open"></i> المستندات المرفقة
-                            </h3>
-                            <div id="documentsContainer"></div>
-                            <button type="button" class="btn-3d secondary" onclick="addDocumentForm()" style="margin-top: 15px;">
-                                <i class="fas fa-plus"></i> إضافة مستند جديد
-                            </button>
-                        </div>
-
-                        <!-- Form Actions -->
-                        <div class="form-actions">
-                            <button type="submit" class="btn-3d">
-                                <i class="fas fa-save"></i>
-                                <span id="submitButtonText">حفظ الطلب</span>
-                            </button>
-                            <button type="button" class="btn-3d secondary" onclick="resetForm()">
-                                <i class="fas fa-redo"></i> إعادة تعيين
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </section>
-
-            <!-- Archive Tab -->
-            <section id="archive" class="tab-content">
-                <div class="header-3d">
-                    <h1><i class="fas fa-archive"></i> 📋 سجل الطلبات والأرشيف</h1>
-                </div>
-
-                <div class="glass-panel">
-                    <!-- Search Bar -->
-                    <div class="controls-bar">
-                        <div class="search-box">
-                            <i class="fas fa-search"></i>
-                            <input type="text" 
-                                   id="searchInput" 
-                                   placeholder="ابحث في كل البيانات: رقم الطلب، العنوان، الجهة، الحالة، المستندات..." 
-                                   oninput="searchRequests(this.value)">
+            </div>
+            <div class="glass-panel">
+                <h3 style="margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">
+                    <i class="fas fa-brain"></i> الذكاء الاصطناعي: طلبات الاحاطة
+                </h3>
+                <p style="color: var(--text-light); margin-bottom: 15px; font-size: 0.9rem;">
+                    سيقوم النظام بمسح جميع العناوين في الأرشيف والتعرف على الطلبات التي تبدأ بكلمة "طلب احاطة".
+                </p>
+                <button class="btn-3d secondary" onclick="runAIAnalysis()" id="aiBtn">
+                    <i class="fas fa-magic"></i> بدء التحليل بالذكاء الاصطناعي
+                </button>
+                <div id="aiResult" class="ai-result-box">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                        <i class="fas fa-robot" style="font-size: 2rem; color: #6366f1;"></i>
+                        <div>
+                            <h4 style="margin:0;">تم اكتمال التحليل</h4>
+                            <span class="ai-badge">AI Processed</span>
                         </div>
                     </div>
+                    <p>تم العثور على: <strong id="ihtiaCount" style="color: #6366f1; font-size: 1.2rem;">0</strong> طلب احاطة</p>
+                </div>
+            </div>
+            <div class="glass-panel">
+                 <button class="btn-3d" style="width: 100%; background: var(--secondary);" onclick="window.print()">
+                    <i class="fas fa-print"></i> طباعة تقرير كامل للنظام
+                 </button>
+            </div>
+        </section>
 
-                    <!-- Requests Table -->
-                    <div class="table-responsive">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th>🔢 رقم الطلب</th>
-                                    <th>📝 العنوان</th>
-                                    <th>🏛️ الجهة</th>
-                                    <th>📅 التاريخ</th>
-                                    <th>📎 مستندات</th>
-                                    <th>✅ الحالة</th>
-                                </tr>
-                            </thead>
-                            <tbody id="requestsTableBody">
-                                <tr>
-                                    <td colspan="6" class="text-center">لا توجد طلبات للعرض</td>
-                                </tr>
-                            </tbody>
-                        </table>
+        <!-- Register Tab -->
+        <section id="register" class="tab-content">
+            <div class="header-3d">
+                <h1><i class="fas fa-plus-circle"></i> ➕ تسجيل / تعديل طلب</h1>
+            </div>
+            <div class="glass-panel form-container">
+                <form id="requestForm">
+                    <div class="form-grid">
+                        <div class="input-group">
+                            <label><i class="fas fa-hashtag"></i> رقم الطلب</label>
+                            <input type="text" id="reqId" required placeholder="مثال: 2024/001">
+                        </div>
+                        <div class="input-group">
+                            <label><i class="fas fa-calendar"></i> تاريخ التقديم</label>
+                            <input type="date" id="reqDate" required>
+                        </div>
+                        <div class="input-group full-width">
+                            <label><i class="fas fa-heading"></i> عنوان الطلب</label>
+                            <input type="text" id="reqTitle" required placeholder="عنوان مختصر للطلب">
+                        </div>
+                        <div class="input-group full-width">
+                            <label><i class="fas fa-building"></i> الجهة المعنية</label>
+                            <input type="text" id="reqAuthority" required placeholder="الوزارة أو المؤسسة">
+                        </div>
+                        <div class="input-group full-width">
+                            <label><i class="fas fa-align-right"></i> تفاصيل الطلب</label>
+                            <textarea id="reqDetails" rows="5" required placeholder="اكتب تفاصيل الطلب هنا..."></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label><i class="fas fa-tasks"></i> حالة الطلب</label>
+                            <select id="reqStatus" required>
+                                <option value="execution">قيد التنفيذ</option>
+                                <option value="review">قيد المراجعة</option>
+                                <option value="completed">مكتمل</option>
+                                <option value="rejected">مرفوض</option>
+                            </select>
+                        </div>
+                        <div class="input-group">
+                            <label>
+                                <input type="checkbox" id="hasDocuments" style="width: auto; margin-left: 10px;">
+                                <i class="fas fa-paperclip"></i> يوجد مستندات مرفقة
+                            </label>
+                        </div>
+                    </div>
+                    <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px;">
+                        <button type="submit" class="btn-3d" style="flex: 1;">
+                            <i class="fas fa-save"></i> <span id="submitButtonText">حفظ الطلب</span>
+                        </button>
+                        <button type="button" class="btn-3d secondary" onclick="resetForm()">
+                            <i class="fas fa-redo"></i> إعادة تعيين
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </section>
+
+        <!-- Archive Tab -->
+        <section id="archive" class="tab-content">
+            <div class="header-3d">
+                <h1><i class="fas fa-archive"></i> 📋 سجل الطلبات والأرشيف</h1>
+            </div>
+            <div class="glass-panel">
+                <div class="controls-bar">
+                    <div class="input-group">
+                        <div style="position: relative;">
+                            <i class="fas fa-search" style="position: absolute; right: 15px; top: 12px; color: var(--text-light);"></i>
+                            <input type="text" id="searchInput" style="padding-right: 40px;" placeholder="ابحث في كل البيانات..." oninput="searchRequests(this.value)">
+                        </div>
                     </div>
                 </div>
-            </section>
-
-            <!-- Footer -->
+                <div class="table-responsive" style="margin-top: 15px;">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>🔢 رقم الطلب</th>
+                                <th>📝 العنوان</th>
+                                <th>🏛️ الجهة</th>
+                                <th>📅 التاريخ</th>
+                                <th>📎 مستندات</th>
+                                <th>✅ الحالة</th>
+                                <th>عرض</th>
+                            </tr>
+                        </thead>
+                        <tbody id="requestsTableBody">
+                            <tr><td colspan="7" class="text-center">لا توجد طلبات للعرض</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
             <footer class="app-footer">
                 <div class="footer-card">
                     <div class="footer-content">
-                        <div class="footer-left">
-                            <div class="footer-icon">
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div class="footer-icon" style="background: #e2e8f0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                                 <i class="fas fa-code"></i>
                             </div>
-                            <div class="footer-text">
-                                <h3>
+                            <div class="footer-text" style="text-align: right;">
+                                <h3 style="font-size: 0.9rem;">
                                     <span class="footer-badge">💻</span>
                                     برمجة وتطوير
                                 </h3>
-                                <p>مهندس محمد حماد</p>
+                                <p style="font-size: 0.8rem;">مهندس محمد حماد</p>
                             </div>
                         </div>
-                        <div class="footer-right">
-                            <a href="https://www.facebook.com/en.mohamed.nasr" 
-                               target="_blank" 
-                               rel="noopener noreferrer" 
-                               class="footer-social-btn facebook"
-                               title="Facebook">
+                        <div style="display: flex; gap: 10px;">
+                            <a href="https://www.facebook.com/en.mohamed.nasr" target="_blank" class="footer-social-btn facebook">
                                 <i class="fab fa-facebook-f"></i>
                             </a>
-                            <a href="https://github.com/mohamednasr5" 
-                               target="_blank" 
-                               rel="noopener noreferrer" 
-                               class="footer-social-btn github"
-                               title="GitHub">
+                            <a href="https://github.com/mohamednasr5" target="_blank" class="footer-social-btn github">
                                 <i class="fab fa-github"></i>
                             </a>
                         </div>
                     </div>
                 </div>
             </footer>
-        </main>
-    </div>
+        </section>
+    </main>
 
     <!-- Details Modal -->
     <div id="detailsModal" class="modal-overlay">
@@ -268,24 +417,315 @@
             </div>
             <div class="modal-body" id="modalBody"></div>
             <div class="modal-actions">
-                <button class="btn-action edit" onclick="editRequest()">
+                <button class="btn-action edit" onclick="editRequest()" style="background: var(--primary);">
                     <i class="fas fa-edit"></i> تعديل
                 </button>
-                <button class="btn-action delete" onclick="confirmDelete()">
+                <button class="btn-action delete" onclick="confirmDelete()" style="background: var(--danger);">
                     <i class="fas fa-trash"></i> حذف
                 </button>
-                <button class="btn-action print" onclick="printRequest()">
+                <button class="btn-action print" onclick="printRequest()" style="background: var(--secondary);">
                     <i class="fas fa-print"></i> طباعة
-                </button>
-                <button class="btn-action export" onclick="exportRequest()">
-                    <i class="fas fa-download"></i> تصدير
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="firebase-config.js"></script>
-    <script src="script.js"></script>
+    <!-- Main Application Script -->
+    <script>
+        // ==========================================
+        // APP LOGIC (Using external RequestManager)
+        // ==========================================
+        
+        let requestsData = [];
+        let currentRequestKey = null; 
+        let chartInstance = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('reqDate').valueAsDate = new Date();
+            
+            if (typeof RequestManager !== 'undefined') {
+                fetchRealtimeData();
+            } else {
+                console.error('RequestManager not loaded. Check firebase-config.js');
+                alert('خطأ في تحميل ملف الإعدادات firebase-config.js');
+            }
+        });
+
+        // --- 1. Fetch Data using RequestManager ---
+        function fetchRealtimeData() {
+            RequestManager.listenToRequests((data) => {
+                requestsData = data;
+                requestsData.sort((a, b) => new Date(b.reqDate) - new Date(a.reqDate));
+                renderTable(requestsData);
+                updateDashboard();
+            });
+        }
+
+        // --- 2. Navigation (Updated for Instant Transition) ---
+        function switchTab(tabId, element) {
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            
+            // Add active class to the target tab
+            const targetTab = document.getElementById(tabId);
+            if (targetTab) {
+                targetTab.classList.add('active');
+            }
+
+            // Update Navigation Styling
+            document.querySelectorAll('.nav-links li, .mobile-nav-item').forEach(item => item.classList.remove('active'));
+            if (element) {
+                element.classList.add('active');
+            }
+
+            // Scroll to top immediately for fresh feel
+            document.querySelector('.main-content').scrollTop = 0;
+        }
+
+        // --- 3. Form Handling (Create/Update) ---
+        document.getElementById('requestForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const requestData = {
+                reqId: document.getElementById('reqId').value,
+                reqDate: document.getElementById('reqDate').value,
+                title: document.getElementById('reqTitle').value,
+                authority: document.getElementById('reqAuthority').value,
+                details: document.getElementById('reqDetails').value,
+                status: document.getElementById('reqStatus').value,
+                hasDocuments: document.getElementById('hasDocuments').checked
+            };
+
+            let success = false;
+
+            if (currentRequestKey) {
+                success = await RequestManager.updateRequest(currentRequestKey, requestData);
+                if(success) showToast('تم تحديث الطلب بنجاح');
+            } else {
+                success = await RequestManager.addRequest(requestData);
+                if(success) showToast('تم تسجيل الطلب بنجاح');
+            }
+
+            if(success) {
+                resetForm();
+                switchTab('archive', document.querySelectorAll('.mobile-nav-item')[3]);
+            } else {
+                showToast('حدث خطأ أثناء الحفظ', 'error');
+            }
+        });
+
+        function resetForm() {
+            document.getElementById('requestForm').reset();
+            document.getElementById('reqDate').valueAsDate = new Date();
+            currentRequestKey = null;
+            document.getElementById('submitButtonText').innerText = 'حفظ الطلب';
+        }
+
+        // --- 4. Table & Search ---
+        function renderTable(data) {
+            const tbody = document.getElementById('requestsTableBody');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">لا توجد طلبات للعرض</td></tr>';
+                return;
+            }
+
+            data.forEach(req => {
+                const statusMap = {
+                    'execution': { text: 'قيد التنفيذ', class: 'status-execution' },
+                    'review': { text: 'قيد المراجعة', class: 'status-review' },
+                    'completed': { text: 'مكتمل', class: 'status-completed' },
+                    'rejected': { text: 'مرفوض', class: 'status-rejected' }
+                };
+                const st = statusMap[req.status];
+
+                const row = `
+                    <tr onclick="openModal('${req.firebaseKey}')">
+                        <td>${req.reqId}</td>
+                        <td style="font-weight:bold;">${req.title}</td>
+                        <td>${req.authority}</td>
+                        <td>${req.reqDate}</td>
+                        <td>${req.hasDocuments ? '<i class="fas fa-paperclip"></i>' : '-'}</td>
+                        <td><span class="status-badge ${st.class}">${st.text}</span></td>
+                        <td>
+                             <button class="btn-action" style="padding: 5px 10px; font-size: 0.8rem; background: var(--primary);">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.innerHTML += row;
+            });
+        }
+
+        function searchRequests(query) {
+            const lowerQ = query.toLowerCase();
+            const filtered = requestsData.filter(r => 
+                r.title.toLowerCase().includes(lowerQ) || 
+                r.reqId.includes(lowerQ) ||
+                r.authority.toLowerCase().includes(lowerQ)
+            );
+            renderTable(filtered);
+        }
+
+        // --- 5. Dashboard & Charts ---
+        function updateDashboard() {
+            const total = requestsData.length;
+            const completed = requestsData.filter(r => r.status === 'completed').length;
+            const pending = requestsData.filter(r => r.status === 'execution' || r.status === 'review').length;
+            const rejected = requestsData.filter(r => r.status === 'rejected').length;
+
+            animateValue("totalRequests", parseInt(document.getElementById("totalRequests").innerText), total, 500);
+            animateValue("completedRequests", parseInt(document.getElementById("completedRequests").innerText), completed, 500);
+            animateValue("pendingRequests", parseInt(document.getElementById("pendingRequests").innerText), pending, 500);
+            animateValue("rejectedRequests", parseInt(document.getElementById("rejectedRequests").innerText), rejected, 500);
+
+            renderChart(completed, pending, rejected);
+        }
+
+        function renderChart(completed, pending, rejected) {
+            const ctx = document.getElementById('requestsChart').getContext('2d');
+            if (chartInstance) chartInstance.destroy();
+
+            chartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['مكتملة', 'قيد التنفيذ/المراجعة', 'مرفوضة'],
+                    datasets: [{
+                        data: [completed, pending, rejected],
+                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { font: { family: 'Cairo' } } } }
+                }
+            });
+        }
+
+        // --- 6. Reports & AI Logic ---
+        function generateDateReport() {
+            const start = document.getElementById('reportStartDate').value;
+            const end = document.getElementById('reportEndDate').value;
+
+            if (!start || !end) { showToast('يرجى اختيار التواريخ', 'warning'); return; }
+
+            const filtered = requestsData.filter(r => r.reqDate >= start && r.reqDate <= end);
+            document.getElementById('dateReportResult').classList.add('active');
+            document.getElementById('reportCount').innerText = filtered.length;
+        }
+
+        function runAIAnalysis() {
+            const btn = document.getElementById('aiBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> جاري التحليل الذكي...';
+
+            setTimeout(() => {
+                const count = requestsData.filter(req => {
+                    const cleanTitle = req.title.trim();
+                    return cleanTitle.startsWith('طلب احاطة') || cleanTitle.startsWith('طلب احاطه');
+                }).length;
+
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-magic"></i> بدء التحليل بالذكاء الاصطناعي';
+                
+                const resultBox = document.getElementById('aiResult');
+                resultBox.classList.add('active');
+                animateValue("ihtiaCount", 0, count, 1000);
+
+            }, 1500);
+        }
+
+        // --- 7. Modal Actions ---
+        function openModal(key) {
+            const req = requestsData.find(r => r.firebaseKey === key);
+            if (!req) return;
+
+            currentRequestKey = key;
+            document.getElementById('modalTitle').innerText = req.title;
+            document.getElementById('modalReqId').innerText = `رقم الطلب: ${req.reqId} | التاريخ: ${req.reqDate}`;
+            
+            document.getElementById('modalBody').innerHTML = `
+                <div style="margin-bottom:15px;"><strong>الجهة:</strong> ${req.authority}</div>
+                <div style="background: #f8fafc; padding: 10px; border-radius: 8px; line-height: 1.6; margin-bottom:15px;">${req.details}</div>
+                <div><strong>الحالة:</strong> ${req.status}</div>
+                <div><strong>مستندات:</strong> ${req.hasDocuments ? 'نعم' : 'لا'}</div>
+            `;
+            document.getElementById('detailsModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('detailsModal').style.display = 'none';
+            currentRequestKey = null;
+        }
+
+        async function editRequest() {
+            const req = requestsData.find(r => r.firebaseKey === currentRequestKey);
+            if (!req) return;
+
+            closeModal();
+            switchTab('register', document.querySelectorAll('.mobile-nav-item')[2]);
+            
+            document.getElementById('reqId').value = req.reqId;
+            document.getElementById('reqTitle').value = req.title;
+            document.getElementById('reqDate').value = req.reqDate;
+            document.getElementById('reqAuthority').value = req.authority;
+            document.getElementById('reqDetails').value = req.details;
+            document.getElementById('reqStatus').value = req.status;
+            document.getElementById('hasDocuments').checked = req.hasDocuments;
+            document.getElementById('submitButtonText').innerText = 'تحديث الطلب';
+        }
+
+        async function confirmDelete() {
+            if(confirm('هل أنت متأكد من حذف هذا الطلب نهائياً من قاعدة البيانات؟')) {
+                const success = await RequestManager.deleteRequest(currentRequestKey);
+                if(success) {
+                    closeModal();
+                    showToast('تم حذف الطلب');
+                } else {
+                    showToast('حدث خطأ أثناء الحذف', 'error');
+                }
+            }
+        }
+
+        function printRequest() {
+            window.print();
+        }
+
+        // --- Utilities ---
+        function showToast(msg, type='success') {
+            const toast = document.createElement('div');
+            toast.style.position = 'fixed';
+            toast.style.top = '20px';
+            toast.style.left = '50%';
+            toast.style.transform = 'translateX(-50%)';
+            toast.style.background = type === 'success' ? '#10b981' : (type === 'error' ? '#ef4444' : '#f59e0b');
+            toast.style.color = 'white';
+            toast.style.padding = '10px 20px';
+            toast.style.borderRadius = '30px';
+            toast.style.zIndex = '3000';
+            toast.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
+            toast.innerText = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function animateValue(id, start, end, duration) {
+            if (start === end) return;
+            const range = end - start;
+            let current = start;
+            const increment = end > start ? 1 : -1;
+            const stepTime = Math.abs(Math.floor(duration / range));
+            const obj = document.getElementById(id);
+            const timer = setInterval(function() {
+                current += increment;
+                obj.innerHTML = current;
+                if (current == end) clearInterval(timer);
+            }, stepTime > 0 ? stepTime : 10);
+        }
+    </script>
 </body>
 </html>
