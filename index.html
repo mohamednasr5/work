@@ -108,6 +108,15 @@
         .ai-badge { background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; margin-right: 5px; }
         .ai-result-box { background: #f5f3ff; border: 1px solid #ddd6fe; padding: 15px; border-radius: 12px; margin-top: 15px; display: none; }
         .ai-result-box.active { display: block; animation: fadeIn 0.5s; }
+        .ai-number-display { 
+            font-size: 2.5rem; 
+            font-weight: 900; 
+            color: #6366f1; 
+            cursor: pointer; 
+            transition: transform 0.2s; 
+            display: inline-block;
+        }
+        .ai-number-display:hover { transform: scale(1.05); color: #4f46e5; text-decoration: underline; }
 
         /* --- Mobile Navigation --- */
         .mobile-nav { display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height-mobile); background: var(--surface); box-shadow: 0 -5px 20px rgba(0,0,0,0.05); z-index: 1000; justify-content: space-around; align-items: center; padding-bottom: env(safe-area-inset-bottom); }
@@ -117,12 +126,20 @@
 
         /* --- Modal --- */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
-        .modal-content { background: var(--surface); border-radius: var(--radius); width: 100%; max-width: 500px; overflow: hidden; position: relative; }
-        .close-modal { position: absolute; top: 15px; left: 15px; font-size: 1.5rem; cursor: pointer; color: var(--text-light); }
-        .modal-header { padding: 20px; border-bottom: 1px solid #e2e8f0; }
-        .modal-body { padding: 20px; }
+        .modal-content { background: var(--surface); border-radius: var(--radius); width: 100%; max-width: 500px; overflow: hidden; position: relative; max-height: 90vh; display: flex; flex-direction: column; }
+        .modal-content.large { max-width: 800px; }
+        .close-modal { position: absolute; top: 15px; left: 15px; font-size: 1.5rem; cursor: pointer; color: var(--text-light); z-index: 10; }
+        .modal-header { padding: 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
+        .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
         .modal-actions { display: flex; gap: 10px; padding: 20px; border-top: 1px solid #e2e8f0; }
         .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 5px; }
+
+        /* --- Documents Section Toggle --- */
+        #documentsSection { display: none; background: #f8fafc; padding: 15px; border-radius: 12px; border: 2px dashed #cbd5e1; margin-top: 15px; }
+        #documentsSection.active { display: block; animation: fadeIn 0.3s; }
+        .doc-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+        .doc-item { display: flex; gap: 10px; align-items: center; background: white; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
+        .doc-item input { flex: 1; border: none; padding: 5px; }
 
         /* --- Footer --- */
         .app-footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: var(--text-light); font-size: 0.9rem; }
@@ -138,8 +155,18 @@
             .form-grid { grid-template-columns: 1fr; }
             .report-controls { flex-direction: column; align-items: stretch; }
             .footer-content { flex-direction: column; gap: 10px; }
-            /* Hide ONLY Documents column on mobile, keep Date visible */
             th:nth-child(5), td:nth-child(5) { display: none; } 
+        }
+
+        /* --- PRINT STYLES (No Scrollbars/Frame) --- */
+        @media print {
+            body * { visibility: hidden; }
+            #printArea, #printArea * { visibility: visible; }
+            #printArea { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
+            
+            /* Ensure print content fills page but doesn't overflow with bars */
+            body { height: auto; overflow: visible; background: white; }
+            @page { margin: 0; } /* Remove browser margins */
         }
     </style>
 </head>
@@ -280,7 +307,9 @@
                             <span class="ai-badge">AI Processed</span>
                         </div>
                     </div>
-                    <p>تم العثور على: <strong id="ihtiaCount" style="color: #6366f1; font-size: 1.2rem;">0</strong> طلب احاطة</p>
+                    <p style="margin-bottom: 5px;">تم العثور على: </p>
+                    <span id="ihtiaCount" class="ai-number-display" onclick="openAiModal()">0</span>
+                    <p style="font-size: 0.8rem; color: #64748b;">(اضغط على الرقم لعرض التفاصيل)</p>
                 </div>
             </div>
             <div class="glass-panel">
@@ -327,13 +356,25 @@
                                 <option value="rejected">مرفوض</option>
                             </select>
                         </div>
-                        <div class="input-group">
-                            <label>
-                                <input type="checkbox" id="hasDocuments" style="width: auto; margin-left: 10px;">
+                        <div class="input-group" style="display: flex; align-items: center; justify-content: flex-end;">
+                            <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                                <input type="checkbox" id="hasDocuments" onchange="toggleDocumentsSection()" style="width: 20px; height: 20px;">
                                 <i class="fas fa-paperclip"></i> يوجد مستندات مرفقة
                             </label>
                         </div>
                     </div>
+
+                    <!-- Documents Section -->
+                    <div id="documentsSection">
+                        <h3 style="margin: 0 0 10px 0; font-size: 1rem; color: var(--primary);">إضافة المستندات</h3>
+                        <div id="documentsList" class="doc-list">
+                            <!-- Dynamic inputs go here -->
+                        </div>
+                        <button type="button" class="btn-3d secondary" onclick="addDocumentField()" style="margin-top: 10px; font-size: 0.8rem; padding: 8px 15px;">
+                            <i class="fas fa-plus"></i> إضافة مستند آخر
+                        </button>
+                    </div>
+
                     <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px;">
                         <button type="submit" class="btn-3d" style="flex: 1;">
                             <i class="fas fa-save"></i> <span id="submitButtonText">حفظ الطلب</span>
@@ -434,6 +475,38 @@
         </div>
     </div>
 
+    <!-- AI Results Modal -->
+    <div id="aiModal" class="modal-overlay">
+        <div class="modal-content large">
+            <span class="close-modal" onclick="closeAiModal()">×</span>
+            <div class="modal-header">
+                <h2><i class="fas fa-brain"></i> تقرير طلبات الاحاطة التفصيلي</h2>
+            </div>
+            <div class="modal-body">
+                <!-- Printable Area -->
+                <div id="printArea">
+                    <div style="text-align: center; margin-bottom: 20px; border-bottom: 2px solid #eee; padding-bottom: 10px;">
+                        <h3 style="color: var(--primary); margin-bottom: 5px;">نظام إدارة طلبات البرلمان</h3>
+                        <p>تقرير شامل لطلبات الاحاطة</p>
+                        <p style="font-size: 0.8rem; color: #888;">تاريخ التقرير: <span id="aiReportDate"></span></p>
+                    </div>
+                    
+                    <div id="aiReportContent">
+                        <!-- Table or List injected here -->
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-action" onclick="printAiReport()" style="background: var(--primary); flex: 2;">
+                    <i class="fas fa-print"></i> طباعة التقرير
+                </button>
+                <button class="btn-action" onclick="closeAiModal()" style="background: var(--secondary); flex: 1;">
+                    <i class="fas fa-times"></i> إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Main Application Script -->
     <script>
         // ==========================================
@@ -443,9 +516,11 @@
         let requestsData = [];
         let currentRequestKey = null; 
         let chartInstance = null;
+        let documentsData = []; // Temporary storage for docs in form
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('reqDate').valueAsDate = new Date();
+            addDocumentField(); // Add one empty doc field by default (hidden until checkbox checked)
             
             if (typeof RequestManager !== 'undefined') {
                 fetchRealtimeData();
@@ -460,8 +535,7 @@
             RequestManager.listenToRequests((data) => {
                 requestsData = data;
                 
-                // --- NEW SORTING LOGIC: Sort by ID Ascending (1, 2, 10...) ---
-                // localeCompare with numeric:true handles 1, 2, 10 correctly
+                // Sort Ascending by ID
                 requestsData.sort((a, b) => {
                     return a.reqId.localeCompare(b.reqId, undefined, { numeric: true, sensitivity: 'base' });
                 });
@@ -471,7 +545,7 @@
             });
         }
 
-        // --- 2. Navigation (Instant Transition) ---
+        // --- 2. Navigation ---
         function switchTab(tabId, element) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             const targetTab = document.getElementById(tabId);
@@ -487,9 +561,43 @@
             document.querySelector('.main-content').scrollTop = 0;
         }
 
-        // --- 3. Form Handling (Create/Update) ---
+        // --- 3. Document Handling ---
+        function toggleDocumentsSection() {
+            const isChecked = document.getElementById('hasDocuments').checked;
+            const section = document.getElementById('documentsSection');
+            
+            if (isChecked) {
+                section.classList.add('active');
+                // Ensure at least one field exists
+                const list = document.getElementById('documentsList');
+                if(list.children.length === 0) addDocumentField();
+            } else {
+                section.classList.remove('active');
+            }
+        }
+
+        function addDocumentField() {
+            const container = document.getElementById('documentsList');
+            const div = document.createElement('div');
+            div.className = 'doc-item';
+            div.innerHTML = `
+                <i class="fas fa-file-alt"></i>
+                <input type="text" placeholder="اسم المستند" class="doc-input">
+                <button type="button" onclick="this.parentElement.remove()" style="border:none; background:none; color: #ef4444; cursor:pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(div);
+        }
+
+        // --- 4. Form Handling (Create/Update) ---
         document.getElementById('requestForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+
+            // Gather documents
+            const docInputs = document.querySelectorAll('.doc-input');
+            const docsList = [];
+            docInputs.forEach(input => {
+                if(input.value.trim() !== "") docsList.push(input.value.trim());
+            });
 
             const requestData = {
                 reqId: document.getElementById('reqId').value,
@@ -498,13 +606,13 @@
                 authority: document.getElementById('reqAuthority').value,
                 details: document.getElementById('reqDetails').value,
                 status: document.getElementById('reqStatus').value,
-                hasDocuments: document.getElementById('hasDocuments').checked
+                hasDocuments: document.getElementById('hasDocuments').checked,
+                documentsList: docsList // Save array of document names
             };
 
             let success = false;
 
             if (currentRequestKey) {
-                // Logic: Update Request (Replaces old data completely)
                 success = await RequestManager.updateRequest(currentRequestKey, requestData);
                 if(success) showToast('تم تعديل الطلب وحفظه بنجاح');
             } else {
@@ -525,9 +633,12 @@
             document.getElementById('reqDate').valueAsDate = new Date();
             currentRequestKey = null;
             document.getElementById('submitButtonText').innerText = 'حفظ الطلب';
+            document.getElementById('documentsSection').classList.remove('active');
+            document.getElementById('documentsList').innerHTML = ''; 
+            addDocumentField();
         }
 
-        // --- 4. Table & Search ---
+        // --- 5. Table & Search ---
         function renderTable(data) {
             const tbody = document.getElementById('requestsTableBody');
             tbody.innerHTML = '';
@@ -575,7 +686,7 @@
             renderTable(filtered);
         }
 
-        // --- 5. Dashboard & Charts ---
+        // --- 6. Dashboard & Charts ---
         function updateDashboard() {
             const total = requestsData.length;
             const completed = requestsData.filter(r => r.status === 'completed').length;
@@ -612,7 +723,7 @@
             });
         }
 
-        // --- 6. Reports & AI Logic ---
+        // --- 7. Reports & AI Logic ---
         function generateDateReport() {
             const start = document.getElementById('reportStartDate').value;
             const end = document.getElementById('reportEndDate').value;
@@ -630,22 +741,62 @@
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> جاري التحليل الذكي...';
 
             setTimeout(() => {
-                const count = requestsData.filter(req => {
+                const ihtiaRequests = requestsData.filter(req => {
                     const cleanTitle = req.title.trim();
                     return cleanTitle.startsWith('طلب احاطة') || cleanTitle.startsWith('طلب احاطه');
-                }).length;
+                });
 
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-magic"></i> بدء التحليل بالذكاء الاصطناعي';
                 
                 const resultBox = document.getElementById('aiResult');
                 resultBox.classList.add('active');
-                animateValue("ihtiaCount", 0, count, 1000);
+                animateValue("ihtiaCount", 0, ihtiaRequests.length, 1000);
+
+                // Store results in global for modal
+                window.currentAiResults = ihtiaRequests;
 
             }, 1500);
         }
 
-        // --- 7. Modal Actions ---
+        function openAiModal() {
+            if (!window.currentAiResults || window.currentAiResults.length === 0) {
+                showToast('لا توجد نتائج لعرضها', 'warning');
+                return;
+            }
+
+            // Populate Modal
+            const container = document.getElementById('aiReportContent');
+            const dateSpan = document.getElementById('aiReportDate');
+            
+            dateSpan.innerText = new Date().toLocaleDateString('ar-EG');
+            
+            let html = '<table style="width:100%; border-collapse: collapse; margin-top: 15px;"><thead><tr style="background:#f1f5f9;"><th style="padding:10px; border:1px solid #ddd;">رقم الطلب</th><th style="padding:10px; border:1px solid #ddd;">العنوان</th><th style="padding:10px; border:1px solid #ddd;">التفاصيل</th></tr></thead><tbody>';
+
+            window.currentAiResults.forEach(req => {
+                html += `
+                    <tr>
+                        <td style="padding:10px; border:1px solid #ddd; text-align:center;">${req.reqId}</td>
+                        <td style="padding:10px; border:1px solid #ddd; font-weight:bold;">${req.title}</td>
+                        <td style="padding:10px; border:1px solid #ddd;">${req.details}</td>
+                    </tr>
+                `;
+            });
+            html += '</tbody></table>';
+            
+            container.innerHTML = html;
+            document.getElementById('aiModal').style.display = 'flex';
+        }
+
+        function closeAiModal() {
+            document.getElementById('aiModal').style.display = 'none';
+        }
+
+        function printAiReport() {
+            window.print();
+        }
+
+        // --- 8. Modal Actions ---
         function openModal(key) {
             const req = requestsData.find(r => r.firebaseKey === key);
             if (!req) return;
@@ -653,13 +804,22 @@
             currentRequestKey = key;
             document.getElementById('modalTitle').innerText = req.title;
             document.getElementById('modalReqId').innerText = req.reqId;
-            document.getElementById('modalReqDate').innerText = req.reqDate; // Showing Date in Modal
+            document.getElementById('modalReqDate').innerText = req.reqDate;
+            
+            let docsHtml = 'لا يوجد مستندات';
+            if (req.hasDocuments) {
+                if (req.documentsList && req.documentsList.length > 0) {
+                    docsHtml = '<ul style="margin-right: 20px;">' + req.documentsList.map(d => `<li>${d}</li>`).join('') + '</ul>';
+                } else {
+                    docsHtml = '<span style="color:var(--success);"><i class="fas fa-check"></i> نعم، يوجد مستندات</span>';
+                }
+            }
             
             document.getElementById('modalBody').innerHTML = `
                 <div style="margin-bottom:15px;"><strong>الجهة:</strong> ${req.authority}</div>
                 <div style="background: #f8fafc; padding: 10px; border-radius: 8px; line-height: 1.6; margin-bottom:15px;">${req.details}</div>
-                <div><strong>الحالة:</strong> ${req.status}</div>
-                <div><strong>مستندات:</strong> ${req.hasDocuments ? 'نعم' : 'لا'}</div>
+                <div style="margin-bottom:10px;"><strong>الحالة:</strong> <span class="status-badge status-${req.status}">${req.status}</span></div>
+                <div style="margin-bottom:10px;"><strong>المستندات:</strong> ${docsHtml}</div>
             `;
             document.getElementById('detailsModal').style.display = 'flex';
         }
@@ -683,6 +843,22 @@
             document.getElementById('reqDetails').value = req.details;
             document.getElementById('reqStatus').value = req.status;
             document.getElementById('hasDocuments').checked = req.hasDocuments;
+            
+            // Restore documents
+            if (req.hasDocuments) {
+                toggleDocumentsSection();
+                const list = document.getElementById('documentsList');
+                list.innerHTML = ''; // Clear default
+                if (req.documentsList && req.documentsList.length > 0) {
+                    req.documentsList.forEach(docName => {
+                        addDocumentField(); // Add field
+                        list.lastChild.querySelector('input').value = docName; // Fill it
+                    });
+                } else {
+                    addDocumentField();
+                }
+            }
+
             document.getElementById('submitButtonText').innerText = 'تحديث الطلب';
         }
 
@@ -699,6 +875,10 @@
         }
 
         function printRequest() {
+            // For general request printing (not AI report)
+            // We can reuse the modal body but standard print usually prints whole page.
+            // To print ONLY the request, we'd need a specific print style, 
+            // but user asked for specific AI print behavior.
             window.print();
         }
 
@@ -712,7 +892,7 @@
             toast.style.background = type === 'success' ? '#10b981' : (type === 'error' ? '#ef4444' : '#f59e0b');
             toast.style.color = 'white';
             toast.style.padding = '10px 20px';
-            toast.style.borderRadius = '30px';
+            toast.style.border-radius = '30px';
             toast.style.zIndex = '3000';
             toast.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
             toast.innerText = msg;
