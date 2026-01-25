@@ -16,11 +16,11 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Firebase SDKs -->
+    <!-- Firebase SDKs (مطلوبة لعمل الربط) -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-    <!-- Config File -->
+    <!-- ملف الإعدادات الخاص بك (يجب أن يكون في نفس المجلد) -->
     <script src="firebase-config.js"></script>
 
     <style>
@@ -163,10 +163,8 @@
             body * { visibility: hidden; }
             #printArea, #printArea * { visibility: visible; }
             #printArea { position: absolute; left: 0; top: 0; width: 100%; margin: 0; padding: 0; }
-            
-            /* Ensure print content fills page but doesn't overflow with bars */
             body { height: auto; overflow: visible; background: white; }
-            @page { margin: 0; } /* Remove browser margins */
+            @page { margin: 0; }
         }
     </style>
 </head>
@@ -462,10 +460,10 @@
             </div>
             <div class="modal-body" id="modalBody"></div>
             <div class="modal-actions">
-                <button class="btn-action edit" onclick="editRequest()" style="background: var(--primary);">
+                <button class="btn-action edit" onclick="checkPasscode('edit')" style="background: var(--primary);">
                     <i class="fas fa-edit"></i> تعديل
                 </button>
-                <button class="btn-action delete" onclick="confirmDelete()" style="background: var(--danger);">
+                <button class="btn-action delete" onclick="checkPasscode('delete')" style="background: var(--danger);">
                     <i class="fas fa-trash"></i> حذف
                 </button>
                 <button class="btn-action print" onclick="printRequest()" style="background: var(--secondary);">
@@ -516,17 +514,18 @@
         let requestsData = [];
         let currentRequestKey = null; 
         let chartInstance = null;
-        let documentsData = []; // Temporary storage for docs in form
+        let documentsData = []; 
+        const SECURE_CODE = "521988";
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('reqDate').valueAsDate = new Date();
-            addDocumentField(); // Add one empty doc field by default (hidden until checkbox checked)
+            addDocumentField(); 
             
             if (typeof RequestManager !== 'undefined') {
                 fetchRealtimeData();
             } else {
                 console.error('RequestManager not loaded. Check firebase-config.js');
-                alert('خطأ في تحميل ملف الإعدادات firebase-config.js');
+                alert('خطأ: لم يتم العثور على ملف الإعدادات firebase-config.js');
             }
         });
 
@@ -568,7 +567,6 @@
             
             if (isChecked) {
                 section.classList.add('active');
-                // Ensure at least one field exists
                 const list = document.getElementById('documentsList');
                 if(list.children.length === 0) addDocumentField();
             } else {
@@ -607,7 +605,7 @@
                 details: document.getElementById('reqDetails').value,
                 status: document.getElementById('reqStatus').value,
                 hasDocuments: document.getElementById('hasDocuments').checked,
-                documentsList: docsList // Save array of document names
+                documentsList: docsList 
             };
 
             let success = false;
@@ -796,7 +794,7 @@
             window.print();
         }
 
-        // --- 8. Modal Actions ---
+        // --- 8. Modal Actions & Security ---
         function openModal(key) {
             const req = requestsData.find(r => r.firebaseKey === key);
             if (!req) return;
@@ -829,7 +827,24 @@
             currentRequestKey = null;
         }
 
-        async function editRequest() {
+        function checkPasscode(action) {
+            // Secure Logic
+            const code = prompt("الرجاء إدخال الرمز السري للقيام بهذا الإجراء:");
+            
+            if (code === null) return; // User cancelled
+
+            if (code === SECURE_CODE) {
+                if (action === 'edit') {
+                    performEdit();
+                } else if (action === 'delete') {
+                    performDelete();
+                }
+            } else {
+                showToast("الرمز السري غير صحيح", "error");
+            }
+        }
+
+        async function performEdit() {
             const req = requestsData.find(r => r.firebaseKey === currentRequestKey);
             if (!req) return;
 
@@ -844,15 +859,14 @@
             document.getElementById('reqStatus').value = req.status;
             document.getElementById('hasDocuments').checked = req.hasDocuments;
             
-            // Restore documents
             if (req.hasDocuments) {
                 toggleDocumentsSection();
                 const list = document.getElementById('documentsList');
-                list.innerHTML = ''; // Clear default
+                list.innerHTML = ''; 
                 if (req.documentsList && req.documentsList.length > 0) {
                     req.documentsList.forEach(docName => {
-                        addDocumentField(); // Add field
-                        list.lastChild.querySelector('input').value = docName; // Fill it
+                        addDocumentField(); 
+                        list.lastChild.querySelector('input').value = docName;
                     });
                 } else {
                     addDocumentField();
@@ -862,7 +876,7 @@
             document.getElementById('submitButtonText').innerText = 'تحديث الطلب';
         }
 
-        async function confirmDelete() {
+        async function performDelete() {
             if(confirm('هل أنت متأكد من حذف هذا الطلب نهائياً من قاعدة البيانات؟')) {
                 const success = await RequestManager.deleteRequest(currentRequestKey);
                 if(success) {
@@ -874,11 +888,11 @@
             }
         }
 
+        // Kept for compatibility if user clicks direct function (but buttons now use checkPasscode)
+        async function editRequest() { checkPasscode('edit'); }
+        async function confirmDelete() { checkPasscode('delete'); }
+
         function printRequest() {
-            // For general request printing (not AI report)
-            // We can reuse the modal body but standard print usually prints whole page.
-            // To print ONLY the request, we'd need a specific print style, 
-            // but user asked for specific AI print behavior.
             window.print();
         }
 
@@ -892,7 +906,7 @@
             toast.style.background = type === 'success' ? '#10b981' : (type === 'error' ? '#ef4444' : '#f59e0b');
             toast.style.color = 'white';
             toast.style.padding = '10px 20px';
-            toast.style.border-radius = '30px';
+            toast.style.borderRadius = '30px';
             toast.style.zIndex = '3000';
             toast.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
             toast.innerText = msg;
