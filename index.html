@@ -61,7 +61,7 @@
         .header-3d h1 { font-size: 1.8rem; font-weight: 900; background: linear-gradient(135deg, var(--text-main), var(--primary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 5px; }
         .glass-panel { background: var(--glass-bg); border: var(--glass-border); border-radius: var(--radius); padding: 20px; margin-bottom: 20px; box-shadow: var(--shadow); backdrop-filter: blur(10px); }
 
-        /* --- Tabs Logic (Crucial Fix) --- */
+        /* --- Tabs Logic --- */
         .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
         .tab-content.active { display: block; }
 
@@ -95,7 +95,7 @@
         /* --- Table --- */
         .table-responsive { overflow-x: auto; border-radius: 12px; }
         table { width: 100%; border-collapse: collapse; background: var(--surface); min-width: 600px; }
-        th, td { padding: 15px; text-align: right; border-bottom: 1px solid #f1f5f9; }
+        th, td { padding: 15px; text-align: right; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
         th { background-color: #f8fafc; color: var(--text-light); font-weight: 700; }
         .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
         .status-execution { background: #fff7ed; color: #c2410c; }
@@ -138,7 +138,8 @@
             .form-grid { grid-template-columns: 1fr; }
             .report-controls { flex-direction: column; align-items: stretch; }
             .footer-content { flex-direction: column; gap: 10px; }
-            th:nth-child(5), td:nth-child(5) { display: none; }
+            /* Hide ONLY Documents column on mobile, keep Date visible */
+            th:nth-child(5), td:nth-child(5) { display: none; } 
         }
     </style>
 </head>
@@ -413,7 +414,10 @@
             <span class="close-modal" onclick="closeModal()">×</span>
             <div class="modal-header">
                 <h2 id="modalTitle">تفاصيل الطلب</h2>
-                <p id="modalReqId" style="color: #95a5a6; font-size: 14px;"></p>
+                <div style="color: var(--text-light); margin-top: 5px;">
+                    <i class="fas fa-hashtag"></i> <span id="modalReqId"></span> <br>
+                    <i class="fas fa-calendar"></i> <span id="modalReqDate" style="margin-right: 5px; font-weight:bold;"></span>
+                </div>
             </div>
             <div class="modal-body" id="modalBody"></div>
             <div class="modal-actions">
@@ -433,7 +437,7 @@
     <!-- Main Application Script -->
     <script>
         // ==========================================
-        // APP LOGIC (Using external RequestManager)
+        // APP LOGIC
         // ==========================================
         
         let requestsData = [];
@@ -455,30 +459,31 @@
         function fetchRealtimeData() {
             RequestManager.listenToRequests((data) => {
                 requestsData = data;
-                requestsData.sort((a, b) => new Date(b.reqDate) - new Date(a.reqDate));
+                
+                // --- NEW SORTING LOGIC: Sort by ID Ascending (1, 2, 10...) ---
+                // localeCompare with numeric:true handles 1, 2, 10 correctly
+                requestsData.sort((a, b) => {
+                    return a.reqId.localeCompare(b.reqId, undefined, { numeric: true, sensitivity: 'base' });
+                });
+
                 renderTable(requestsData);
                 updateDashboard();
             });
         }
 
-        // --- 2. Navigation (Updated for Instant Transition) ---
+        // --- 2. Navigation (Instant Transition) ---
         function switchTab(tabId, element) {
-            // Remove active class from all tabs
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            
-            // Add active class to the target tab
             const targetTab = document.getElementById(tabId);
             if (targetTab) {
                 targetTab.classList.add('active');
             }
 
-            // Update Navigation Styling
             document.querySelectorAll('.nav-links li, .mobile-nav-item').forEach(item => item.classList.remove('active'));
             if (element) {
                 element.classList.add('active');
             }
 
-            // Scroll to top immediately for fresh feel
             document.querySelector('.main-content').scrollTop = 0;
         }
 
@@ -499,8 +504,9 @@
             let success = false;
 
             if (currentRequestKey) {
+                // Logic: Update Request (Replaces old data completely)
                 success = await RequestManager.updateRequest(currentRequestKey, requestData);
-                if(success) showToast('تم تحديث الطلب بنجاح');
+                if(success) showToast('تم تعديل الطلب وحفظه بنجاح');
             } else {
                 success = await RequestManager.addRequest(requestData);
                 if(success) showToast('تم تسجيل الطلب بنجاح');
@@ -646,7 +652,8 @@
 
             currentRequestKey = key;
             document.getElementById('modalTitle').innerText = req.title;
-            document.getElementById('modalReqId').innerText = `رقم الطلب: ${req.reqId} | التاريخ: ${req.reqDate}`;
+            document.getElementById('modalReqId').innerText = req.reqId;
+            document.getElementById('modalReqDate').innerText = req.reqDate; // Showing Date in Modal
             
             document.getElementById('modalBody').innerHTML = `
                 <div style="margin-bottom:15px;"><strong>الجهة:</strong> ${req.authority}</div>
