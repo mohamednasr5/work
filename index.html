@@ -20,9 +20,6 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
-    <!-- Config File -->
-    <script src="firebase-config.js"></script>
-
     <style>
         :root {
             --primary: #2563eb;
@@ -31,6 +28,8 @@
             --success: #10b981;
             --warning: #f59e0b;
             --danger: #ef4444;
+            /* Added Info/Purple for Ihtia */
+            --info: #8b5cf6; 
             --background: #f1f5f9;
             --surface: #ffffff;
             --text-main: #1e293b;
@@ -75,9 +74,26 @@
         .stat-card.success::before { background: var(--success); }
         .stat-card.warning::before { background: var(--warning); }
         .stat-card.danger::before { background: var(--danger); }
+        /* New Card Style */
+        .stat-card.info::before { background: var(--info); }
+        
         .stat-card .icon { font-size: 2rem; margin-bottom: 10px; display: block; }
         .stat-card h3 { font-size: 0.9rem; color: var(--text-light); margin-bottom: 5px; }
         .stat-card .number { font-size: 1.8rem; font-weight: 800; color: var(--text-main); }
+
+        /* --- Authority Report Styles --- */
+        .authority-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .authority-card { 
+            background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; 
+            cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+        }
+        .authority-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--primary); }
+        .authority-card h4 { font-size: 0.95rem; margin-bottom: 10px; color: var(--text-main); line-height: 1.4; height: 40px; overflow: hidden; }
+        .authority-count { 
+            font-size: 1.5rem; font-weight: 800; color: var(--primary); 
+            background: #eff6ff; padding: 5px 10px; border-radius: 8px; display: inline-block;
+        }
+        .authority-card:hover .authority-count { background: var(--primary); color: white; }
 
         /* --- Forms --- */
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -127,7 +143,7 @@
         /* --- Modal --- */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 2000; }
         .modal-content { background: var(--surface); border-radius: var(--radius); width: 100%; max-width: 500px; overflow: hidden; position: relative; max-height: 90vh; display: flex; flex-direction: column; }
-        .modal-content.large { max-width: 800px; }
+        .modal-content.large { max-width: 900px; }
         .close-modal { position: absolute; top: 15px; left: 15px; font-size: 1.5rem; cursor: pointer; color: var(--text-light); z-index: 10; }
         .modal-header { padding: 20px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; }
         .modal-body { padding: 20px; overflow-y: auto; flex: 1; }
@@ -300,6 +316,8 @@
                     <p class="no-alerts">لا توجد تنبيهات حالية</p>
                 </div>
             </div>
+            
+            <!-- Stats Grid -->
             <div class="stats-grid no-print">
                 <div class="stat-card total">
                     <div class="icon">📊</div>
@@ -321,7 +339,14 @@
                     <h3>مرفوضة</h3>
                     <span class="number" id="rejectedRequests">0</span>
                 </div>
+                <!-- NEW CARD: Ihtia Requests -->
+                <div class="stat-card info">
+                    <div class="icon">📜</div>
+                    <h3>طلبات الإحاطة</h3>
+                    <span class="number" id="ihtiaRequests">0</span>
+                </div>
             </div>
+
             <div class="glass-panel no-print">
                 <canvas id="requestsChart"></canvas>
             </div>
@@ -332,6 +357,21 @@
             <div class="header-3d no-print">
                 <h1><i class="fas fa-file-invoice"></i> 📑 التقارير والتحليل الذكي</h1>
             </div>
+            
+            <!-- Authority Report Section (NEW) -->
+            <div class="glass-panel no-print">
+                <h3 style="margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">
+                    <i class="fas fa-building"></i> توزيع الطلبات حسب الجهات
+                </h3>
+                <p style="margin-bottom: 15px; color: var(--text-light); font-size: 0.9rem;">
+                    اضغط على الجهة لعرض قائمة الطلبات المقدمة لها وطباعتها.
+                </p>
+                <div id="authorityGrid" class="authority-grid">
+                    <!-- Authority Cards Injected Here -->
+                    <div style="grid-column: 1/-1; text-align: center; color: var(--text-light);">جاري تحميل البيانات...</div>
+                </div>
+            </div>
+
             <div class="glass-panel no-print">
                 <h3 style="margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">
                     <i class="fas fa-calendar-alt"></i> تقرير بفترة زمنية محددة
@@ -376,7 +416,6 @@
                         </div>
                     </div>
                     <p style="margin-bottom: 5px;">تم العثور على: </p>
-                    <!-- Ensuring click event is explicit -->
                     <span id="ihtiaCount" class="ai-number-display" onclick="openAiModal()" title="اضغط لعرض التفاصيل">0</span>
                     <p style="font-size: 0.8rem; color: #64748b;">(اضغط على الرقم لعرض التفاصيل)</p>
                 </div>
@@ -544,6 +583,29 @@
         </div>
     </div>
 
+    <!-- Authority Report Modal (NEW) -->
+    <div id="authorityModal" class="modal-overlay">
+        <div class="modal-content large">
+            <span class="close-modal" onclick="closeAuthorityModal()">×</span>
+            <div class="modal-header">
+                <h2><i class="fas fa-building"></i> تقرير جهة: <span id="authModalTitle" style="color: var(--primary);"></span></h2>
+            </div>
+            <div class="modal-body">
+                <div id="authPreviewArea" style="padding: 20px; text-align: center; color: var(--text-light);">
+                    <!-- Content injected via JS -->
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-action" onclick="printAuthorityReport()" style="background: var(--primary); flex: 2;">
+                    <i class="fas fa-print"></i> طباعة التقرير
+                </button>
+                <button class="btn-action" onclick="closeAuthorityModal()" style="background: var(--secondary); flex: 1;">
+                    <i class="fas fa-times"></i> إغلاق
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- AI Results Modal -->
     <div id="aiModal" class="modal-overlay">
         <div class="modal-content large">
@@ -578,6 +640,7 @@
         let currentRequestKey = null; 
         let chartInstance = null;
         let documentsData = []; 
+        let currentAuthorityData = []; // Stores data for the current authority modal
         const SECURE_CODE = "521988";
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -604,6 +667,7 @@
 
                 renderTable(requestsData);
                 updateDashboard();
+                updateAuthorityReport(); // Update Authority Report when data changes
             });
         }
 
@@ -753,11 +817,18 @@
             const completed = requestsData.filter(r => r.status === 'completed').length;
             const pending = requestsData.filter(r => r.status === 'execution' || r.status === 'review').length;
             const rejected = requestsData.filter(r => r.status === 'rejected').length;
+            
+            // NEW: Ihtia Requests Calculation
+            const ihtiaCount = requestsData.filter(req => {
+                const cleanTitle = req.title.trim();
+                return cleanTitle.startsWith('طلب احاطة') || cleanTitle.startsWith('طلب احاطه');
+            }).length;
 
             animateValue("totalRequests", parseInt(document.getElementById("totalRequests").innerText), total, 500);
             animateValue("completedRequests", parseInt(document.getElementById("completedRequests").innerText), completed, 500);
             animateValue("pendingRequests", parseInt(document.getElementById("pendingRequests").innerText), pending, 500);
             animateValue("rejectedRequests", parseInt(document.getElementById("rejectedRequests").innerText), rejected, 500);
+            animateValue("ihtiaRequests", parseInt(document.getElementById("ihtiaRequests").innerText), ihtiaCount, 500);
 
             renderChart(completed, pending, rejected);
         }
@@ -784,7 +855,100 @@
             });
         }
 
-        // --- 7. Reports & AI Logic ---
+        // --- 7. Authority Report Logic (NEW) ---
+        function updateAuthorityReport() {
+            const grid = document.getElementById('authorityGrid');
+            grid.innerHTML = '';
+
+            if (requestsData.length === 0) {
+                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center;">لا توجد بيانات للتحليل</div>';
+                return;
+            }
+
+            // Group by Authority
+            const authMap = {};
+            requestsData.forEach(req => {
+                const auth = req.authority || 'غير محدد';
+                if (!authMap[auth]) authMap[auth] = 0;
+                authMap[auth]++;
+            });
+
+            // Create Cards
+            for (const [auth, count] of Object.entries(authMap)) {
+                const card = document.createElement('div');
+                card.className = 'authority-card';
+                card.innerHTML = `
+                    <h4>${auth}</h4>
+                    <div class="authority-count" onclick="openAuthorityModal('${auth}', ${count})">
+                        ${count}
+                    </div>
+                    <div style="font-size:0.8rem; color:var(--text-light); margin-top:5px;">طلب</div>
+                `;
+                grid.appendChild(card);
+            }
+        }
+
+        function openAuthorityModal(authorityName, count) {
+            // Filter data
+            const filteredData = requestsData.filter(req => req.authority === authorityName);
+            currentAuthorityData = filteredData;
+            
+            document.getElementById('authModalTitle').innerText = authorityName;
+            
+            const previewArea = document.getElementById('authPreviewArea');
+            previewArea.innerHTML = `
+                <h3>إجمالي الطلبات: ${filteredData.length}</h3>
+                <p>اضغط على زر طباعة التقرير لعرض التفاصيل.</p>
+            `;
+
+            document.getElementById('authorityModal').style.display = 'flex';
+        }
+
+        function closeAuthorityModal() {
+            document.getElementById('authorityModal').style.display = 'none';
+            currentAuthorityData = [];
+        }
+
+        function printAuthorityReport() {
+            if (!currentAuthorityData || currentAuthorityData.length === 0) return;
+
+            const printArea = document.getElementById('printArea');
+            let tableRows = '';
+
+            currentAuthorityData.forEach(req => {
+                const statusMap = {
+                    'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة',
+                    'completed': 'مكتمل', 'rejected': 'مرفوض'
+                };
+                tableRows += `
+                    <tr>
+                        <td>${req.reqId}</td>
+                        <td>${req.title}</td>
+                        <td>${req.reqDate}</td>
+                        <td>${statusMap[req.status]}</td>
+                    </tr>
+                `;
+            });
+
+            printArea.innerHTML = `
+                ${generatePrintHeader('تقرير طلبات الجهة: ' + document.getElementById('authModalTitle').innerText)}
+                <p style="margin-bottom: 15px;">عدد الطلبات: <strong>${currentAuthorityData.length}</strong></p>
+                <table class="print-table">
+                    <thead>
+                        <tr>
+                            <th>رقم الطلب</th>
+                            <th>العنوان</th>
+                            <th>التاريخ</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tableRows}</tbody>
+                </table>
+            `;
+            setTimeout(() => { window.print(); }, 300);
+        }
+
+        // --- 8. Reports & AI Logic (Existing) ---
         function generateDateReport() {
             const start = document.getElementById('reportStartDate').value;
             const end = document.getElementById('reportEndDate').value;
@@ -814,29 +978,23 @@
                 resultBox.classList.add('active');
                 animateValue("ihtiaCount", 0, ihtiaRequests.length, 1000);
 
-                // Store results globally
                 window.currentAiResults = ihtiaRequests;
 
             }, 1500);
         }
 
         function openAiModal() {
-            // Explicitly check data
             if (!window.currentAiResults || window.currentAiResults.length === 0) {
                 showToast('لا توجد بيانات للعرض', 'warning');
                 return;
             }
-
-            // Just open the modal, content injected during print
             const modal = document.getElementById('aiModal');
             const previewArea = document.getElementById('aiPreviewArea');
-            
             previewArea.innerHTML = `
                 <h3>نتائج التحليل</h3>
                 <p>تم العثور على <strong>${window.currentAiResults.length}</strong> طلب احاطة.</p>
-                <p>اضغط على "طباعة التقرير" لعرض الكشف الكامل وتفاصيل الطلبات.</p>
+                <p>اضغط على "طباعة التقرير" لعرض الكشف الكامل.</p>
             `;
-            
             modal.style.display = 'flex';
         }
 
@@ -844,7 +1002,7 @@
             document.getElementById('aiModal').style.display = 'none';
         }
 
-        // --- 8. PRINTING LOGIC (FIXED) ---
+        // --- 9. PRINTING LOGIC (Existing & Extended) ---
         function generatePrintHeader(title) {
             const now = new Date();
             return `
@@ -872,10 +1030,8 @@
                 }
             }
 
-            // 1. Inject Content
             printArea.innerHTML = `
                 ${generatePrintHeader('تفاصيل الطلب رقم: ' + req.reqId)}
-                
                 <div class="print-details-grid">
                     <div class="print-field"><strong>رقم الطلب:</strong> <span>${req.reqId}</span></div>
                     <div class="print-field"><strong>التاريخ:</strong> <span>${req.reqDate}</span></div>
@@ -884,24 +1040,19 @@
                     <div class="print-field"><strong>الحالة:</strong> <span>${req.status}</span></div>
                     <div class="print-field"><strong>مرفقات:</strong> <span>${docsHtml}</span></div>
                 </div>
-
                 <div style="margin-bottom: 20px;">
                     <strong>وصف الطلب:</strong>
                     <p style="padding: 15px; background: #fff; border: 1px solid #ccc; margin-top: 5px; line-height: 1.6;">
                         ${req.details}
                     </p>
                 </div>
-
                 <div style="margin-top: 50px; display: flex; justify-content: space-between;">
                     <div style="border-top: 1px solid #000; width: 200px; text-align: center;">توقيع مدير النظام</div>
                     <div style="border-top: 1px solid #000; width: 200px; text-align: center;">ختم النظام</div>
                 </div>
             `;
 
-            // 2. Delay for Render then Print
-            setTimeout(() => {
-                window.print();
-            }, 300);
+            setTimeout(() => { window.print(); }, 300);
         }
 
         function printAiReport() {
@@ -925,11 +1076,9 @@
                 `;
             });
 
-            // 1. Inject Content
             printArea.innerHTML = `
                 ${generatePrintHeader('تقرير طلبات الاحاطة (الذكاء الاصطناعي)')}
                 <p style="margin-bottom: 15px;">إجمالي الطلبات: <strong>${window.currentAiResults.length}</strong></p>
-                
                 <table class="print-table">
                     <thead>
                         <tr>
@@ -940,16 +1089,10 @@
                             <th>الحالة</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        ${tableRows}
-                    </tbody>
+                    <tbody>${tableRows}</tbody>
                 </table>
             `;
-
-            // 2. Delay then Print
-            setTimeout(() => {
-                window.print();
-            }, 300);
+            setTimeout(() => { window.print(); }, 300);
         }
 
         function printFullReport() {
@@ -966,7 +1109,6 @@
                     'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة',
                     'completed': 'مكتمل', 'rejected': 'مرفوض'
                 };
-                
                 tableRows += `
                     <tr>
                         <td>${req.reqId}</td>
@@ -978,11 +1120,9 @@
                 `;
             });
 
-            // 1. Inject Content
             printArea.innerHTML = `
                 ${generatePrintHeader('التقرير الشامل لجميع الطلبات')}
                 <p style="margin-bottom: 15px;">إجمالي الطلبات: <strong>${requestsData.length}</strong></p>
-                
                 <table class="print-table">
                     <thead>
                         <tr>
@@ -993,19 +1133,13 @@
                             <th>الحالة</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        ${tableRows}
-                    </tbody>
+                    <tbody>${tableRows}</tbody>
                 </table>
             `;
-
-            // 2. Delay then Print
-            setTimeout(() => {
-                window.print();
-            }, 300);
+            setTimeout(() => { window.print(); }, 300);
         }
 
-        // --- 9. Modal Actions & Security ---
+        // --- 10. Modal Actions & Security ---
         function openModal(key) {
             const req = requestsData.find(r => r.firebaseKey === key);
             if (!req) return;
@@ -1093,10 +1227,6 @@
             }
         }
 
-        // Compatibility wrappers
-        async function editRequest() { checkPasscode('edit'); }
-        async function confirmDelete() { checkPasscode('delete'); }
-
         // --- Utilities ---
         function showToast(msg, type='success') {
             const toast = document.createElement('div');
@@ -1132,5 +1262,177 @@
     
     <!-- Hidden Print Area Container -->
     <div id="printArea"></div>
+
+    <!-- 
+       ===================================================================
+       FIREBASE CONFIGURATION (Embedded for Single File Portability)
+       Normally this would be in firebase-config.js
+       ===================================================================
+    -->
+    <script>
+        // firebase-config.js - Firebase Configuration & Request Manager
+        // برمجة وتطوير: مهندس محمد حماد
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE8",
+            authDomain: "hedor-bea3c.firebaseapp.com",
+            databaseURL: "https://hedor-bea3c-default-rtdb.firebaseio.com",
+            projectId: "hedor-bea3c",
+            storageBucket: "hedor-bea3c.firebasestorage.app",
+            messagingSenderId: "369239455736",
+            appId: "1:369239455736:web:116295854269abecf6480d",
+            measurementId: "G-R2MG1YKQEP"
+        };
+
+        // Initialize Firebase
+        if (typeof firebase !== 'undefined') {
+            firebase.initializeApp(firebaseConfig);
+            window.database = firebase.database();
+            console.log('✅ Firebase Initialized Successfully');
+        } else {
+            console.error("❌ Firebase SDK not loaded!");
+        }
+
+        /**
+         * Enhanced Request Manager with improved error handling and validation
+         */
+        window.RequestManager = {
+            /**
+             * Add new request to database
+             */
+            addRequest: async (data) => {
+                try {
+                    if (!data.reqId || !data.title) {
+                        throw new Error("Missing required fields");
+                    }
+
+                    const newRef = window.database.ref('parliament-requests').push();
+                    await newRef.set({
+                        ...data,
+                        firebaseKey: newRef.key,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                    });
+
+                    console.log('✅ Request added successfully:', newRef.key);
+                    return true;
+                } catch (error) {
+                    console.error("❌ Error adding request:", error);
+                    return false;
+                }
+            },
+
+            /**
+             * Update existing request
+             */
+            updateRequest: async (key, data) => {
+                try {
+                    if (!key) throw new Error("Invalid firebase key");
+                    if (!data.reqId || !data.title) throw new Error("Missing required fields");
+
+                    const updateData = {
+                        ...data,
+                        updatedAt: new Date().toISOString()
+                    };
+
+                    await window.database.ref(`parliament-requests/${key}`).update(updateData);
+                    console.log('✅ Request updated successfully:', key);
+                    return true;
+                } catch (error) {
+                    console.error("❌ Error updating request:", error);
+                    return false;
+                }
+            },
+
+            /**
+             * Delete request from database
+             */
+            deleteRequest: async (key) => {
+                try {
+                    if (!key) throw new Error("Invalid firebase key");
+                    await window.database.ref(`parliament-requests/${key}`).remove();
+                    console.log('✅ Request deleted successfully:', key);
+                    return true;
+                } catch (error) {
+                    console.error("❌ Error deleting request:", error);
+                    return false;
+                }
+            },
+
+            /**
+             * Listen to real-time updates of all requests
+             */
+            listenToRequests: (callback) => {
+                if (!window.database) {
+                    console.error("❌ Database not initialized");
+                    return;
+                }
+
+                window.database.ref('parliament-requests').on('value', (snapshot) => {
+                    try {
+                        const data = snapshot.val();
+                        let requests = [];
+
+                        if (data && typeof data === 'object') {
+                            requests = Object.entries(data).map(([key, value]) => ({
+                                ...value,
+                                firebaseKey: key
+                            }));
+                        }
+
+                        callback(requests);
+                        console.log(`✅ Loaded ${requests.length} requests`);
+                    } catch (error) {
+                        console.error("❌ Error processing requests:", error);
+                        callback([]);
+                    }
+                }, (error) => {
+                    console.error("❌ Database listener error:", error);
+                });
+            },
+
+            /**
+             * Get single request by key
+             */
+            getRequest: async (key) => {
+                try {
+                    const snapshot = await window.database.ref(`parliament-requests/${key}`).once('value');
+                    const data = snapshot.val();
+                    if (data) {
+                        return { ...data, firebaseKey: key };
+                    }
+                    return null;
+                } catch (error) {
+                    console.error("❌ Error fetching request:", error);
+                    return null;
+                }
+            },
+
+            /**
+             * Get all requests once (not real-time)
+             */
+            getAllRequests: async () => {
+                try {
+                    const snapshot = await window.database.ref('parliament-requests').once('value');
+                    const data = snapshot.val();
+                    let requests = [];
+
+                    if (data && typeof data === 'object') {
+                        requests = Object.entries(data).map(([key, value]) => ({
+                            ...value,
+                            firebaseKey: key
+                        }));
+                    }
+
+                    return requests;
+                } catch (error) {
+                    console.error("❌ Error fetching all requests:", error);
+                    return [];
+                }
+            }
+        };
+
+        console.log('✅ Firebase Request Manager Ready');
+    </script>
 </body>
 </html>
