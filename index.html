@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>نظام إدارة طلبات البرلمان</title>
+    <title>نظام إدارة طلبات البرلمان - ذكي</title>
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -74,7 +74,6 @@
         .stat-card.success::before { background: var(--success); }
         .stat-card.warning::before { background: var(--warning); }
         .stat-card.danger::before { background: var(--danger); }
-        /* New Card Style */
         .stat-card.info::before { background: var(--info); }
         
         .stat-card .icon { font-size: 2rem; margin-bottom: 10px; display: block; }
@@ -86,14 +85,23 @@
         .authority-card { 
             background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; 
             cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
+            display: flex; flex-direction: column; justify-content: space-between;
         }
         .authority-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--primary); }
-        .authority-card h4 { font-size: 0.95rem; margin-bottom: 10px; color: var(--text-main); line-height: 1.4; height: 40px; overflow: hidden; }
+        .authority-card h4 { font-size: 0.95rem; margin-bottom: 10px; color: var(--text-main); line-height: 1.4; min-height: 40px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .authority-count { 
             font-size: 1.5rem; font-weight: 800; color: var(--primary); 
-            background: #eff6ff; padding: 5px 10px; border-radius: 8px; display: inline-block;
+            background: #eff6ff; padding: 5px 10px; border-radius: 8px; display: inline-block; width: fit-content;
         }
         .authority-card:hover .authority-count { background: var(--primary); color: white; }
+        
+        /* AI Badge on Card */
+        .ai-indicator {
+            position: absolute; top: 5px; left: 5px;
+            font-size: 0.6rem; background: #8b5cf6; color: white;
+            padding: 2px 6px; border-radius: 4px; display: none;
+        }
+        .authority-card.grouped .ai-indicator { display: block; }
 
         /* --- Forms --- */
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
@@ -165,82 +173,23 @@
         .github { background: #333; }
 
         /* --- PRINT STYLES (A4 Professional) --- */
-        #printArea { display: none; } /* Hidden on screen */
+        #printArea { display: none; } 
 
         @media print {
-            body { 
-                background: white; 
-                height: auto; 
-                overflow: visible; 
-                display: block; 
-                margin: 0; 
-                padding: 0;
-            }
-            
-            /* Hide everything */
-            aside, nav.mobile-nav, .header-3d, .modal-overlay, .btn-action, .btn-3d, .stats-grid, .no-print, .close-modal, #searchInput, .report-controls, .ai-result-box, #alertsContent {
-                display: none !important;
-            }
-
-            /* Show Print Area */
-            #printArea {
-                display: block !important;
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                visibility: visible;
-                background: white;
-                color: black;
-                padding: 20px;
-                direction: rtl;
-                font-size: 12pt;
-                z-index: 9999;
-            }
-
-            /* Print Specific Styles */
-            .print-header {
-                text-align: center;
-                border-bottom: 2px solid #000;
-                padding-bottom: 10px;
-                margin-bottom: 20px;
-            }
+            body { background: white; height: auto; overflow: visible; display: block; margin: 0; padding: 0; }
+            aside, nav.mobile-nav, .header-3d, .modal-overlay, .btn-action, .btn-3d, .stats-grid, .no-print, .close-modal, #searchInput, .report-controls, .ai-result-box, #alertsContent { display: none !important; }
+            #printArea { display: block !important; position: absolute; top: 0; left: 0; width: 100%; visibility: visible; background: white; color: black; padding: 20px; direction: rtl; font-size: 12pt; z-index: 9999; }
+            .print-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
             .print-header h1 { font-size: 18pt; margin: 0; color: #000; }
             .print-header p { margin: 5px 0; font-size: 11pt; }
-            
-            .print-details-grid {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 15px;
-                margin-bottom: 20px;
-                border: 1px solid #ddd;
-                padding: 15px;
-                background: #f9f9f9;
-            }
-            
+            .print-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; border: 1px solid #ddd; padding: 15px; background: #f9f9f9; }
             .print-field { margin-bottom: 10px; }
             .print-field strong { display: block; color: #333; }
             .print-field span { color: #000; }
-
-            .print-table {
-                width: 100%;
-                border-collapse: collapse;
-                margin-top: 10px;
-            }
-            .print-table th, .print-table td {
-                border: 1px solid #333;
-                padding: 8px;
-                text-align: right;
-                font-size: 10pt;
-                white-space: normal;
-            }
+            .print-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            .print-table th, .print-table td { border: 1px solid #333; padding: 8px; text-align: right; font-size: 10pt; white-space: normal; }
             .print-table th { background-color: #eee !important; color: #000; }
-
-            /* A4 Page Settings */
-            @page {
-                size: A4;
-                margin: 10mm;
-            }
+            @page { size: A4; margin: 10mm; }
         }
 
         /* --- Responsive Queries --- */
@@ -358,17 +307,17 @@
                 <h1><i class="fas fa-file-invoice"></i> 📑 التقارير والتحليل الذكي</h1>
             </div>
             
-            <!-- Authority Report Section (NEW) -->
+            <!-- Authority Report Section (Enhanced with AI) -->
             <div class="glass-panel no-print">
                 <h3 style="margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">
-                    <i class="fas fa-building"></i> توزيع الطلبات حسب الجهات
+                    <i class="fas fa-brain" style="color: #8b5cf6;"></i> توزيع الطلبات حسب الجهات (ذكي)
                 </h3>
                 <p style="margin-bottom: 15px; color: var(--text-light); font-size: 0.9rem;">
-                    اضغط على الجهة لعرض قائمة الطلبات المقدمة لها وطباعتها.
+                    يقوم النظام بتحليل أسماء الجهات وتجميع الجهات المتشابهة (مثل: وزارة الصحة والهيئة العامة للصحة) في بطاقة واحدة.
                 </p>
                 <div id="authorityGrid" class="authority-grid">
                     <!-- Authority Cards Injected Here -->
-                    <div style="grid-column: 1/-1; text-align: center; color: var(--text-light);">جاري تحميل البيانات...</div>
+                    <div style="grid-column: 1/-1; text-align: center; color: var(--text-light);">جاري تحليل البيانات...</div>
                 </div>
             </div>
 
@@ -450,6 +399,7 @@
                         <div class="input-group full-width">
                             <label><i class="fas fa-building"></i> الجهة المعنية</label>
                             <input type="text" id="reqAuthority" required placeholder="الوزارة أو المؤسسة">
+                            <small style="color: var(--text-light); font-size: 0.8rem;">سيقوم النظام بتجميع الأسماء المتشابهة تلقائياً</small>
                         </div>
                         <div class="input-group full-width">
                             <label><i class="fas fa-align-right"></i> تفاصيل الطلب</label>
@@ -583,12 +533,13 @@
         </div>
     </div>
 
-    <!-- Authority Report Modal (NEW) -->
+    <!-- Authority Report Modal (Enhanced) -->
     <div id="authorityModal" class="modal-overlay">
         <div class="modal-content large">
             <span class="close-modal" onclick="closeAuthorityModal()">×</span>
             <div class="modal-header">
                 <h2><i class="fas fa-building"></i> تقرير جهة: <span id="authModalTitle" style="color: var(--primary);"></span></h2>
+                <div id="authModalSubtitle" style="font-size: 0.85rem; color: var(--text-light); margin-top: 5px;"></div>
             </div>
             <div class="modal-body">
                 <div id="authPreviewArea" style="padding: 20px; text-align: center; color: var(--text-light);">
@@ -614,7 +565,6 @@
                 <h2><i class="fas fa-brain"></i> تقرير طلبات الاحاطة التفصيلي</h2>
             </div>
             <div class="modal-body">
-                <!-- Placeholder for visual preview if needed, print logic handles content injection -->
                 <div id="aiPreviewArea" style="padding: 20px; text-align: center; color: var(--text-light);">
                     اضغط على زر "طباعة التقرير" أدناه لعرض التقرير الكامل جاهزاً للطباعة.
                 </div>
@@ -651,7 +601,7 @@
                 fetchRealtimeData();
             } else {
                 console.error('RequestManager not loaded. Check firebase-config.js');
-                alert('خطأ: لم يتم العثور على ملف الإعدادات firebase-config.js');
+                showToast('خطأ: لم يتم العثور على ملف الإعدادات firebase-config.js', 'error');
             }
         });
 
@@ -855,7 +805,85 @@
             });
         }
 
-        // --- 7. Authority Report Logic (NEW) ---
+        // ==========================================
+        // 7. AI AUTHORITY MATCHING LOGIC (NEW)
+        // ==========================================
+        
+        const AI_AuthorityMatcher = {
+            // كلمات يتم تجاهلها لمحاكاة فهم السياق
+            stopWords: ['وزارة', 'الهيئة', 'المؤسسة', 'المصلحة', 'الجهاز', 'المجلس', 'البنك', 'الشركة', 'المصرية', 'العامة', 'القومية', 'المركزية', 'للـ', 'والـ'],
+
+            // تنظيف النص للحصول على الكلمة المفتاحية
+            cleanText: function(text) {
+                if (!text) return "";
+                let cleaned = text.replace(/[^\u0600-\u06FFa-zA-Z0-9\s]/g, ""); // إزالة الرموز
+                let words = cleaned.split(" ");
+                
+                // تصفية الكلمات الشائعة غير المهمة
+                let filtered = words.filter(w => w.length > 2 && !this.stopWords.includes(w));
+                return filtered.join(" ");
+            },
+
+            // حساب نسبة التشابه (خوارزمية بسيطة)
+            calculateSimilarity: function(str1, str2) {
+                if (str1 === str2) return 1.0;
+                if (!str1 || !str2) return 0.0;
+                
+                // Check if one contains the other
+                if (str1.includes(str2) || str2.includes(str1)) return 0.8;
+                
+                // Jaccard Index logic (simplified)
+                const set1 = new Set(str1.split(" "));
+                const set2 = new Set(str2.split(" "));
+                const intersection = new Set([...set1].filter(x => set2.has(x)));
+                const union = new Set([...set1, ...set2]);
+                
+                return intersection.size / union.size;
+            },
+
+            // الدالة الرئيسية لتجميع البيانات
+            analyze: function(requests) {
+                let groups = [];
+                
+                requests.forEach(req => {
+                    const originalName = req.authority || 'غير محدد';
+                    const coreName = this.cleanText(originalName);
+                    
+                    if (!coreName) return; // تجاهل الأسماء الفارغة بعد التنظيف
+
+                    let matchedGroup = null;
+
+                    // البحث عن مجموعة موجودة مشابهة
+                    for (let group of groups) {
+                        const similarity = this.calculateSimilarity(coreName, group.coreKey);
+                        if (similarity > 0.5) { // عتبة التشابه 50%
+                            matchedGroup = group;
+                            break;
+                        }
+                    }
+
+                    if (matchedGroup) {
+                        matchedGroup.count++;
+                        matchedGroup.requests.push(req);
+                        if (!matchedGroup.variants.includes(originalName)) {
+                            matchedGroup.variants.push(originalName);
+                        }
+                    } else {
+                        groups.push({
+                            displayName: originalName, // الاسم الأصلي كعنوان أساسي
+                            coreKey: coreName,
+                            count: 1,
+                            requests: [req],
+                            variants: [originalName]
+                        });
+                    }
+                });
+
+                // ترتيب حسب الأكثر طلبات
+                return groups.sort((a, b) => b.count - a.count);
+            }
+        };
+
         function updateAuthorityReport() {
             const grid = document.getElementById('authorityGrid');
             grid.innerHTML = '';
@@ -865,43 +893,63 @@
                 return;
             }
 
-            // Group by Authority
-            const authMap = {};
-            requestsData.forEach(req => {
-                const auth = req.authority || 'غير محدد';
-                if (!authMap[auth]) authMap[auth] = 0;
-                authMap[auth]++;
-            });
+            // استخدام الـ AI Matcher
+            const groupedAuthorities = AI_AuthorityMatcher.analyze(requestsData);
 
             // Create Cards
-            for (const [auth, count] of Object.entries(authMap)) {
+            groupedAuthorities.forEach(group => {
+                const isGrouped = group.variants.length > 1;
+                
                 const card = document.createElement('div');
-                card.className = 'authority-card';
+                card.className = `authority-card ${isGrouped ? 'grouped' : ''}`;
+                
+                // Tooltip content for grouped items
+                let tooltip = isGrouped ? `title="يشمل: ${group.variants.join('، ')}"` : '';
+
                 card.innerHTML = `
-                    <h4>${auth}</h4>
-                    <div class="authority-count" onclick="openAuthorityModal('${auth}', ${count})">
-                        ${count}
+                    <div class="ai-indicator"><i class="fas fa-magic"></i> AI Grouped</div>
+                    <h4 ${tooltip}>${group.displayName}</h4>
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div class="authority-count" onclick="openAuthorityModalWithGroup('${encodeURIComponent(JSON.stringify(group))}')">
+                            ${group.count}
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-light);">
+                            ${isGrouped ? `(${group.variants.length} مسميات)` : 'طلب'}
+                        </div>
                     </div>
-                    <div style="font-size:0.8rem; color:var(--text-light); margin-top:5px;">طلب</div>
                 `;
                 grid.appendChild(card);
-            }
+            });
         }
 
-        function openAuthorityModal(authorityName, count) {
-            // Filter data
-            const filteredData = requestsData.filter(req => req.authority === authorityName);
-            currentAuthorityData = filteredData;
-            
-            document.getElementById('authModalTitle').innerText = authorityName;
-            
-            const previewArea = document.getElementById('authPreviewArea');
-            previewArea.innerHTML = `
-                <h3>إجمالي الطلبات: ${filteredData.length}</h3>
-                <p>اضغط على زر طباعة التقرير لعرض التفاصيل.</p>
-            `;
+        function openAuthorityModalWithGroup(groupString) {
+            try {
+                // Decode JSON passed through URI
+                const group = JSON.parse(decodeURIComponent(groupString));
+                
+                // Prepare data (flatten requests)
+                currentAuthorityData = group.requests;
+                
+                document.getElementById('authModalTitle').innerText = group.displayName;
+                
+                let subtitleHtml = '';
+                if (group.variants.length > 1) {
+                    subtitleHtml = `<i class="fas fa-magic" style="color:#8b5cf6"></i> تم تجميع ${group.variants.length} مسميات متشابهة: ${group.variants.join('، ')}`;
+                } else {
+                    subtitleHtml = "بيانات الجهة المعنية";
+                }
+                document.getElementById('authModalSubtitle').innerHTML = subtitleHtml;
 
-            document.getElementById('authorityModal').style.display = 'flex';
+                const previewArea = document.getElementById('authPreviewArea');
+                previewArea.innerHTML = `
+                    <h3>إجمالي الطلبات: ${group.requests.length}</h3>
+                    <p>اضغط على زر طباعة التقرير لعرض التفاصيل.</p>
+                `;
+
+                document.getElementById('authorityModal').style.display = 'flex';
+            } catch (e) {
+                console.error("Error parsing group data", e);
+            }
         }
 
         function closeAuthorityModal() {
@@ -932,6 +980,7 @@
 
             printArea.innerHTML = `
                 ${generatePrintHeader('تقرير طلبات الجهة: ' + document.getElementById('authModalTitle').innerText)}
+                <p style="margin-bottom: 5px; font-size: 0.9rem; color: #555;">${document.getElementById('authModalSubtitle').innerText}</p>
                 <p style="margin-bottom: 15px;">عدد الطلبات: <strong>${currentAuthorityData.length}</strong></p>
                 <table class="print-table">
                     <thead>
@@ -1266,7 +1315,7 @@
     <!-- 
        ===================================================================
        FIREBASE CONFIGURATION (Embedded for Single File Portability)
-       Normally this would be in firebase-config.js
+       Integrated from user provided file
        ===================================================================
     -->
     <script>
