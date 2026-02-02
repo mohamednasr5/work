@@ -353,7 +353,7 @@
                     <i class="fas fa-brain"></i> الذكاء الاصطناعي: طلبات الاحاطة
                 </h3>
                 <p style="color: var(--text-light); margin-bottom: 15px; font-size: 0.9rem;">
-                    سيقوم النظام بمسح جميع العناوين في الأرشيف والتعرف على الطلبات التي تبدأ بكلمة "طلب احاطة".
+                    سيقوم النظام بمسح جميع العناوين في الأرشيف والتعرف على الطلبات التي تبدأ بكلمة "طلب احاطة" (بجميع اشكال الهمزات والتاء).
                 </p>
                 <button class="btn-3d secondary" onclick="runAIAnalysis()" id="aiBtn">
                     <i class="fas fa-magic"></i> بدء التحليل بالذكاء الاصطناعي
@@ -883,9 +883,11 @@
             const pending = requestsData.filter(r => r.status === 'execution' || r.status === 'review').length;
             const rejected = requestsData.filter(r => r.status === 'rejected').length;
             
+            // تحديث منطق العد للوحة التحكم أيضاً ليكون متوافقاً
+            const regex = /طلب\s+[أإا]حاط[ةه]/;
             const ihtiaCount = requestsData.filter(req => {
                 const cleanTitle = req.title.trim();
-                return cleanTitle.startsWith('طلب احاطة') || cleanTitle.startsWith('طلب احاطه');
+                return regex.test(cleanTitle);
             }).length;
 
             animateValue("totalRequests", parseInt(document.getElementById("totalRequests").innerText), total, 500);
@@ -1057,7 +1059,7 @@
             setTimeout(() => { window.print(); }, 300);
         }
 
-        // --- 8. Reports & AI Logic ---
+        // --- 8. Reports & AI Logic (UPDATED) ---
         function generateDateReport() {
             const start = document.getElementById('reportStartDate').value;
             const end = document.getElementById('reportEndDate').value;
@@ -1072,10 +1074,14 @@
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> جاري التحليل الذكي...';
             setTimeout(() => {
+                // Regex for "Talab Ehata" detection (any Alef form, any Taa/Ha ending)
+                const regex = /طلب\s+[أإا]حاط[ةه]/;
+                
                 const ihtiaRequests = requestsData.filter(req => {
                     const cleanTitle = req.title.trim();
-                    return cleanTitle.startsWith('طلب احاطة') || cleanTitle.startsWith('طلب احاطه');
+                    return regex.test(cleanTitle);
                 });
+                
                 btn.disabled = false;
                 btn.innerHTML = '<i class="fas fa-magic"></i> بدء التحليل بالذكاء الاصطناعي';
                 const resultBox = document.getElementById('aiResult');
