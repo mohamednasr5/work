@@ -3,16 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>نظام إدارة طلبات البرلمان - ذكي</title>
+    <title>نظام إدارة طلبات البرلمان - النسخة المحدثة</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
-
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -25,6 +22,9 @@
             --warning: #f59e0b;
             --danger: #ef4444;
             --info: #8b5cf6; 
+            --type-special: #7c3aed; /* بنفسجي للخاص */
+            --type-general: #0891b2; /* سماوي للعام */
+            --type-briefing: #ea580c; /* برتقالي للإحاطة */
             --background: #f1f5f9;
             --surface: #ffffff;
             --text-main: #1e293b;
@@ -58,7 +58,6 @@
         /* --- Tabs Logic --- */
         .tab-content { display: none; animation: fadeIn 0.3s ease-in-out; }
         .tab-content.active { display: block; }
-
         @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
 
         /* --- Stats Grid --- */
@@ -70,31 +69,30 @@
         .stat-card.warning::before { background: var(--warning); }
         .stat-card.danger::before { background: var(--danger); }
         .stat-card.info::before { background: var(--info); }
+        .stat-card.type-special::before { background: var(--type-special); }
+        .stat-card.type-general::before { background: var(--type-general); }
+        .stat-card.type-briefing::before { background: var(--type-briefing); }
         
         .stat-card .icon { font-size: 2rem; margin-bottom: 10px; display: block; }
         .stat-card h3 { font-size: 0.9rem; color: var(--text-light); margin-bottom: 5px; }
         .stat-card .number { font-size: 1.8rem; font-weight: 800; color: var(--text-main); }
 
         /* --- Authority Report Styles --- */
-        .authority-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; }
+        .report-section-title { font-size: 1.1rem; font-weight: bold; margin: 20px 0 10px 0; padding-bottom: 5px; border-bottom: 2px solid #e2e8f0; display: flex; align-items: center; gap: 10px; }
+        .authority-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 15px; margin-bottom: 30px; }
         .authority-card { 
             background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 15px; 
             cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden;
             display: flex; flex-direction: column; justify-content: space-between;
         }
         .authority-card:hover { transform: translateY(-3px); box-shadow: var(--shadow); border-color: var(--primary); }
-        .authority-card h4 { font-size: 0.95rem; margin-bottom: 10px; color: var(--text-main); line-height: 1.4; min-height: 40px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .authority-card h4 { font-size: 0.9rem; margin-bottom: 10px; color: var(--text-main); line-height: 1.4; min-height: 40px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .authority-count { 
-            font-size: 1.5rem; font-weight: 800; color: var(--primary); 
-            background: #eff6ff; padding: 5px 10px; border-radius: 8px; display: inline-block; width: fit-content;
+            font-size: 1.4rem; font-weight: 800; color: var(--primary); 
+            background: #eff6ff; padding: 4px 12px; border-radius: 8px; display: inline-block; width: fit-content;
         }
         .authority-card:hover .authority-count { background: var(--primary); color: white; }
-        
-        .ai-indicator {
-            position: absolute; top: 5px; left: 5px;
-            font-size: 0.6rem; background: #8b5cf6; color: white;
-            padding: 2px 6px; border-radius: 4px; display: none;
-        }
+        .ai-indicator { position: absolute; top: 5px; left: 5px; font-size: 0.6rem; background: #8b5cf6; color: white; padding: 2px 6px; border-radius: 4px; display: none; }
         .authority-card.grouped .ai-indicator { display: block; }
 
         /* --- Forms --- */
@@ -103,10 +101,7 @@
         .input-group.full-width { grid-column: 1 / -1; }
         .input-group label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-main); font-size: 0.9rem; }
         .input-group input, .input-group select, .input-group textarea { width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px; font-family: inherit; transition: border-color 0.2s; background: #fff; }
-        
-        /* Read only input style */
         .input-group input[readonly] { background-color: #f1f5f9; color: #64748b; cursor: not-allowed; border-color: #cbd5e1; }
-
         .input-group input:focus, .input-group select:focus, .input-group textarea:focus { border-color: var(--primary); }
 
         /* --- Filter Controls --- */
@@ -114,12 +109,8 @@
             background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 15px;
             display: flex; flex-wrap: wrap; gap: 15px; align-items: center; border: 1px dashed #cbd5e1;
         }
-        .filter-container select, .filter-container input[type="text"] {
-            flex: 1; min-width: 200px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px;
-        }
-        .filter-checkbox {
-            display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none;
-        }
+        .filter-container select, .filter-container input[type="text"] { flex: 1; min-width: 150px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; }
+        .filter-checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
         .filter-checkbox input { width: 18px; height: 18px; }
 
         /* --- Buttons --- */
@@ -130,7 +121,7 @@
 
         /* --- Table --- */
         .table-responsive { overflow-x: auto; border-radius: 12px; }
-        table { width: 100%; border-collapse: collapse; background: var(--surface); min-width: 600px; }
+        table { width: 100%; border-collapse: collapse; background: var(--surface); min-width: 700px; }
         th, td { padding: 15px; text-align: right; border-bottom: 1px solid #f1f5f9; white-space: nowrap; }
         th { background-color: #f8fafc; color: var(--text-light); font-weight: 700; }
         .status-badge { padding: 5px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; }
@@ -138,16 +129,12 @@
         .status-review { background: #eff6ff; color: #1d4ed8; }
         .status-completed { background: #ecfdf5; color: #047857; }
         .status-rejected { background: #fef2f2; color: #b91c1c; }
-        /* New Status Style */
         .status-replied { background: #d1fae5; color: #065f46; }
-
-        /* --- Reports & AI --- */
-        .report-controls { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 12px; align-items: end; }
-        .ai-badge { background: linear-gradient(135deg, #8b5cf6, #6366f1); color: white; padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; margin-right: 5px; }
-        .ai-result-box { background: #f5f3ff; border: 1px solid #ddd6fe; padding: 15px; border-radius: 12px; margin-top: 15px; display: none; }
-        .ai-result-box.active { display: block; animation: fadeIn 0.5s; }
-        .ai-number-display { font-size: 2.5rem; font-weight: 900; color: #6366f1; cursor: pointer; transition: transform 0.2s; display: inline-block; }
-        .ai-number-display:hover { transform: scale(1.05); color: #4f46e5; text-decoration: underline; }
+        
+        .type-badge { padding: 4px 8px; border-radius: 6px; font-size: 0.75rem; color: white; font-weight: normal; }
+        .bg-special { background-color: var(--type-special); }
+        .bg-general { background-color: var(--type-general); }
+        .bg-briefing { background-color: var(--type-briefing); }
 
         /* --- Mobile Navigation --- */
         .mobile-nav { display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height-mobile); background: var(--surface); box-shadow: 0 -5px 20px rgba(0,0,0,0.05); z-index: 1000; justify-content: space-around; align-items: center; padding-bottom: env(safe-area-inset-bottom); }
@@ -165,30 +152,20 @@
         .modal-actions { display: flex; gap: 10px; padding: 20px; border-top: 1px solid #e2e8f0; }
         .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 5px; }
 
-        /* --- Documents & Replies Section Toggle --- */
+        /* --- Documents & Replies --- */
         #documentsSection, #repliesSection { display: none; padding: 15px; border-radius: 12px; margin-top: 15px; }
         #documentsSection { background: #f8fafc; border: 2px dashed #cbd5e1; }
         #repliesSection { background: #ecfdf5; border: 2px dashed #10b981; }
-        
         #documentsSection.active, #repliesSection.active { display: block; animation: fadeIn 0.3s; }
-        
         .doc-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
         .doc-item { display: flex; gap: 10px; align-items: center; background: white; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
         .doc-item input, .doc-item textarea { flex: 1; border: none; padding: 5px; font-family: inherit; }
 
-        /* --- Footer --- */
-        .app-footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: var(--text-light); font-size: 0.9rem; }
-        .footer-content { display: flex; align-items: center; justify-content: center; gap: 15px; flex-wrap: wrap; }
-        .footer-social-btn { width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; text-decoration: none; }
-        .facebook { background: #1877f2; }
-        .github { background: #333; }
-
         /* --- PRINT STYLES --- */
         #printArea { display: none; } 
-
         @media print {
             body { background: white; height: auto; overflow: visible; display: block; margin: 0; padding: 0; }
-            aside, nav.mobile-nav, .header-3d, .modal-overlay, .btn-action, .btn-3d, .stats-grid, .no-print, .close-modal, #searchInput, .report-controls, .ai-result-box, #alertsContent, .filter-container { display: none !important; }
+            aside, nav.mobile-nav, .header-3d, .modal-overlay, .btn-action, .btn-3d, .stats-grid, .no-print, .close-modal, #searchInput, .report-controls, .filter-container { display: none !important; }
             #printArea { display: block !important; position: absolute; top: 0; left: 0; width: 100%; visibility: visible; background: white; color: black; padding: 20px; direction: rtl; font-size: 12pt; z-index: 9999; }
             .print-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
             .print-header h1 { font-size: 18pt; margin: 0; color: #000; }
@@ -196,21 +173,17 @@
             .print-details-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; border: 1px solid #ddd; padding: 15px; background: #f9f9f9; }
             .print-field { margin-bottom: 10px; }
             .print-field strong { display: block; color: #333; }
-            .print-field span { color: #000; }
             .print-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
             .print-table th, .print-table td { border: 1px solid #333; padding: 8px; text-align: right; font-size: 10pt; white-space: normal; }
             .print-table th { background-color: #eee !important; color: #000; }
             @page { size: A4; margin: 10mm; }
         }
 
-        /* --- Responsive Queries --- */
         @media (max-width: 768px) {
             .sidebar { display: none; }
             .mobile-nav { display: flex; }
             .form-grid { grid-template-columns:1fr; }
-            .report-controls { flex-direction: column; align-items: stretch; }
-            .footer-content { flex-direction: column; gap: 10px; }
-            th:nth-child(5), td:nth-child(5) { display: none; } 
+            th:nth-child(5), td:nth-child(5), th:nth-child(6), td:nth-child(6) { display: none; } 
         }
     </style>
 </head>
@@ -223,42 +196,26 @@
         <nav>
             <ul class="nav-links">
                 <li class="active" onclick="switchTab('dashboard', this)">
-                    <i class="fas fa-chart-line"></i>
-                    <span>لوحة التحكم</span>
+                    <i class="fas fa-chart-line"></i> <span>لوحة التحكم</span>
                 </li>
                 <li onclick="switchTab('reports', this)">
-                    <i class="fas fa-file-invoice-dollar"></i>
-                    <span>التقارير والذكاء الاصطناعي</span>
+                    <i class="fas fa-file-invoice-dollar"></i> <span>التقارير المصنفة</span>
                 </li>
                 <li onclick="switchTab('register', this)">
-                    <i class="fas fa-plus-circle"></i>
-                    <span>تسجيل طلب</span>
+                    <i class="fas fa-plus-circle"></i> <span>تسجيل طلب</span>
                 </li>
                 <li onclick="switchTab('archive', this)">
-                    <i class="fas fa-archive"></i>
-                    <span>الأرشيف</span>
+                    <i class="fas fa-archive"></i> <span>الأرشيف</span>
                 </li>
             </ul>
         </nav>
     </aside>
 
     <nav class="mobile-nav no-print">
-        <div class="mobile-nav-item active" onclick="switchTab('dashboard', this)">
-            <i class="fas fa-chart-pie"></i>
-            <span>الرئيسية</span>
-        </div>
-        <div class="mobile-nav-item" onclick="switchTab('reports', this)">
-            <i class="fas fa-robot"></i>
-            <span>التقارير AI</span>
-        </div>
-        <div class="mobile-nav-item" onclick="switchTab('register', this)">
-            <i class="fas fa-plus-circle"></i>
-            <span>إضافة</span>
-        </div>
-        <div class="mobile-nav-item" onclick="switchTab('archive', this)">
-            <i class="fas fa-list"></i>
-            <span>الأرشيف</span>
-        </div>
+        <div class="mobile-nav-item active" onclick="switchTab('dashboard', this)"><i class="fas fa-chart-pie"></i><span>الرئيسية</span></div>
+        <div class="mobile-nav-item" onclick="switchTab('reports', this)"><i class="fas fa-file-invoice"></i><span>التقارير</span></div>
+        <div class="mobile-nav-item" onclick="switchTab('register', this)"><i class="fas fa-plus-circle"></i><span>إضافة</span></div>
+        <div class="mobile-nav-item" onclick="switchTab('archive', this)"><i class="fas fa-list"></i><span>الأرشيف</span></div>
     </nav>
 
     <main class="main-content">
@@ -266,38 +223,25 @@
             <div class="header-3d no-print">
                 <h1><i class="fas fa-chart-line"></i> 📊 لوحة المعلومات والتنبيهات</h1>
             </div>
-            <div class="glass-panel no-print">
-                <h2 style="margin-bottom: 20px; color: var(--primary); font-weight: 800;"><i class="fas fa-bell"></i> 🔔 التنبيهات الهامة</h2>
-                <div id="alertsContent">
-                    <p class="no-alerts">لا توجد تنبيهات حالية</p>
-                </div>
-            </div>
             
             <div class="stats-grid no-print">
                 <div class="stat-card total">
-                    <div class="icon">📊</div>
-                    <h3>إجمالي الطلبات</h3>
-                    <span class="number" id="totalRequests">0</span>
+                    <div class="icon">📊</div><h3>إجمالي الطلبات</h3><span class="number" id="totalRequests">0</span>
+                </div>
+                <div class="stat-card type-special">
+                    <div class="icon">🌟</div><h3>طلبات خاصة</h3><span class="number" id="statsSpecial">0</span>
+                </div>
+                <div class="stat-card type-general">
+                    <div class="icon">📢</div><h3>طلبات عامة</h3><span class="number" id="statsGeneral">0</span>
+                </div>
+                <div class="stat-card type-briefing">
+                    <div class="icon">📜</div><h3>طلبات إحاطة</h3><span class="number" id="statsBriefing">0</span>
                 </div>
                 <div class="stat-card success">
-                    <div class="icon">✅</div>
-                    <h3>مكتملة</h3>
-                    <span class="number" id="completedRequests">0</span>
+                    <div class="icon">✅</div><h3>مكتملة</h3><span class="number" id="completedRequests">0</span>
                 </div>
                 <div class="stat-card warning">
-                    <div class="icon">⏳</div>
-                    <h3>قيد التنفيذ</h3>
-                    <span class="number" id="pendingRequests">0</span>
-                </div>
-                <div class="stat-card danger">
-                    <div class="icon">❌</div>
-                    <h3>مرفوضة</h3>
-                    <span class="number" id="rejectedRequests">0</span>
-                </div>
-                <div class="stat-card info">
-                    <div class="icon">📜</div>
-                    <h3>طلبات الإحاطة</h3>
-                    <span class="number" id="ihtiaRequests">0</span>
+                    <div class="icon">⏳</div><h3>قيد التنفيذ</h3><span class="number" id="pendingRequests">0</span>
                 </div>
             </div>
 
@@ -308,73 +252,29 @@
 
         <section id="reports" class="tab-content">
             <div class="header-3d no-print">
-                <h1><i class="fas fa-file-invoice"></i> 📑 التقارير والتحليل الذكي</h1>
+                <h1><i class="fas fa-file-invoice"></i> 📑 التقارير المصنفة</h1>
             </div>
             
             <div class="glass-panel no-print">
-                <h3 style="margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">
-                    <i class="fas fa-brain" style="color: #8b5cf6;"></i> توزيع الطلبات حسب الجهات (ذكي)
-                </h3>
-                <p style="margin-bottom: 15px; color: var(--text-light); font-size: 0.9rem;">
-                    يقوم النظام بتحليل أسماء الجهات وتجميع الجهات المتشابهة.
-                </p>
-                <div id="authorityGrid" class="authority-grid">
-                    <div style="grid-column: 1/-1; text-align: center; color: var(--text-light);">جاري تحليل البيانات...</div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+                    <h3 style="color: var(--primary);"><i class="fas fa-layer-group"></i> توزيع الطلبات حسب النوع والجهة</h3>
+                    <button class="btn-3d" onclick="printCategorizedReport()"><i class="fas fa-print"></i> طباعة التقرير المصنف</button>
                 </div>
-            </div>
 
-            <div class="glass-panel no-print">
-                <h3 style="margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">
-                    <i class="fas fa-calendar-alt"></i> تقرير بفترة زمنية محددة
-                </h3>
-                <div class="report-controls">
-                    <div class="input-group" style="flex: 1;">
-                        <label>من تاريخ:</label>
-                        <input type="date" id="reportStartDate">
-                    </div>
-                    <div class="input-group" style="flex: 1;">
-                        <label>إلى تاريخ:</label>
-                        <input type="date" id="reportEndDate">
-                    </div>
-                    <button class="btn-3d" onclick="generateDateReport()">
-                        <i class="fas fa-search"></i> عرض التقرير
-                    </button>
+                <div class="report-section-title" style="color: var(--type-special); border-color: var(--type-special);">
+                    <i class="fas fa-star"></i> الطلبات الخاصة
                 </div>
-                <div id="dateReportResult" class="ai-result-box">
-                    <h4>نتائج التقرير للفترة المحددة:</h4>
-                    <div class="stat-card" style="margin-top: 10px; padding: 10px;">
-                        <span class="number" id="reportCount" style="font-size: 1.5rem;">0</span>
-                        <h3>عدد الطلبات</h3>
-                    </div>
+                <div id="gridSpecial" class="authority-grid"></div>
+
+                <div class="report-section-title" style="color: var(--type-general); border-color: var(--type-general);">
+                    <i class="fas fa-bullhorn"></i> الطلبات العامة
                 </div>
-            </div>
-            <div class="glass-panel no-print">
-                <h3 style="margin-bottom: 15px; border-bottom: 2px solid #f1f5f9; padding-bottom: 10px;">
-                    <i class="fas fa-brain"></i> الذكاء الاصطناعي: طلبات الاحاطة
-                </h3>
-                <p style="color: var(--text-light); margin-bottom: 15px; font-size: 0.9rem;">
-                    سيقوم النظام بمسح جميع العناوين في الأرشيف والتعرف على الطلبات التي تبدأ بكلمة "طلب احاطة" (بجميع اشكال الهمزات والتاء).
-                </p>
-                <button class="btn-3d secondary" onclick="runAIAnalysis()" id="aiBtn">
-                    <i class="fas fa-magic"></i> بدء التحليل بالذكاء الاصطناعي
-                </button>
-                <div id="aiResult" class="ai-result-box">
-                    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                        <i class="fas fa-robot" style="font-size: 2rem; color: #6366f1;"></i>
-                        <div>
-                            <h4 style="margin:0;">تم اكتمال التحليل</h4>
-                            <span class="ai-badge">AI Processed</span>
-                        </div>
-                    </div>
-                    <p style="margin-bottom: 5px;">تم العثور على: </p>
-                    <span id="ihtiaCount" class="ai-number-display" onclick="openAiModal()" title="اضغط لعرض التفاصيل">0</span>
-                    <p style="font-size: 0.8rem; color: #64748b;">(اضغط على الرقم لعرض التفاصيل)</p>
+                <div id="gridGeneral" class="authority-grid"></div>
+
+                <div class="report-section-title" style="color: var(--type-briefing); border-color: var(--type-briefing);">
+                    <i class="fas fa-scroll"></i> طلبات الإحاطة
                 </div>
-            </div>
-            <div class="glass-panel no-print">
-                 <button class="btn-3d" style="width: 100%; background: var(--secondary);" onclick="printFullReport()">
-                    <i class="fas fa-print"></i> طباعة تقرير كامل للنظام
-                 </button>
+                <div id="gridBriefing" class="authority-grid"></div>
             </div>
         </section>
 
@@ -388,12 +288,22 @@
                         <div class="input-group">
                             <label><i class="fas fa-hashtag"></i> رقم الطلب (تلقائي)</label>
                             <input type="text" id="reqId" readonly placeholder="جاري تحديد الرقم..." style="background-color: #f1f5f9; color: #2563eb; font-weight: bold;">
-                            <small style="color: var(--success);"><i class="fas fa-check-circle"></i> الرقم يتولد تلقائياً ولا يتكرر</small>
                         </div>
                         <div class="input-group">
                             <label><i class="fas fa-calendar"></i> تاريخ التقديم</label>
                             <input type="date" id="reqDate" required>
                         </div>
+                        
+                        <div class="input-group full-width">
+                            <label style="color: var(--primary); font-size:1.1rem;"><i class="fas fa-filter"></i> نوع الطلب</label>
+                            <select id="reqType" required style="border: 2px solid var(--primary); background: #f0f9ff;">
+                                <option value="" disabled selected>-- اختر نوع الطلب --</option>
+                                <option value="special">طلب خاص</option>
+                                <option value="general">طلب عام</option>
+                                <option value="briefing">طلب إحاطة</option>
+                            </select>
+                        </div>
+
                         <div class="input-group full-width">
                             <label><i class="fas fa-heading"></i> عنوان الطلب</label>
                             <input type="text" id="reqTitle" required placeholder="عنوان مختصر للطلب">
@@ -401,13 +311,12 @@
                         <div class="input-group full-width">
                             <label><i class="fas fa-building"></i> الجهة المعنية</label>
                             <input type="text" id="reqAuthority" required placeholder="الوزارة أو المؤسسة">
-                            <small style="color: var(--text-light); font-size: 0.8rem;">سيقوم النظام بتجميع الأسماء المتشابهة تلقائياً</small>
+                            <small style="color: var(--text-light); font-size: 0.8rem;">سيقوم النظام بتجميع الأسماء المتشابهة تلقائياً في التقارير</small>
                         </div>
                         <div class="input-group full-width">
                             <label><i class="fas fa-align-right"></i> تفاصيل الطلب</label>
                             <textarea id="reqDetails" rows="5" required placeholder="اكتب تفاصيل الطلب هنا..."></textarea>
                         </div>
-                        
                         <div class="input-group">
                             <label><i class="fas fa-tasks"></i> حالة الطلب</label>
                             <select id="reqStatus" required onchange="toggleRepliesSection()">
@@ -418,11 +327,10 @@
                                 <option value="rejected">مرفوض</option>
                             </select>
                         </div>
-
+                        
                         <div id="repliesSection" class="input-group full-width">
                             <h3 style="margin: 0 0 10px 0; font-size: 1rem; color: #047857;"><i class="fas fa-reply-all"></i> الردود الواردة من الجهة</h3>
-                            <div id="repliesList" class="doc-list">
-                                </div>
+                            <div id="repliesList" class="doc-list"></div>
                             <button type="button" class="btn-3d" onclick="addReplyField()" style="margin-top: 10px; font-size: 0.8rem; padding: 8px 15px; background: #10b981;">
                                 <i class="fas fa-plus"></i> إضافة رد آخر
                             </button>
@@ -438,8 +346,7 @@
 
                     <div id="documentsSection">
                         <h3 style="margin: 0 0 10px 0; font-size: 1rem; color: var(--primary);">إضافة المستندات</h3>
-                        <div id="documentsList" class="doc-list">
-                            </div>
+                        <div id="documentsList" class="doc-list"></div>
                         <button type="button" class="btn-3d secondary" onclick="addDocumentField()" style="margin-top: 10px; font-size: 0.8rem; padding: 8px 15px;">
                             <i class="fas fa-plus"></i> إضافة مستند آخر
                         </button>
@@ -467,6 +374,14 @@
                     <i class="fas fa-search" style="position: absolute; right: 12px; top: 12px; color: var(--text-light);"></i>
                     <input type="text" id="searchInput" style="padding-right: 35px;" placeholder="بحث بالعنوان أو الرقم..." oninput="applyFilters()">
                 </div>
+                
+                <select id="filterType" onchange="applyFilters()">
+                    <option value="all">كل الأنواع</option>
+                    <option value="special">طلب خاص</option>
+                    <option value="general">طلب عام</option>
+                    <option value="briefing">طلب إحاطة</option>
+                </select>
+
                 <select id="filterStatus" onchange="applyFilters()">
                     <option value="all">كل الحالات</option>
                     <option value="execution">قيد التنفيذ</option>
@@ -475,10 +390,6 @@
                     <option value="completed">مكتمل</option>
                     <option value="rejected">مرفوض</option>
                 </select>
-                <label class="filter-checkbox">
-                    <input type="checkbox" id="filterDocs" onchange="applyFilters()">
-                    <span>يوجد مستندات فقط</span>
-                </label>
                 <button class="btn-3d btn-sm" onclick="printFilteredReport()">
                     <i class="fas fa-print"></i> طباعة النتائج
                 </button>
@@ -489,47 +400,22 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>🔢 رقم الطلب</th>
+                                <th>🔢 الرقم</th>
+                                <th>📌 النوع</th>
                                 <th>📝 العنوان</th>
                                 <th>🏛️ الجهة</th>
                                 <th>📅 التاريخ</th>
-                                <th>📎 مستندات</th>
+                                <th>📎 م.</th>
                                 <th>✅ الحالة</th>
                                 <th>عرض</th>
                             </tr>
                         </thead>
                         <tbody id="requestsTableBody">
-                            <tr><td colspan="7" class="text-center">لا توجد طلبات للعرض</td></tr>
+                            <tr><td colspan="8" class="text-center">لا توجد طلبات للعرض</td></tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-            <footer class="app-footer no-print">
-                <div class="footer-card">
-                    <div class="footer-content">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <div class="footer-icon" style="background: #e2e8f0; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
-                                <i class="fas fa-code"></i>
-                            </div>
-                            <div class="footer-text" style="text-align: right;">
-                                <h3 style="font-size: 0.9rem;">
-                                    <span class="footer-badge">💻</span>
-                                    برمجة وتطوير
-                                </h3>
-                                <p style="font-size: 0.8rem;">مهندس محمد حماد</p>
-                            </div>
-                        </div>
-                        <div style="display: flex; gap: 10px;">
-                            <a href="https://www.facebook.com/en.mohamed.nasr" target="_blank" class="footer-social-btn facebook">
-                                <i class="fab fa-facebook-f"></i>
-                            </a>
-                            <a href="https://github.com/mohamednasr5" target="_blank" class="footer-social-btn github">
-                                <i class="fab fa-github"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </footer>
         </section>
     </main>
 
@@ -539,21 +425,14 @@
             <div class="modal-header">
                 <h2 id="modalTitle">تفاصيل الطلب</h2>
                 <div style="color: var(--text-light); margin-top: 5px;">
-                    <i class="fas fa-hashtag"></i> <span id="modalReqId"></span> <br>
-                    <i class="fas fa-calendar"></i> <span id="modalReqDate" style="margin-right: 5px; font-weight:bold;"></span>
+                    <i class="fas fa-hashtag"></i> <span id="modalReqId"></span> | <span id="modalReqTypeBadge"></span>
                 </div>
             </div>
             <div class="modal-body" id="modalBody"></div>
             <div class="modal-actions">
-                <button class="btn-action edit" onclick="checkPasscode('edit')" style="background: var(--primary);">
-                    <i class="fas fa-edit"></i> تعديل
-                </button>
-                <button class="btn-action delete" onclick="checkPasscode('delete')" style="background: var(--danger);">
-                    <i class="fas fa-trash"></i> حذف
-                </button>
-                <button class="btn-action print" onclick="printRequest()" style="background: var(--secondary);">
-                    <i class="fas fa-print"></i> طباعة
-                </button>
+                <button class="btn-action edit" onclick="checkPasscode('edit')" style="background: var(--primary);"><i class="fas fa-edit"></i> تعديل</button>
+                <button class="btn-action delete" onclick="checkPasscode('delete')" style="background: var(--danger);"><i class="fas fa-trash"></i> حذف</button>
+                <button class="btn-action print" onclick="printRequest()" style="background: var(--secondary);"><i class="fas fa-print"></i> طباعة</button>
             </div>
         </div>
     </div>
@@ -566,38 +445,11 @@
                 <div id="authModalSubtitle" style="font-size: 0.85rem; color: var(--text-light); margin-top: 5px;"></div>
             </div>
             <div class="modal-body">
-                <div id="authPreviewArea" style="padding: 20px; text-align: center; color: var(--text-light);">
-                    </div>
+                <div id="authPreviewArea" style="padding: 20px; text-align: center; color: var(--text-light);"></div>
             </div>
             <div class="modal-actions">
-                <button class="btn-action" onclick="printAuthorityReport()" style="background: var(--primary); flex: 2;">
-                    <i class="fas fa-print"></i> طباعة التقرير
-                </button>
-                <button class="btn-action" onclick="closeAuthorityModal()" style="background: var(--secondary); flex: 1;">
-                    <i class="fas fa-times"></i> إغلاق
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="aiModal" class="modal-overlay">
-        <div class="modal-content large">
-            <span class="close-modal" onclick="closeAiModal()">×</span>
-            <div class="modal-header">
-                <h2><i class="fas fa-brain"></i> تقرير طلبات الاحاطة التفصيلي</h2>
-            </div>
-            <div class="modal-body">
-                <div id="aiPreviewArea" style="padding: 20px; text-align: center; color: var(--text-light);">
-                    اضغط على زر "طباعة التقرير" أدناه لعرض التقرير الكامل جاهزاً للطباعة.
-                </div>
-            </div>
-            <div class="modal-actions">
-                <button class="btn-action" onclick="printAiReport()" style="background: var(--primary); flex: 2;">
-                    <i class="fas fa-print"></i> طباعة التقرير
-                </button>
-                <button class="btn-action" onclick="closeAiModal()" style="background: var(--secondary); flex: 1;">
-                    <i class="fas fa-times"></i> إغلاق
-                </button>
+                <button class="btn-action" onclick="printAuthorityReport()" style="background: var(--primary); flex: 2;"><i class="fas fa-print"></i> طباعة التقرير</button>
+                <button class="btn-action" onclick="closeAuthorityModal()" style="background: var(--secondary); flex: 1;"><i class="fas fa-times"></i> إغلاق</button>
             </div>
         </div>
     </div>
@@ -610,179 +462,143 @@
         let requestsData = [];
         let currentRequestKey = null; 
         let chartInstance = null;
-        let documentsData = []; 
         let currentAuthorityData = []; 
         const SECURE_CODE = "521988";
+
+        // Translation Maps
+        const statusMap = {
+            'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'replied': 'تم الرد', 'completed': 'مكتمل', 'rejected': 'مرفوض'
+        };
+        const typeMap = {
+            'special': 'طلب خاص', 'general': 'طلب عام', 'briefing': 'طلب إحاطة'
+        };
 
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('reqDate').valueAsDate = new Date();
             addDocumentField(); 
-            addReplyField(); // Initialize with one reply field hidden
+            addReplyField(); 
             
             if (typeof RequestManager !== 'undefined') {
                 fetchRealtimeData();
             } else {
-                showToast('خطأ: لم يتم العثور على ملف الإعدادات firebase-config.js', 'error');
+                alert('خطأ: لم يتم العثور على قاعدة البيانات');
             }
         });
 
-        // --- 1. Fetch Data using RequestManager ---
+        // --- 1. Fetch Data ---
         function fetchRealtimeData() {
             RequestManager.listenToRequests((data) => {
                 requestsData = data;
-                
-                // Sort Ascending by ID
-                requestsData.sort((a, b) => {
-                    return a.reqId.localeCompare(b.reqId, undefined, { numeric: true, sensitivity: 'base' });
-                });
+                // Sort Descending by Date/ID usually better, but keeping Sort Ascending per request
+                requestsData.sort((a, b) => a.reqId.localeCompare(b.reqId, undefined, { numeric: true, sensitivity: 'base' }));
 
                 renderTable(requestsData);
                 updateDashboard();
-                updateAuthorityReport(); 
+                updateAllReports(); 
             });
         }
 
-        // --- 2. Navigation ---
+        // --- 2. Navigation & Auto ID ---
         function switchTab(tabId, element) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
-            const targetTab = document.getElementById(tabId);
-            if (targetTab) {
-                targetTab.classList.add('active');
-            }
-
+            document.getElementById(tabId).classList.add('active');
             document.querySelectorAll('.nav-links li, .mobile-nav-item').forEach(item => item.classList.remove('active'));
-            if (element) {
-                element.classList.add('active');
-            }
-
-            document.querySelector('.main-content').scrollTop = 0;
-
-            // Auto ID Logic Trigger
-            if (tabId === 'register') {
-                setAutoId();
-            }
+            if (element) element.classList.add('active');
+            if (tabId === 'register') setAutoId();
         }
 
-        // --- 2.1 Auto ID Logic ---
         function setAutoId() {
             if (requestsData.length === 0) {
                 document.getElementById('reqId').value = "1";
                 return;
             }
-
             let maxId = 0;
             requestsData.forEach(req => {
-                // Extract numbers from reqId (handles "11", "2024/011", "REQ-05")
                 const matches = req.reqId.match(/\d+/g);
                 if (matches) {
                     const num = parseInt(matches.join(''), 10);
-                    if (num > maxId) {
-                        maxId = num;
-                    }
+                    if (num > maxId) maxId = num;
                 }
             });
-
-            const nextId = maxId + 1;
-            document.getElementById('reqId').value = nextId.toString();
+            document.getElementById('reqId').value = (maxId + 1).toString();
         }
 
-        // --- 3. Document Handling ---
+        // --- 3. UI Helpers ---
         function toggleDocumentsSection() {
             const isChecked = document.getElementById('hasDocuments').checked;
             const section = document.getElementById('documentsSection');
-            
             if (isChecked) {
                 section.classList.add('active');
-                const list = document.getElementById('documentsList');
-                if(list.children.length === 0) addDocumentField();
+                if(document.getElementById('documentsList').children.length === 0) addDocumentField();
             } else {
                 section.classList.remove('active');
             }
         }
-
         function addDocumentField() {
             const container = document.getElementById('documentsList');
             const div = document.createElement('div');
             div.className = 'doc-item';
-            div.innerHTML = `
-                <i class="fas fa-file-alt"></i>
-                <input type="text" placeholder="اسم المستند" class="doc-input">
-                <button type="button" onclick="this.parentElement.remove()" style="border:none; background:none; color: #ef4444; cursor:pointer;"><i class="fas fa-times"></i></button>
-            `;
+            div.innerHTML = `<i class="fas fa-file-alt"></i><input type="text" placeholder="اسم المستند" class="doc-input"><button type="button" onclick="this.parentElement.remove()" style="border:none; background:none; color: #ef4444;"><i class="fas fa-times"></i></button>`;
             container.appendChild(div);
         }
 
-        // --- 3.5 Replies Handling (NEW) ---
         function toggleRepliesSection() {
             const status = document.getElementById('reqStatus').value;
             const section = document.getElementById('repliesSection');
-            const list = document.getElementById('repliesList');
-            
             if (status === 'replied') {
                 section.style.display = 'block';
-                if(list.children.length === 0) addReplyField();
+                if(document.getElementById('repliesList').children.length === 0) addReplyField();
             } else {
                 section.style.display = 'none';
             }
         }
-
         function addReplyField(value = "") {
             const container = document.getElementById('repliesList');
             const div = document.createElement('div');
             div.className = 'doc-item';
-            div.innerHTML = `
-                <i class="fas fa-comment-dots" style="color: #10b981;"></i>
-                <textarea placeholder="نص الرد الوارد من الجهة..." class="reply-input" rows="2" style="flex:1; border:none; padding:5px; resize:vertical;">${value}</textarea>
-                <button type="button" onclick="this.parentElement.remove()" style="border:none; background:none; color: #ef4444; cursor:pointer;"><i class="fas fa-times"></i></button>
-            `;
+            div.innerHTML = `<i class="fas fa-comment-dots" style="color: #10b981;"></i><textarea placeholder="نص الرد..." class="reply-input" rows="2" style="flex:1; border:none; padding:5px;">${value}</textarea><button type="button" onclick="this.parentElement.remove()" style="border:none; background:none; color: #ef4444;"><i class="fas fa-times"></i></button>`;
             container.appendChild(div);
         }
 
-        // --- 4. Form Handling (Create/Update) ---
+        // --- 4. Form Handling ---
         document.getElementById('requestForm').addEventListener('submit', async function(e) {
             e.preventDefault();
+            
+            // Validate Type
+            const reqType = document.getElementById('reqType').value;
+            if(!reqType) { alert("يرجى اختيار نوع الطلب"); return; }
 
-            // Collect Documents
             const docInputs = document.querySelectorAll('.doc-input');
-            const docsList = [];
-            docInputs.forEach(input => {
-                if(input.value.trim() !== "") docsList.push(input.value.trim());
-            });
-
-            // Collect Replies (NEW)
+            const docsList = Array.from(docInputs).map(i => i.value.trim()).filter(v => v !== "");
+            
             const replyInputs = document.querySelectorAll('.reply-input');
-            const repliesList = [];
-            replyInputs.forEach(input => {
-                if(input.value.trim() !== "") repliesList.push(input.value.trim());
-            });
+            const repliesList = Array.from(replyInputs).map(i => i.value.trim()).filter(v => v !== "");
 
             const requestData = {
                 reqId: document.getElementById('reqId').value,
                 reqDate: document.getElementById('reqDate').value,
+                requestType: reqType, // New Field
                 title: document.getElementById('reqTitle').value,
                 authority: document.getElementById('reqAuthority').value,
                 details: document.getElementById('reqDetails').value,
                 status: document.getElementById('reqStatus').value,
                 hasDocuments: document.getElementById('hasDocuments').checked,
                 documentsList: docsList,
-                repliesList: repliesList // Save replies
+                repliesList: repliesList
             };
 
             let success = false;
-
             if (currentRequestKey) {
                 success = await RequestManager.updateRequest(currentRequestKey, requestData);
-                if(success) showToast('تم تعديل الطلب وحفظه بنجاح');
+                if(success) alert('تم التعديل بنجاح');
             } else {
                 success = await RequestManager.addRequest(requestData);
-                if(success) showToast('تم تسجيل الطلب بنجاح');
+                if(success) alert('تم التسجيل بنجاح');
             }
 
             if(success) {
                 resetForm();
-                switchTab('archive', document.querySelectorAll('.mobile-nav-item')[3]);
-            } else {
-                showToast('حدث خطأ أثناء الحفظ', 'error');
+                switchTab('archive');
             }
         });
 
@@ -791,140 +607,94 @@
             document.getElementById('reqDate').valueAsDate = new Date();
             currentRequestKey = null;
             document.getElementById('submitButtonText').innerText = 'حفظ الطلب';
+            document.getElementById('reqType').value = ""; // Reset Select
             
-            // Reset Docs
             document.getElementById('documentsSection').classList.remove('active');
             document.getElementById('documentsList').innerHTML = ''; 
             addDocumentField();
-
-            // Reset Replies
             document.getElementById('repliesSection').style.display = 'none';
             document.getElementById('repliesList').innerHTML = '';
             addReplyField();
-
-            // Generate next ID after reset
             setAutoId();
         }
 
-        // --- 5. Table & Search & Filters ---
-        
+        // --- 5. Table & Filter ---
         function applyFilters() {
             const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const typeFilter = document.getElementById('filterType').value;
             const statusFilter = document.getElementById('filterStatus').value;
-            const docFilter = document.getElementById('filterDocs').checked;
 
             const filtered = requestsData.filter(r => {
-                // Text Search
-                const matchText = r.title.toLowerCase().includes(searchText) || 
-                                   r.reqId.toLowerCase().includes(searchText) ||
-                                   r.authority.toLowerCase().includes(searchText);
-                
-                // Status Filter
+                const matchText = r.title.toLowerCase().includes(searchText) || r.reqId.includes(searchText) || r.authority.toLowerCase().includes(searchText);
+                const matchType = typeFilter === 'all' || r.requestType === typeFilter;
                 const matchStatus = statusFilter === 'all' || r.status === statusFilter;
-
-                // Document Filter
-                const matchDocs = docFilter ? r.hasDocuments === true : true;
-
-                return matchText && matchStatus && matchDocs;
+                return matchText && matchType && matchStatus;
             });
-
             renderTable(filtered);
-            window.currentFilteredData = filtered; // Store for printing
+            window.currentFilteredData = filtered;
         }
 
         function renderTable(data) {
             const tbody = document.getElementById('requestsTableBody');
             tbody.innerHTML = '';
-
-            if (data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;">لا توجد طلبات للعرض</td></tr>';
-                return;
-            }
+            if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">لا توجد طلبات</td></tr>'; return; }
 
             data.forEach(req => {
-                const statusMap = {
-                    'execution': { text: 'قيد التنفيذ', class: 'status-execution' },
-                    'review': { text: 'قيد المراجعة', class: 'status-review' },
-                    'replied': { text: 'تم الرد', class: 'status-replied' }, // NEW
-                    'completed': { text: 'مكتمل', class: 'status-completed' },
-                    'rejected': { text: 'مرفوض', class: 'status-rejected' }
-                };
-                
-                const st = statusMap[req.status] || { text: req.status, class: '' };
+                const st = statusMap[req.status] || req.status;
+                const stClass = 'status-' + req.status;
+                const tp = typeMap[req.requestType] || 'غير محدد';
+                const tpClass = 'bg-' + req.requestType;
 
                 const row = `
-                    <tr onclick="openModal('${req.firebaseKey}')">
+                    <tr onclick="openModal('${req.firebaseKey}')" style="cursor:pointer">
                         <td>${req.reqId}</td>
+                        <td><span class="type-badge ${tpClass}">${tp}</span></td>
                         <td style="font-weight:bold;">${req.title}</td>
                         <td>${req.authority}</td>
                         <td>${req.reqDate}</td>
                         <td>${req.hasDocuments ? '<i class="fas fa-paperclip"></i>' : '-'}</td>
-                        <td><span class="status-badge ${st.class}">${st.text}</span></td>
-                        <td>
-                             <button class="btn-action" style="padding: 5px 10px; font-size: 0.8rem; background: var(--primary);">
-                                <i class="fas fa-eye"></i>
-                            </button>
-                        </td>
+                        <td><span class="status-badge ${stClass}">${st}</span></td>
+                        <td><button class="btn-action" style="padding:5px 10px; background:var(--primary);"><i class="fas fa-eye"></i></button></td>
                     </tr>
                 `;
                 tbody.innerHTML += row;
             });
         }
 
-        function searchRequests(query) {
-            document.getElementById('searchInput').value = query;
-            applyFilters();
-        }
-
-        // --- 6. Dashboard & Charts ---
+        // --- 6. Dashboard Stats ---
         function updateDashboard() {
             const total = requestsData.length;
-            const completed = requestsData.filter(r => r.status === 'completed').length;
-            const pending = requestsData.filter(r => r.status === 'execution' || r.status === 'review').length;
-            const rejected = requestsData.filter(r => r.status === 'rejected').length;
+            const special = requestsData.filter(r => r.requestType === 'special').length;
+            const general = requestsData.filter(r => r.requestType === 'general').length;
+            const briefing = requestsData.filter(r => r.requestType === 'briefing').length;
             
-            // تحديث منطق العد للوحة التحكم أيضاً ليكون متوافقاً
-            const regex = /طلب\s+[أإا]حاط[ةه]/;
-            const ihtiaCount = requestsData.filter(req => {
-                const cleanTitle = req.title.trim();
-                return regex.test(cleanTitle);
-            }).length;
+            document.getElementById("totalRequests").innerText = total;
+            document.getElementById("statsSpecial").innerText = special;
+            document.getElementById("statsGeneral").innerText = general;
+            document.getElementById("statsBriefing").innerText = briefing;
 
-            animateValue("totalRequests", parseInt(document.getElementById("totalRequests").innerText), total, 500);
-            animateValue("completedRequests", parseInt(document.getElementById("completedRequests").innerText), completed, 500);
-            animateValue("pendingRequests", parseInt(document.getElementById("pendingRequests").innerText), pending, 500);
-            animateValue("rejectedRequests", parseInt(document.getElementById("rejectedRequests").innerText), rejected, 500);
-            animateValue("ihtiaRequests", parseInt(document.getElementById("ihtiaRequests").innerText), ihtiaCount, 500);
+            document.getElementById("completedRequests").innerText = requestsData.filter(r => r.status === 'completed').length;
+            document.getElementById("pendingRequests").innerText = requestsData.filter(r => r.status === 'execution' || r.status === 'review').length;
 
-            renderChart(completed, pending, rejected);
+            renderChart(special, general, briefing);
         }
 
-        function renderChart(completed, pending, rejected) {
+        function renderChart(s, g, b) {
             const ctx = document.getElementById('requestsChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
-
             chartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['مكتملة', 'قيد التنفيذ/المراجعة', 'مرفوضة'],
-                    datasets: [{
-                        data: [completed, pending, rejected],
-                        backgroundColor: ['#10b981', '#f59e0b', '#ef4444'],
-                        borderWidth: 0
-                    }]
+                    labels: ['خاص', 'عام', 'إحاطة'],
+                    datasets: [{ data: [s, g, b], backgroundColor: ['#7c3aed', '#0891b2', '#ea580c'], borderWidth: 0 }]
                 },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: { legend: { position: 'bottom', labels: { font: { family: 'Cairo' } } } }
-                }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Cairo' } } } } }
             });
         }
 
-        // --- 7. AI Authority Matching Logic ---
+        // --- 7. Grouped Reports Logic ---
         const AI_AuthorityMatcher = {
-            stopWords: ['وزارة', 'الهيئة', 'المؤسسة', 'المصلحة', 'الجهاز', 'المجلس', 'البنك', 'الشركة', 'المصرية', 'العامة', 'القومية', 'المركزية', 'للـ', 'والـ'],
-
+            stopWords: ['وزارة', 'الهيئة', 'المؤسسة', 'المصلحة', 'الجهاز', 'المجلس', 'البنك', 'الشركة', 'العامة', 'القومية', 'المركزية'],
             cleanText: function(text) {
                 if (!text) return "";
                 let cleaned = text.replace(/[^\u0600-\u06FFa-zA-Z0-9\s]/g, ""); 
@@ -932,21 +702,16 @@
                 let filtered = words.filter(w => w.length > 2 && !this.stopWords.includes(w));
                 return filtered.join(" ");
             },
-
             calculateSimilarity: function(str1, str2) {
                 if (str1 === str2) return 1.0;
                 if (!str1 || !str2) return 0.0;
-                
                 if (str1.includes(str2) || str2.includes(str1)) return 0.8;
-                
                 const set1 = new Set(str1.split(" "));
                 const set2 = new Set(str2.split(" "));
                 const intersection = new Set([...set1].filter(x => set2.has(x)));
                 const union = new Set([...set1, ...set2]);
-                
                 return intersection.size / union.size;
             },
-
             analyze: function(requests) {
                 let groups = [];
                 requests.forEach(req => {
@@ -955,423 +720,227 @@
                     if (!coreName) return; 
                     let matchedGroup = null;
                     for (let group of groups) {
-                        const similarity = this.calculateSimilarity(coreName, group.coreKey);
-                        if (similarity > 0.5) { 
-                            matchedGroup = group;
-                            break;
+                        if (this.calculateSimilarity(coreName, group.coreKey) > 0.5) { 
+                            matchedGroup = group; break;
                         }
                     }
-
                     if (matchedGroup) {
-                        matchedGroup.count++;
-                        matchedGroup.requests.push(req);
-                        if (!matchedGroup.variants.includes(originalName)) {
-                            matchedGroup.variants.push(originalName);
-                        }
+                        matchedGroup.count++; matchedGroup.requests.push(req);
+                        if (!matchedGroup.variants.includes(originalName)) matchedGroup.variants.push(originalName);
                     } else {
-                        groups.push({
-                            displayName: originalName, 
-                            coreKey: coreName,
-                            count: 1,
-                            requests: [req],
-                            variants: [originalName]
-                        });
+                        groups.push({ displayName: originalName, coreKey: coreName, count: 1, requests: [req], variants: [originalName] });
                     }
                 });
                 return groups.sort((a, b) => b.count - a.count);
             }
         };
 
-        function updateAuthorityReport() {
-            const grid = document.getElementById('authorityGrid');
+        function updateAllReports() {
+            // Split Data
+            const specials = requestsData.filter(r => r.requestType === 'special');
+            const generals = requestsData.filter(r => r.requestType === 'general');
+            const briefings = requestsData.filter(r => r.requestType === 'briefing');
+
+            renderAuthorityGrid(specials, 'gridSpecial');
+            renderAuthorityGrid(generals, 'gridGeneral');
+            renderAuthorityGrid(briefings, 'gridBriefing');
+        }
+
+        function renderAuthorityGrid(data, elementId) {
+            const grid = document.getElementById(elementId);
             grid.innerHTML = '';
-            if (requestsData.length === 0) {
-                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center;">لا توجد بيانات للتحليل</div>';
-                return;
-            }
-            const groupedAuthorities = AI_AuthorityMatcher.analyze(requestsData);
-            groupedAuthorities.forEach(group => {
+            if (data.length === 0) { grid.innerHTML = '<div style="grid-column:1/-1; color:#999; font-size:0.9rem;">لا توجد طلبات في هذا التصنيف</div>'; return; }
+            
+            const grouped = AI_AuthorityMatcher.analyze(data);
+            grouped.forEach(group => {
                 const isGrouped = group.variants.length > 1;
                 const card = document.createElement('div');
                 card.className = `authority-card ${isGrouped ? 'grouped' : ''}`;
-                let tooltip = isGrouped ? `title="يشمل: ${group.variants.join('، ')}"` : '';
-
                 card.innerHTML = `
-                    <div class="ai-indicator"><i class="fas fa-magic"></i> AI Grouped</div>
-                    <h4 ${tooltip}>${group.displayName}</h4>
+                    <div class="ai-indicator">AI Grouped</div>
+                    <h4>${group.displayName}</h4>
                     <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div class="authority-count" onclick="openAuthorityModalWithGroup('${encodeURIComponent(JSON.stringify(group))}')">
-                            ${group.count}
-                        </div>
-                        <div style="font-size:0.8rem; color:var(--text-light);">
-                            ${isGrouped ? `(${group.variants.length} مسميات)` : 'طلب'}
-                        </div>
-                    </div>
-                `;
+                        <div class="authority-count" onclick="openAuthorityModalWithGroup('${encodeURIComponent(JSON.stringify(group))}')">${group.count}</div>
+                        <div style="font-size:0.8rem; color:var(--text-light);">${isGrouped ? `(${group.variants.length} مسميات)` : 'طلب'}</div>
+                    </div>`;
                 grid.appendChild(card);
             });
         }
 
         function openAuthorityModalWithGroup(groupString) {
-            try {
-                const group = JSON.parse(decodeURIComponent(groupString));
-                currentAuthorityData = group.requests;
-                document.getElementById('authModalTitle').innerText = group.displayName;
-                
-                let subtitleHtml = '';
-                if (group.variants.length > 1) {
-                    subtitleHtml = `<i class="fas fa-magic" style="color:#8b5cf6"></i> تم تجميع ${group.variants.length} مسميات متشابهة: ${group.variants.join('، ')}`;
-                } else {
-                    subtitleHtml = "بيانات الجهة المعنية";
-                }
-                document.getElementById('authModalSubtitle').innerHTML = subtitleHtml;
-
-                const previewArea = document.getElementById('authPreviewArea');
-                previewArea.innerHTML = `
-                    <h3>إجمالي الطلبات: ${group.requests.length}</h3>
-                    <p>اضغط على زر طباعة التقرير لعرض التفاصيل.</p>
-                `;
-                document.getElementById('authorityModal').style.display = 'flex';
-            } catch (e) {
-                console.error("Error parsing group data", e);
-            }
+            const group = JSON.parse(decodeURIComponent(groupString));
+            currentAuthorityData = group.requests;
+            document.getElementById('authModalTitle').innerText = group.displayName;
+            document.getElementById('authModalSubtitle').innerHTML = group.variants.length > 1 ? `تجميع المسميات: ${group.variants.join('، ')}` : "الطلبات المسجلة لهذه الجهة";
+            document.getElementById('authPreviewArea').innerHTML = `<h3>عدد الطلبات: ${group.requests.length}</h3><p>اضغط طباعة لعرض الكشف</p>`;
+            document.getElementById('authorityModal').style.display = 'flex';
         }
+        function closeAuthorityModal() { document.getElementById('authorityModal').style.display = 'none'; }
 
-        function closeAuthorityModal() {
-            document.getElementById('authorityModal').style.display = 'none';
-            currentAuthorityData = [];
-        }
-
-        function printAuthorityReport() {
-            if (!currentAuthorityData || currentAuthorityData.length === 0) return;
-            const printArea = document.getElementById('printArea');
-            let tableRows = '';
-            currentAuthorityData.forEach(req => {
-                const statusMap = { 'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'replied': 'تم الرد', 'completed': 'مكتمل', 'rejected': 'مرفوض' };
-                tableRows += `<tr><td>${req.reqId}</td><td>${req.title}</td><td>${req.reqDate}</td><td>${statusMap[req.status] || req.status}</td></tr>`;
-            });
-            printArea.innerHTML = `
-                ${generatePrintHeader('تقرير طلبات الجهة: ' + document.getElementById('authModalTitle').innerText)}
-                <p style="margin-bottom: 5px; font-size: 0.9rem; color: #555;">${document.getElementById('authModalSubtitle').innerText}</p>
-                <p style="margin-bottom: 15px;">عدد الطلبات: <strong>${currentAuthorityData.length}</strong></p>
-                <table class="print-table"><thead><tr><th>رقم الطلب</th><th>العنوان</th><th>التاريخ</th><th>الحالة</th></tr></thead><tbody>${tableRows}</tbody></table>
-            `;
-            setTimeout(() => { window.print(); }, 300);
-        }
-
-        // --- 8. Reports & AI Logic (UPDATED) ---
-        function generateDateReport() {
-            const start = document.getElementById('reportStartDate').value;
-            const end = document.getElementById('reportEndDate').value;
-            if (!start || !end) { showToast('يرجى اختيار التواريخ', 'warning'); return; }
-            const filtered = requestsData.filter(r => r.reqDate >= start && r.reqDate <= end);
-            document.getElementById('dateReportResult').classList.add('active');
-            document.getElementById('reportCount').innerText = filtered.length;
-        }
-
-        function runAIAnalysis() {
-            const btn = document.getElementById('aiBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fas fa-circle-notch fa-spin"></i> جاري التحليل الذكي...';
-            setTimeout(() => {
-                // Regex for "Talab Ehata" detection (any Alef form, any Taa/Ha ending)
-                const regex = /طلب\s+[أإا]حاط[ةه]/;
-                
-                const ihtiaRequests = requestsData.filter(req => {
-                    const cleanTitle = req.title.trim();
-                    return regex.test(cleanTitle);
-                });
-                
-                btn.disabled = false;
-                btn.innerHTML = '<i class="fas fa-magic"></i> بدء التحليل بالذكاء الاصطناعي';
-                const resultBox = document.getElementById('aiResult');
-                resultBox.classList.add('active');
-                animateValue("ihtiaCount", 0, ihtiaRequests.length, 1000);
-                window.currentAiResults = ihtiaRequests;
-            }, 1500);
-        }
-
-        function openAiModal() {
-            if (!window.currentAiResults || window.currentAiResults.length === 0) {
-                showToast('لا توجد بيانات للعرض', 'warning');
-                return;
-            }
-            const modal = document.getElementById('aiModal');
-            const previewArea = document.getElementById('aiPreviewArea');
-            previewArea.innerHTML = `<h3>نتائج التحليل</h3><p>تم العثور على <strong>${window.currentAiResults.length}</strong> طلب احاطة.</p><p>اضغط على "طباعة التقرير" لعرض الكشف الكامل.</p>`;
-            modal.style.display = 'flex';
-        }
-
-        function closeAiModal() {
-            document.getElementById('aiModal').style.display = 'none';
-        }
-
-        // --- 9. PRINTING LOGIC ---
-        function generatePrintHeader(title) {
-            const now = new Date();
-            return `
-                <div class="print-header">
-                    <h1>نظام إدارة طلبات البرلمان</h1>
-                    <p>${title}</p>
-                    <p>تاريخ الطباعة: ${now.toLocaleDateString('ar-EG')} - ${now.toLocaleTimeString('ar-EG')}</p>
-                </div>
-                <hr style="border: 0; border-top: 2px solid #000; margin-bottom: 20px;">
-            `;
-        }
-
-        function printRequest() {
-            const req = requestsData.find(r => r.firebaseKey === currentRequestKey);
-            if (!req) return;
-            const printArea = document.getElementById('printArea');
-            let docsHtml = 'لا يوجد مستندات';
-            if (req.hasDocuments) {
-                if (req.documentsList && req.documentsList.length > 0) {
-                    docsHtml = '<ul style="margin-right: 20px;">' + req.documentsList.map(d => `<li>${d}</li>`).join('') + '</ul>';
-                } else {
-                    docsHtml = 'نعم، يوجد مستندات مرفقة';
-                }
-            }
-
-            // Replies in Print
-            let repliesHtml = '';
-            if (req.status === 'replied' && req.repliesList && req.repliesList.length > 0) {
-                repliesHtml = '<div style="margin-top: 20px;"><strong>الردود الواردة:</strong><ul style="margin-right: 20px;">' + 
-                req.repliesList.map(r => `<li>${r}</li>`).join('') + '</ul></div>';
-            }
-
-            const statusMap = {
-                'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'replied': 'تم الرد', 'completed': 'مكتمل', 'rejected': 'مرفوض'
-            };
-
-            printArea.innerHTML = `
-                ${generatePrintHeader('تفاصيل الطلب رقم: ' + req.reqId)}
-                <div class="print-details-grid">
-                    <div class="print-field"><strong>رقم الطلب:</strong> <span>${req.reqId}</span></div>
-                    <div class="print-field"><strong>التاريخ:</strong> <span>${req.reqDate}</span></div>
-                    <div class="print-field"><strong>العنوان:</strong> <span>${req.title}</span></div>
-                    <div class="print-field"><strong>الجهة المعنية:</strong> <span>${req.authority}</span></div>
-                    <div class="print-field"><strong>الحالة:</strong> <span>${statusMap[req.status] || req.status}</span></div>
-                    <div class="print-field"><strong>مرفقات:</strong> <span>${docsHtml}</span></div>
-                </div>
-                <div style="margin-bottom: 20px;">
-                    <strong>وصف الطلب:</strong>
-                    <p style="padding: 15px; background: #fff; border: 1px solid #ccc; margin-top: 5px; line-height: 1.6;">${req.details}</p>
-                </div>
-                ${repliesHtml}
-                <div style="margin-top: 50px; display: flex; justify-content: space-between;">
-                    <div style="border-top: 1px solid #000; width: 200px; text-align: center;">توقيع مدير النظام</div>
-                    <div style="border-top: 1px solid #000; width: 200px; text-align: center;">ختم النظام</div>
-                </div>
-            `;
-            setTimeout(() => { window.print(); }, 300);
-        }
-
-        function printFilteredReport() {
-            const dataToPrint = window.currentFilteredData || requestsData;
-            if (dataToPrint.length === 0) {
-                showToast('لا توجد بيانات للطباعة', 'warning');
-                return;
-            }
-            const printArea = document.getElementById('printArea');
-            let tableRows = '';
-            dataToPrint.forEach(req => {
-                const statusMap = { 'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'replied': 'تم الرد', 'completed': 'مكتمل', 'rejected': 'مرفوض' };
-                tableRows += `<tr><td>${req.reqId}</td><td>${req.title}</td><td>${req.authority}</td><td>${req.reqDate}</td><td>${statusMap[req.status] || req.status}</td></tr>`;
-            });
-            printArea.innerHTML = `
-                ${generatePrintHeader('تقرير مفلتر من الأرشيف')}
-                <p style="margin-bottom: 15px;">إجمالي الطلبات المفلترة: <strong>${dataToPrint.length}</strong></p>
-                <table class="print-table"><thead><tr><th>رقم الطلب</th><th>العنوان</th><th>الجهة</th><th>التاريخ</th><th>الحالة</th></tr></thead><tbody>${tableRows}</tbody></table>
-            `;
-            setTimeout(() => { window.print(); }, 300);
-        }
-
-        function printAiReport() {
-            if (!window.currentAiResults || window.currentAiResults.length === 0) {
-                showToast('لا توجد بيانات للطباعة', 'warning');
-                return;
-            }
-            const printArea = document.getElementById('printArea');
-            let tableRows = '';
-            window.currentAiResults.forEach(req => {
-                tableRows += `<tr><td>${req.reqId}</td><td>${req.title}</td><td>${req.authority}</td><td>${req.reqDate}</td><td>${req.status}</td></tr>`;
-            });
-            printArea.innerHTML = `
-                ${generatePrintHeader('تقرير طلبات الاحاطة (الذكاء الاصطناعي)')}
-                <p style="margin-bottom: 15px;">إجمالي الطلبات: <strong>${window.currentAiResults.length}</strong></p>
-                <table class="print-table"><thead><tr><th>رقم الطلب</th><th>العنوان</th><th>الجهة</th><th>التاريخ</th><th>الحالة</th></tr></thead><tbody>${tableRows}</tbody></table>
-            `;
-            setTimeout(() => { window.print(); }, 300);
-        }
-
-        function printFullReport() {
-            if (requestsData.length === 0) {
-                showToast('لا توجد طلبات للطباعة', 'warning');
-                return;
-            }
-            const printArea = document.getElementById('printArea');
-            let tableRows = '';
-            requestsData.forEach(req => {
-                const statusMap = { 'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'replied': 'تم الرد', 'completed': 'مكتمل', 'rejected': 'مرفوض' };
-                tableRows += `<tr><td>${req.reqId}</td><td>${req.title}</td><td>${req.authority}</td><td>${req.reqDate}</td><td>${statusMap[req.status] || req.status}</td></tr>`;
-            });
-            printArea.innerHTML = `
-                ${generatePrintHeader('التقرير الشامل لجميع الطلبات')}
-                <p style="margin-bottom: 15px;">إجمالي الطلبات: <strong>${requestsData.length}</strong></p>
-                <table class="print-table"><thead><tr><th>رقم الطلب</th><th>العنوان</th><th>الجهة</th><th>التاريخ</th><th>الحالة</th></tr></thead><tbody>${tableRows}</tbody></table>
-            `;
-            setTimeout(() => { window.print(); }, 300);
-        }
-
-        // --- 10. Modal Actions & Security ---
+        // --- 8. Modal & Actions ---
         function openModal(key) {
             const req = requestsData.find(r => r.firebaseKey === key);
             if (!req) return;
             currentRequestKey = key;
             document.getElementById('modalTitle').innerText = req.title;
             document.getElementById('modalReqId').innerText = req.reqId;
-            document.getElementById('modalReqDate').innerText = req.reqDate;
-            let docsHtml = 'لا يوجد مستندات';
-            if (req.hasDocuments) {
-                if (req.documentsList && req.documentsList.length > 0) {
-                    docsHtml = '<ul style="margin-right: 20px;">' + req.documentsList.map(d => `<li>${d}</li>`).join('') + '</ul>';
-                } else {
-                    docsHtml = '<span style="color:var(--success);"><i class="fas fa-check"></i> نعم، يوجد مستندات</span>';
-                }
-            }
+            document.getElementById('modalReqTypeBadge').innerText = typeMap[req.requestType] || req.requestType;
             
-            // Show Replies in Modal (NEW)
-            let repliesHtml = '';
-            if (req.status === 'replied' && req.repliesList && req.repliesList.length > 0) {
-                repliesHtml = '<div style="margin-top:15px; background:#f0fdf4; padding:10px; border-radius:8px; border:1px solid #bbf7d0;"><strong><i class="fas fa-reply"></i> الردود الواردة:</strong><ul style="margin-right:20px; margin-top:5px;">' + 
-                req.repliesList.map(r => `<li>${r}</li>`).join('') + '</ul></div>';
-            }
-
-            const statusMap = {
-                'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'replied': 'تم الرد', 'completed': 'مكتمل', 'rejected': 'مرفوض'
-            };
+            let docsHtml = req.hasDocuments ? (req.documentsList?.length ? `<ul>${req.documentsList.map(d=>`<li>${d}</li>`).join('')}</ul>` : 'يوجد مرفقات') : 'لا يوجد';
+            let repliesHtml = (req.status === 'replied' && req.repliesList?.length) ? `<div style="background:#f0fdf4; padding:10px; margin-top:10px;"><strong>الردود:</strong><ul>${req.repliesList.map(r=>`<li>${r}</li>`).join('')}</ul></div>` : '';
 
             document.getElementById('modalBody').innerHTML = `
-                <div style="margin-bottom:15px;"><strong>الجهة:</strong> ${req.authority}</div>
-                <div style="background: #f8fafc; padding: 10px; border-radius: 8px; line-height: 1.6; margin-bottom:15px;">${req.details}</div>
-                <div style="margin-bottom:10px;"><strong>الحالة:</strong> <span class="status-badge status-${req.status}">${statusMap[req.status] || req.status}</span></div>
-                <div style="margin-bottom:10px;"><strong>المستندات:</strong> ${docsHtml}</div>
+                <div style="margin-bottom:10px;"><strong>النوع:</strong> ${typeMap[req.requestType]}</div>
+                <div style="margin-bottom:10px;"><strong>الجهة:</strong> ${req.authority}</div>
+                <div style="background:#f8fafc; padding:10px; margin-bottom:10px;">${req.details}</div>
+                <div style="margin-bottom:10px;"><strong>الحالة:</strong> ${statusMap[req.status]}</div>
+                <div><strong>المستندات:</strong> ${docsHtml}</div>
                 ${repliesHtml}
             `;
             document.getElementById('detailsModal').style.display = 'flex';
         }
-
-        function closeModal() {
-            document.getElementById('detailsModal').style.display = 'none';
-            currentRequestKey = null;
-        }
+        function closeModal() { document.getElementById('detailsModal').style.display = 'none'; currentRequestKey = null; }
 
         function checkPasscode(action) {
-            const code = prompt("الرجاء إدخال الرمز السري للقيام بهذا الإجراء:");
-            if (code === null) return;
+            const code = prompt("أدخل الرمز السري:");
             if (code === SECURE_CODE) {
                 if (action === 'edit') performEdit();
                 else if (action === 'delete') performDelete();
-            } else {
-                showToast("الرمز السري غير صحيح", "error");
-            }
+            } else { alert("رمز خاطئ"); }
         }
 
         async function performEdit() {
             const req = requestsData.find(r => r.firebaseKey === currentRequestKey);
-            if (!req) return;
             closeModal();
-            switchTab('register', document.querySelectorAll('.mobile-nav-item')[2]);
-            
+            switchTab('register');
             document.getElementById('reqId').value = req.reqId;
-            document.getElementById('reqTitle').value = req.title;
             document.getElementById('reqDate').value = req.reqDate;
+            document.getElementById('reqType').value = req.requestType || 'general'; // Default fallback
+            document.getElementById('reqTitle').value = req.title;
             document.getElementById('reqAuthority').value = req.authority;
             document.getElementById('reqDetails').value = req.details;
             document.getElementById('reqStatus').value = req.status;
             document.getElementById('hasDocuments').checked = req.hasDocuments;
-            
-            // Restore Documents
-            if (req.hasDocuments) {
-                toggleDocumentsSection();
-                const list = document.getElementById('documentsList');
-                list.innerHTML = ''; 
-                if (req.documentsList && req.documentsList.length > 0) {
-                    req.documentsList.forEach(docName => {
-                        const container = document.getElementById('documentsList');
-                        const div = document.createElement('div');
-                        div.className = 'doc-item';
-                        div.innerHTML = `<i class="fas fa-file-alt"></i><input type="text" value="${docName}" class="doc-input"><button type="button" onclick="this.parentElement.remove()" style="border:none; background:none; color: #ef4444; cursor:pointer;"><i class="fas fa-times"></i></button>`;
-                        container.appendChild(div);
-                    });
-                } else {
-                    addDocumentField();
-                }
-            }
 
-            // Restore Replies (NEW)
-            toggleRepliesSection(); 
-            const rList = document.getElementById('repliesList');
-            rList.innerHTML = '';
-            if (req.status === 'replied' && req.repliesList && req.repliesList.length > 0) {
-                req.repliesList.forEach(replyText => {
-                    addReplyField(replyText);
-                });
-            } else if (req.status === 'replied') {
-                addReplyField();
-            }
+            // Restore Docs
+            toggleDocumentsSection();
+            const dList = document.getElementById('documentsList'); dList.innerHTML = '';
+            if(req.documentsList) req.documentsList.forEach(d => {
+                const div = document.createElement('div'); div.className='doc-item';
+                div.innerHTML = `<i class="fas fa-file-alt"></i><input type="text" value="${d}" class="doc-input"><button type="button" onclick="this.parentElement.remove()" style="border:none;background:none;color:red;">x</button>`;
+                dList.appendChild(div);
+            });
+            if(dList.children.length === 0) addDocumentField();
+
+            // Restore Replies
+            toggleRepliesSection();
+            const rList = document.getElementById('repliesList'); rList.innerHTML = '';
+            if(req.repliesList) req.repliesList.forEach(r => {
+                 const div = document.createElement('div'); div.className='doc-item';
+                div.innerHTML = `<i class="fas fa-comment"></i><textarea class="reply-input" style="flex:1;border:none;">${r}</textarea><button type="button" onclick="this.parentElement.remove()" style="border:none;background:none;color:red;">x</button>`;
+                rList.appendChild(div);
+            });
+            if(req.status === 'replied' && rList.children.length === 0) addReplyField();
 
             document.getElementById('submitButtonText').innerText = 'تحديث الطلب';
         }
 
         async function performDelete() {
-            if(confirm('هل أنت متأكد من حذف هذا الطلب نهائياً من قاعدة البيانات؟')) {
-                const success = await RequestManager.deleteRequest(currentRequestKey);
-                if(success) {
-                    closeModal();
-                    showToast('تم حذف الطلب');
-                } else {
-                    showToast('حدث خطأ أثناء الحذف', 'error');
-                }
+            if(confirm('هل أنت متأكد؟')) {
+                await RequestManager.deleteRequest(currentRequestKey);
+                closeModal();
             }
         }
 
-        // --- Utilities ---
-        function showToast(msg, type='success') {
-            const toast = document.createElement('div');
-            toast.style.position = 'fixed';
-            toast.style.top = '20px';
-            toast.style.left = '50%';
-            toast.style.transform = 'translateX(-50%)';
-            toast.style.background = type === 'success' ? '#10b981' : (type === 'error' ? '#ef4444' : '#f59e0b');
-            toast.style.color = 'white';
-            toast.style.padding = '10px 20px';
-            toast.style.borderRadius = '30px';
-            toast.style.zIndex = '3000';
-            toast.style.boxShadow = '0 5px 15px rgba(0,0,0,0.2)';
-            toast.innerText = msg;
-            document.body.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
+        // --- 9. Printing Logic ---
+        function generatePrintHeader(title) {
+            const now = new Date();
+            return `<div class="print-header"><h1>نظام إدارة طلبات البرلمان</h1><p>${title}</p><p>${now.toLocaleDateString('ar-EG')} ${now.toLocaleTimeString('ar-EG')}</p></div><hr>`;
         }
 
-        function animateValue(id, start, end, duration) {
-            if (start === end) return;
-            const range = end - start;
-            let current = start;
-            const increment = end > start ? 1 : -1;
-            const stepTime = Math.abs(Math.floor(duration / range));
-            const obj = document.getElementById(id);
-            const timer = setInterval(function() {
-                current += increment;
-                obj.innerHTML = current;
-                if (current == end) clearInterval(timer);
-            }, stepTime > 0 ? stepTime : 10);
+        function printRequest() {
+            const req = requestsData.find(r => r.firebaseKey === currentRequestKey);
+            const printArea = document.getElementById('printArea');
+            printArea.innerHTML = `
+                ${generatePrintHeader('تفاصيل طلب: ' + req.reqId)}
+                <div class="print-details-grid">
+                    <div class="print-field"><strong>النوع:</strong> ${typeMap[req.requestType]}</div>
+                    <div class="print-field"><strong>العنوان:</strong> ${req.title}</div>
+                    <div class="print-field"><strong>الجهة:</strong> ${req.authority}</div>
+                    <div class="print-field"><strong>التاريخ:</strong> ${req.reqDate}</div>
+                    <div class="print-field"><strong>الحالة:</strong> ${statusMap[req.status]}</div>
+                </div>
+                <div style="margin-top:20px; border:1px solid #ddd; padding:15px;"><strong>التفاصيل:</strong><br>${req.details}</div>
+            `;
+            setTimeout(() => window.print(), 300);
         }
+
+        function printAuthorityReport() {
+            const printArea = document.getElementById('printArea');
+            let rows = '';
+            currentAuthorityData.forEach(r => {
+                rows += `<tr><td>${r.reqId}</td><td>${typeMap[r.requestType]}</td><td>${r.title}</td><td>${r.reqDate}</td><td>${statusMap[r.status]}</td></tr>`;
+            });
+            printArea.innerHTML = `
+                ${generatePrintHeader('تقرير جهة: ' + document.getElementById('authModalTitle').innerText)}
+                <table class="print-table"><thead><tr><th>الرقم</th><th>النوع</th><th>العنوان</th><th>التاريخ</th><th>الحالة</th></tr></thead><tbody>${rows}</tbody></table>
+            `;
+            setTimeout(() => window.print(), 300);
+        }
+
+        function printFilteredReport() {
+            const data = window.currentFilteredData || requestsData;
+            const printArea = document.getElementById('printArea');
+            let rows = '';
+            data.forEach(r => {
+                rows += `<tr><td>${r.reqId}</td><td>${typeMap[r.requestType]}</td><td>${r.title}</td><td>${r.authority}</td><td>${statusMap[r.status]}</td></tr>`;
+            });
+            printArea.innerHTML = `
+                ${generatePrintHeader('تقرير بحث مفلتر')}
+                <table class="print-table"><thead><tr><th>الرقم</th><th>النوع</th><th>العنوان</th><th>الجهة</th><th>الحالة</th></tr></thead><tbody>${rows}</tbody></table>
+            `;
+            setTimeout(() => window.print(), 300);
+        }
+
+        function printCategorizedReport() {
+            const printArea = document.getElementById('printArea');
+            
+            const createSection = (title, data) => {
+                if(data.length === 0) return '';
+                // Group by authority for the report
+                const groups = AI_AuthorityMatcher.analyze(data);
+                let html = `<h3 style="margin-top:20px; border-bottom:1px solid #000;">${title} (العدد: ${data.length})</h3>`;
+                
+                groups.forEach(g => {
+                    html += `<h4>• الجهة: ${g.displayName} <span style="font-size:0.8rem">(${g.count} طلبات)</span></h4>`;
+                    html += `<table class="print-table" style="margin-bottom:15px; width:95%; margin-right:5%;">
+                        <thead><tr><th>الرقم</th><th>العنوان</th><th>التاريخ</th><th>الحالة</th></tr></thead><tbody>`;
+                    g.requests.forEach(r => {
+                        html += `<tr><td>${r.reqId}</td><td>${r.title}</td><td>${r.reqDate}</td><td>${statusMap[r.status]}</td></tr>`;
+                    });
+                    html += `</tbody></table>`;
+                });
+                return html;
+            };
+
+            const specials = requestsData.filter(r => r.requestType === 'special');
+            const generals = requestsData.filter(r => r.requestType === 'general');
+            const briefings = requestsData.filter(r => r.requestType === 'briefing');
+
+            printArea.innerHTML = `
+                ${generatePrintHeader('التقرير الشامل المصنف')}
+                ${createSection('أولاً: الطلبات الخاصة', specials)}
+                ${createSection('ثانياً: الطلبات العامة', generals)}
+                ${createSection('ثالثاً: طلبات الإحاطة', briefings)}
+            `;
+            setTimeout(() => window.print(), 300);
+        }
+
     </script>
-    
     <div id="printArea"></div>
 
     <script>
+        // Firebase Config (استخدم نفس الإعدادات الخاصة بك)
         const firebaseConfig = {
             apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE8",
             authDomain: "hedor-bea3c.firebaseapp.com",
@@ -1386,64 +955,30 @@
         if (typeof firebase !== 'undefined') {
             firebase.initializeApp(firebaseConfig);
             window.database = firebase.database();
-            console.log('✅ Firebase Initialized Successfully');
-        } else {
-            console.error("❌ Firebase SDK not loaded!");
         }
 
         window.RequestManager = {
             addRequest: async (data) => {
-                try {
-                    if (!data.reqId || !data.title) throw new Error("Missing required fields");
-                    const newRef = window.database.ref('parliament-requests').push();
-                    await newRef.set({ ...data, firebaseKey: newRef.key, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
-                    console.log('✅ Request added successfully:', newRef.key);
-                    return true;
-                } catch (error) {
-                    console.error("❌ Error adding request:", error);
-                    return false;
-                }
+                const ref = window.database.ref('parliament-requests').push();
+                await ref.set({ ...data, firebaseKey: ref.key });
+                return true;
             },
             updateRequest: async (key, data) => {
-                try {
-                    if (!key || !data.reqId || !data.title) throw new Error("Invalid input");
-                    await window.database.ref(`parliament-requests/${key}`).update({ ...data, updatedAt: new Date().toISOString() });
-                    console.log('✅ Request updated successfully:', key);
-                    return true;
-                } catch (error) {
-                    console.error("❌ Error updating request:", error);
-                    return false;
-                }
+                await window.database.ref(`parliament-requests/${key}`).update(data);
+                return true;
             },
             deleteRequest: async (key) => {
-                try {
-                    if (!key) throw new Error("Invalid key");
-                    await window.database.ref(`parliament-requests/${key}`).remove();
-                    console.log('✅ Request deleted successfully:', key);
-                    return true;
-                } catch (error) {
-                    console.error("❌ Error deleting request:", error);
-                    return false;
-                }
+                await window.database.ref(`parliament-requests/${key}`).remove();
+                return true;
             },
-            listenToRequests: (callback) => {
-                if (!window.database) return;
-                window.database.ref('parliament-requests').on('value', (snapshot) => {
-                    try {
-                        const data = snapshot.val();
-                        let requests = [];
-                        if (data && typeof data === 'object') {
-                            requests = Object.entries(data).map(([key, value]) => ({ ...value, firebaseKey: key }));
-                        }
-                        callback(requests);
-                    } catch (error) {
-                        console.error("❌ Error processing requests:", error);
-                        callback([]);
-                    }
+            listenToRequests: (cb) => {
+                window.database.ref('parliament-requests').on('value', snap => {
+                    const data = snap.val();
+                    const arr = data ? Object.values(data) : [];
+                    cb(arr);
                 });
             }
         };
-        console.log('✅ Firebase Request Manager Ready');
     </script>
 </body>
 </html>
