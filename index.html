@@ -5,18 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>نظام إدارة طلبات البرلمان - ذكي</title>
 
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap" rel="stylesheet">
 
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-    <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
 
@@ -142,6 +138,8 @@
         .status-review { background: #eff6ff; color: #1d4ed8; }
         .status-completed { background: #ecfdf5; color: #047857; }
         .status-rejected { background: #fef2f2; color: #b91c1c; }
+        /* New Status Style */
+        .status-replied { background: #d1fae5; color: #065f46; }
 
         /* --- Reports & AI --- */
         .report-controls { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; background: #f8fafc; padding: 15px; border-radius: 12px; align-items: end; }
@@ -167,12 +165,16 @@
         .modal-actions { display: flex; gap: 10px; padding: 20px; border-top: 1px solid #e2e8f0; }
         .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 5px; }
 
-        /* --- Documents Section Toggle --- */
-        #documentsSection { display: none; background: #f8fafc; padding: 15px; border-radius: 12px; border: 2px dashed #cbd5e1; margin-top: 15px; }
-        #documentsSection.active { display: block; animation: fadeIn 0.3s; }
+        /* --- Documents & Replies Section Toggle --- */
+        #documentsSection, #repliesSection { display: none; padding: 15px; border-radius: 12px; margin-top: 15px; }
+        #documentsSection { background: #f8fafc; border: 2px dashed #cbd5e1; }
+        #repliesSection { background: #ecfdf5; border: 2px dashed #10b981; }
+        
+        #documentsSection.active, #repliesSection.active { display: block; animation: fadeIn 0.3s; }
+        
         .doc-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
         .doc-item { display: flex; gap: 10px; align-items: center; background: white; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
-        .doc-item input { flex: 1; border: none; padding: 5px; }
+        .doc-item input, .doc-item textarea { flex: 1; border: none; padding: 5px; font-family: inherit; }
 
         /* --- Footer --- */
         .app-footer { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: var(--text-light); font-size: 0.9rem; }
@@ -213,7 +215,6 @@
     </style>
 </head>
 <body>
-    <!-- Sidebar (Desktop) -->
     <aside class="sidebar no-print">
         <div class="logo">
             <i class="fas fa-landmark"></i>
@@ -241,7 +242,6 @@
         </nav>
     </aside>
 
-    <!-- Mobile Bottom Navigation -->
     <nav class="mobile-nav no-print">
         <div class="mobile-nav-item active" onclick="switchTab('dashboard', this)">
             <i class="fas fa-chart-pie"></i>
@@ -261,9 +261,7 @@
         </div>
     </nav>
 
-    <!-- Main Content -->
     <main class="main-content">
-        <!-- Dashboard Tab -->
         <section id="dashboard" class="tab-content active">
             <div class="header-3d no-print">
                 <h1><i class="fas fa-chart-line"></i> 📊 لوحة المعلومات والتنبيهات</h1>
@@ -275,7 +273,6 @@
                 </div>
             </div>
             
-            <!-- Stats Grid -->
             <div class="stats-grid no-print">
                 <div class="stat-card total">
                     <div class="icon">📊</div>
@@ -309,7 +306,6 @@
             </div>
         </section>
 
-        <!-- Reports & AI Tab -->
         <section id="reports" class="tab-content">
             <div class="header-3d no-print">
                 <h1><i class="fas fa-file-invoice"></i> 📑 التقارير والتحليل الذكي</h1>
@@ -382,7 +378,6 @@
             </div>
         </section>
 
-        <!-- Register Tab -->
         <section id="register" class="tab-content">
             <div class="header-3d no-print">
                 <h1><i class="fas fa-plus-circle"></i> ➕ تسجيل / تعديل طلب</h1>
@@ -412,15 +407,27 @@
                             <label><i class="fas fa-align-right"></i> تفاصيل الطلب</label>
                             <textarea id="reqDetails" rows="5" required placeholder="اكتب تفاصيل الطلب هنا..."></textarea>
                         </div>
+                        
                         <div class="input-group">
                             <label><i class="fas fa-tasks"></i> حالة الطلب</label>
-                            <select id="reqStatus" required>
+                            <select id="reqStatus" required onchange="toggleRepliesSection()">
                                 <option value="execution">قيد التنفيذ</option>
                                 <option value="review">قيد المراجعة</option>
+                                <option value="replied">تم الرد (وارد من الجهة)</option>
                                 <option value="completed">مكتمل</option>
                                 <option value="rejected">مرفوض</option>
                             </select>
                         </div>
+
+                        <div id="repliesSection" class="input-group full-width">
+                            <h3 style="margin: 0 0 10px 0; font-size: 1rem; color: #047857;"><i class="fas fa-reply-all"></i> الردود الواردة من الجهة</h3>
+                            <div id="repliesList" class="doc-list">
+                                </div>
+                            <button type="button" class="btn-3d" onclick="addReplyField()" style="margin-top: 10px; font-size: 0.8rem; padding: 8px 15px; background: #10b981;">
+                                <i class="fas fa-plus"></i> إضافة رد آخر
+                            </button>
+                        </div>
+
                         <div class="input-group" style="display: flex; align-items: center; justify-content: flex-end;">
                             <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
                                 <input type="checkbox" id="hasDocuments" onchange="toggleDocumentsSection()" style="width: 20px; height: 20px;">
@@ -429,12 +436,10 @@
                         </div>
                     </div>
 
-                    <!-- Documents Section -->
                     <div id="documentsSection">
                         <h3 style="margin: 0 0 10px 0; font-size: 1rem; color: var(--primary);">إضافة المستندات</h3>
                         <div id="documentsList" class="doc-list">
-                            <!-- Dynamic inputs go here -->
-                        </div>
+                            </div>
                         <button type="button" class="btn-3d secondary" onclick="addDocumentField()" style="margin-top: 10px; font-size: 0.8rem; padding: 8px 15px;">
                             <i class="fas fa-plus"></i> إضافة مستند آخر
                         </button>
@@ -452,13 +457,11 @@
             </div>
         </section>
 
-        <!-- Archive Tab -->
         <section id="archive" class="tab-content">
             <div class="header-3d no-print">
                 <h1><i class="fas fa-archive"></i> 📋 سجل الطلبات والأرشيف</h1>
             </div>
             
-            <!-- NEW FILTERS -->
             <div class="filter-container no-print">
                 <div style="flex: 2; min-width: 200px; position: relative;">
                     <i class="fas fa-search" style="position: absolute; right: 12px; top: 12px; color: var(--text-light);"></i>
@@ -468,7 +471,8 @@
                     <option value="all">كل الحالات</option>
                     <option value="execution">قيد التنفيذ</option>
                     <option value="review">قيد المراجعة</option>
-                    <option value="completed">تم الرد / مكتمل</option>
+                    <option value="replied">تم الرد</option>
+                    <option value="completed">مكتمل</option>
                     <option value="rejected">مرفوض</option>
                 </select>
                 <label class="filter-checkbox">
@@ -529,7 +533,6 @@
         </section>
     </main>
 
-    <!-- Details Modal -->
     <div id="detailsModal" class="modal-overlay">
         <div class="modal-content">
             <span class="close-modal" onclick="closeModal()">×</span>
@@ -555,7 +558,6 @@
         </div>
     </div>
 
-    <!-- Authority Report Modal -->
     <div id="authorityModal" class="modal-overlay">
         <div class="modal-content large">
             <span class="close-modal" onclick="closeAuthorityModal()">×</span>
@@ -565,8 +567,7 @@
             </div>
             <div class="modal-body">
                 <div id="authPreviewArea" style="padding: 20px; text-align: center; color: var(--text-light);">
-                    <!-- Content injected via JS -->
-                </div>
+                    </div>
             </div>
             <div class="modal-actions">
                 <button class="btn-action" onclick="printAuthorityReport()" style="background: var(--primary); flex: 2;">
@@ -579,7 +580,6 @@
         </div>
     </div>
 
-    <!-- AI Results Modal -->
     <div id="aiModal" class="modal-overlay">
         <div class="modal-content large">
             <span class="close-modal" onclick="closeAiModal()">×</span>
@@ -602,7 +602,6 @@
         </div>
     </div>
 
-    <!-- Main Application Script -->
     <script>
         // ==========================================
         // APP LOGIC
@@ -618,6 +617,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('reqDate').valueAsDate = new Date();
             addDocumentField(); 
+            addReplyField(); // Initialize with one reply field hidden
             
             if (typeof RequestManager !== 'undefined') {
                 fetchRealtimeData();
@@ -712,14 +712,48 @@
             container.appendChild(div);
         }
 
+        // --- 3.5 Replies Handling (NEW) ---
+        function toggleRepliesSection() {
+            const status = document.getElementById('reqStatus').value;
+            const section = document.getElementById('repliesSection');
+            const list = document.getElementById('repliesList');
+            
+            if (status === 'replied') {
+                section.style.display = 'block';
+                if(list.children.length === 0) addReplyField();
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        function addReplyField(value = "") {
+            const container = document.getElementById('repliesList');
+            const div = document.createElement('div');
+            div.className = 'doc-item';
+            div.innerHTML = `
+                <i class="fas fa-comment-dots" style="color: #10b981;"></i>
+                <textarea placeholder="نص الرد الوارد من الجهة..." class="reply-input" rows="2" style="flex:1; border:none; padding:5px; resize:vertical;">${value}</textarea>
+                <button type="button" onclick="this.parentElement.remove()" style="border:none; background:none; color: #ef4444; cursor:pointer;"><i class="fas fa-times"></i></button>
+            `;
+            container.appendChild(div);
+        }
+
         // --- 4. Form Handling (Create/Update) ---
         document.getElementById('requestForm').addEventListener('submit', async function(e) {
             e.preventDefault();
 
+            // Collect Documents
             const docInputs = document.querySelectorAll('.doc-input');
             const docsList = [];
             docInputs.forEach(input => {
                 if(input.value.trim() !== "") docsList.push(input.value.trim());
+            });
+
+            // Collect Replies (NEW)
+            const replyInputs = document.querySelectorAll('.reply-input');
+            const repliesList = [];
+            replyInputs.forEach(input => {
+                if(input.value.trim() !== "") repliesList.push(input.value.trim());
             });
 
             const requestData = {
@@ -730,7 +764,8 @@
                 details: document.getElementById('reqDetails').value,
                 status: document.getElementById('reqStatus').value,
                 hasDocuments: document.getElementById('hasDocuments').checked,
-                documentsList: docsList 
+                documentsList: docsList,
+                repliesList: repliesList // Save replies
             };
 
             let success = false;
@@ -756,9 +791,17 @@
             document.getElementById('reqDate').valueAsDate = new Date();
             currentRequestKey = null;
             document.getElementById('submitButtonText').innerText = 'حفظ الطلب';
+            
+            // Reset Docs
             document.getElementById('documentsSection').classList.remove('active');
             document.getElementById('documentsList').innerHTML = ''; 
             addDocumentField();
+
+            // Reset Replies
+            document.getElementById('repliesSection').style.display = 'none';
+            document.getElementById('repliesList').innerHTML = '';
+            addReplyField();
+
             // Generate next ID after reset
             setAutoId();
         }
@@ -802,10 +845,12 @@
                 const statusMap = {
                     'execution': { text: 'قيد التنفيذ', class: 'status-execution' },
                     'review': { text: 'قيد المراجعة', class: 'status-review' },
+                    'replied': { text: 'تم الرد', class: 'status-replied' }, // NEW
                     'completed': { text: 'مكتمل', class: 'status-completed' },
                     'rejected': { text: 'مرفوض', class: 'status-rejected' }
                 };
-                const st = statusMap[req.status];
+                
+                const st = statusMap[req.status] || { text: req.status, class: '' };
 
                 const row = `
                     <tr onclick="openModal('${req.firebaseKey}')">
@@ -827,7 +872,6 @@
         }
 
         function searchRequests(query) {
-            // Kept for backward compatibility but applyFilters does more
             document.getElementById('searchInput').value = query;
             applyFilters();
         }
@@ -1001,8 +1045,8 @@
             const printArea = document.getElementById('printArea');
             let tableRows = '';
             currentAuthorityData.forEach(req => {
-                const statusMap = { 'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'completed': 'مكتمل', 'rejected': 'مرفوض' };
-                tableRows += `<tr><td>${req.reqId}</td><td>${req.title}</td><td>${req.reqDate}</td><td>${statusMap[req.status]}</td></tr>`;
+                const statusMap = { 'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'replied': 'تم الرد', 'completed': 'مكتمل', 'rejected': 'مرفوض' };
+                tableRows += `<tr><td>${req.reqId}</td><td>${req.title}</td><td>${req.reqDate}</td><td>${statusMap[req.status] || req.status}</td></tr>`;
             });
             printArea.innerHTML = `
                 ${generatePrintHeader('تقرير طلبات الجهة: ' + document.getElementById('authModalTitle').innerText)}
@@ -1081,6 +1125,18 @@
                     docsHtml = 'نعم، يوجد مستندات مرفقة';
                 }
             }
+
+            // Replies in Print
+            let repliesHtml = '';
+            if (req.status === 'replied' && req.repliesList && req.repliesList.length > 0) {
+                repliesHtml = '<div style="margin-top: 20px;"><strong>الردود الواردة:</strong><ul style="margin-right: 20px;">' + 
+                req.repliesList.map(r => `<li>${r}</li>`).join('') + '</ul></div>';
+            }
+
+            const statusMap = {
+                'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'replied': 'تم الرد', 'completed': 'مكتمل', 'rejected': 'مرفوض'
+            };
+
             printArea.innerHTML = `
                 ${generatePrintHeader('تفاصيل الطلب رقم: ' + req.reqId)}
                 <div class="print-details-grid">
@@ -1088,13 +1144,14 @@
                     <div class="print-field"><strong>التاريخ:</strong> <span>${req.reqDate}</span></div>
                     <div class="print-field"><strong>العنوان:</strong> <span>${req.title}</span></div>
                     <div class="print-field"><strong>الجهة المعنية:</strong> <span>${req.authority}</span></div>
-                    <div class="print-field"><strong>الحالة:</strong> <span>${req.status}</span></div>
+                    <div class="print-field"><strong>الحالة:</strong> <span>${statusMap[req.status] || req.status}</span></div>
                     <div class="print-field"><strong>مرفقات:</strong> <span>${docsHtml}</span></div>
                 </div>
                 <div style="margin-bottom: 20px;">
                     <strong>وصف الطلب:</strong>
                     <p style="padding: 15px; background: #fff; border: 1px solid #ccc; margin-top: 5px; line-height: 1.6;">${req.details}</p>
                 </div>
+                ${repliesHtml}
                 <div style="margin-top: 50px; display: flex; justify-content: space-between;">
                     <div style="border-top: 1px solid #000; width: 200px; text-align: center;">توقيع مدير النظام</div>
                     <div style="border-top: 1px solid #000; width: 200px; text-align: center;">ختم النظام</div>
@@ -1103,7 +1160,6 @@
             setTimeout(() => { window.print(); }, 300);
         }
 
-        // NEW: Print Filtered Report
         function printFilteredReport() {
             const dataToPrint = window.currentFilteredData || requestsData;
             if (dataToPrint.length === 0) {
@@ -1113,8 +1169,8 @@
             const printArea = document.getElementById('printArea');
             let tableRows = '';
             dataToPrint.forEach(req => {
-                const statusMap = { 'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'completed': 'مكتمل', 'rejected': 'مرفوض' };
-                tableRows += `<tr><td>${req.reqId}</td><td>${req.title}</td><td>${req.authority}</td><td>${req.reqDate}</td><td>${statusMap[req.status]}</td></tr>`;
+                const statusMap = { 'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'replied': 'تم الرد', 'completed': 'مكتمل', 'rejected': 'مرفوض' };
+                tableRows += `<tr><td>${req.reqId}</td><td>${req.title}</td><td>${req.authority}</td><td>${req.reqDate}</td><td>${statusMap[req.status] || req.status}</td></tr>`;
             });
             printArea.innerHTML = `
                 ${generatePrintHeader('تقرير مفلتر من الأرشيف')}
@@ -1150,8 +1206,8 @@
             const printArea = document.getElementById('printArea');
             let tableRows = '';
             requestsData.forEach(req => {
-                const statusMap = { 'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'completed': 'مكتمل', 'rejected': 'مرفوض' };
-                tableRows += `<tr><td>${req.reqId}</td><td>${req.title}</td><td>${req.authority}</td><td>${req.reqDate}</td><td>${statusMap[req.status]}</td></tr>`;
+                const statusMap = { 'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'replied': 'تم الرد', 'completed': 'مكتمل', 'rejected': 'مرفوض' };
+                tableRows += `<tr><td>${req.reqId}</td><td>${req.title}</td><td>${req.authority}</td><td>${req.reqDate}</td><td>${statusMap[req.status] || req.status}</td></tr>`;
             });
             printArea.innerHTML = `
                 ${generatePrintHeader('التقرير الشامل لجميع الطلبات')}
@@ -1177,11 +1233,24 @@
                     docsHtml = '<span style="color:var(--success);"><i class="fas fa-check"></i> نعم، يوجد مستندات</span>';
                 }
             }
+            
+            // Show Replies in Modal (NEW)
+            let repliesHtml = '';
+            if (req.status === 'replied' && req.repliesList && req.repliesList.length > 0) {
+                repliesHtml = '<div style="margin-top:15px; background:#f0fdf4; padding:10px; border-radius:8px; border:1px solid #bbf7d0;"><strong><i class="fas fa-reply"></i> الردود الواردة:</strong><ul style="margin-right:20px; margin-top:5px;">' + 
+                req.repliesList.map(r => `<li>${r}</li>`).join('') + '</ul></div>';
+            }
+
+            const statusMap = {
+                'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'replied': 'تم الرد', 'completed': 'مكتمل', 'rejected': 'مرفوض'
+            };
+
             document.getElementById('modalBody').innerHTML = `
                 <div style="margin-bottom:15px;"><strong>الجهة:</strong> ${req.authority}</div>
                 <div style="background: #f8fafc; padding: 10px; border-radius: 8px; line-height: 1.6; margin-bottom:15px;">${req.details}</div>
-                <div style="margin-bottom:10px;"><strong>الحالة:</strong> <span class="status-badge status-${req.status}">${req.status}</span></div>
+                <div style="margin-bottom:10px;"><strong>الحالة:</strong> <span class="status-badge status-${req.status}">${statusMap[req.status] || req.status}</span></div>
                 <div style="margin-bottom:10px;"><strong>المستندات:</strong> ${docsHtml}</div>
+                ${repliesHtml}
             `;
             document.getElementById('detailsModal').style.display = 'flex';
         }
@@ -1216,19 +1285,36 @@
             document.getElementById('reqStatus').value = req.status;
             document.getElementById('hasDocuments').checked = req.hasDocuments;
             
+            // Restore Documents
             if (req.hasDocuments) {
                 toggleDocumentsSection();
                 const list = document.getElementById('documentsList');
                 list.innerHTML = ''; 
                 if (req.documentsList && req.documentsList.length > 0) {
                     req.documentsList.forEach(docName => {
-                        addDocumentField(); 
-                        list.lastChild.querySelector('input').value = docName;
+                        const container = document.getElementById('documentsList');
+                        const div = document.createElement('div');
+                        div.className = 'doc-item';
+                        div.innerHTML = `<i class="fas fa-file-alt"></i><input type="text" value="${docName}" class="doc-input"><button type="button" onclick="this.parentElement.remove()" style="border:none; background:none; color: #ef4444; cursor:pointer;"><i class="fas fa-times"></i></button>`;
+                        container.appendChild(div);
                     });
                 } else {
                     addDocumentField();
                 }
             }
+
+            // Restore Replies (NEW)
+            toggleRepliesSection(); 
+            const rList = document.getElementById('repliesList');
+            rList.innerHTML = '';
+            if (req.status === 'replied' && req.repliesList && req.repliesList.length > 0) {
+                req.repliesList.forEach(replyText => {
+                    addReplyField(replyText);
+                });
+            } else if (req.status === 'replied') {
+                addReplyField();
+            }
+
             document.getElementById('submitButtonText').innerText = 'تحديث الطلب';
         }
 
