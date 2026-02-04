@@ -618,7 +618,7 @@
             setAutoId();
         }
 
-        // --- 5. Table & Filter ---
+        // --- 5. Table & Filter (UPDATED LOGIC) ---
         function applyFilters() {
             const searchText = document.getElementById('searchInput').value.toLowerCase();
             const typeFilter = document.getElementById('filterType').value;
@@ -627,7 +627,20 @@
             const filtered = requestsData.filter(r => {
                 const matchText = r.title.toLowerCase().includes(searchText) || r.reqId.includes(searchText) || r.authority.toLowerCase().includes(searchText);
                 const matchType = typeFilter === 'all' || r.requestType === typeFilter;
-                const matchStatus = statusFilter === 'all' || r.status === statusFilter;
+                
+                // --- التعديل الجديد للفلترة ---
+                let matchStatus = statusFilter === 'all';
+                if (!matchStatus) {
+                    if (statusFilter === 'replied') {
+                        // عرض الطلب إذا كانت حالته "تم الرد" أو إذا كان يوجد ردود مسجلة (بغض النظر عن الحالة)
+                        matchStatus = (r.status === 'replied') || (r.repliesList && r.repliesList.length > 0);
+                    } else {
+                        // للفلترات الأخرى، التحقق التقليدي
+                        matchStatus = r.status === statusFilter;
+                    }
+                }
+                // ------------------------------
+
                 return matchText && matchType && matchStatus;
             });
             renderTable(filtered);
@@ -788,7 +801,7 @@
             
             let docsHtml = req.hasDocuments ? (req.documentsList?.length ? `<ul>${req.documentsList.map(d=>`<li>${d}</li>`).join('')}</ul>` : 'يوجد مرفقات') : 'لا يوجد';
             
-            // *** التعديل الهام هنا: عرض الردود دائماً إذا وجدت، بغض النظر عن الحالة ***
+            // عرض الردود دائماً إذا وجدت
             let repliesHtml = '';
             if (req.repliesList && req.repliesList.length > 0) {
                 repliesHtml = `<div style="background:#f0fdf4; border: 1px solid #10b981; padding:10px; margin-top:10px; border-radius:8px;">
@@ -848,14 +861,12 @@
                 rList.appendChild(div);
             });
 
-            // *** التعديل الهام: إجبار قسم الردود على الظهور إذا كان يوجد بيانات، بغض النظر عن حالة القائمة المنسدلة ***
+            // إجبار قسم الردود على الظهور إذا كان يوجد بيانات
             if(req.repliesList && req.repliesList.length > 0) {
                 document.getElementById('repliesSection').style.display = 'block';
             } else {
-                // لو مفيش ردود، نرجع للوضع الطبيعي بناء على الحالة المختارة
                 toggleRepliesSection();
             }
-            // إضافة حقل فارغ لو مفيش
             if(document.getElementById('repliesList').children.length === 0 && document.getElementById('repliesSection').style.display === 'block') {
                 addReplyField();
             }
@@ -934,7 +945,6 @@
             
             const createSection = (title, data) => {
                 if(data.length === 0) return '';
-                // Group by authority for the report
                 const groups = AI_AuthorityMatcher.analyze(data);
                 let html = `<h3 style="margin-top:20px; border-bottom:1px solid #000;">${title} (العدد: ${data.length})</h3>`;
                 
