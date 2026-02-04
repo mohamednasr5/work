@@ -787,13 +787,21 @@
             document.getElementById('modalReqTypeBadge').innerText = typeMap[req.requestType] || req.requestType;
             
             let docsHtml = req.hasDocuments ? (req.documentsList?.length ? `<ul>${req.documentsList.map(d=>`<li>${d}</li>`).join('')}</ul>` : 'يوجد مرفقات') : 'لا يوجد';
-            let repliesHtml = (req.status === 'replied' && req.repliesList?.length) ? `<div style="background:#f0fdf4; padding:10px; margin-top:10px;"><strong>الردود:</strong><ul>${req.repliesList.map(r=>`<li>${r}</li>`).join('')}</ul></div>` : '';
+            
+            // *** التعديل الهام هنا: عرض الردود دائماً إذا وجدت، بغض النظر عن الحالة ***
+            let repliesHtml = '';
+            if (req.repliesList && req.repliesList.length > 0) {
+                repliesHtml = `<div style="background:#f0fdf4; border: 1px solid #10b981; padding:10px; margin-top:10px; border-radius:8px;">
+                                <strong style="color: #047857; display:block; margin-bottom:5px;"><i class="fas fa-reply-all"></i> الردود الواردة:</strong>
+                                <ul>${req.repliesList.map(r=>`<li style="margin-bottom:5px;">${r}</li>`).join('')}</ul>
+                              </div>`;
+            }
 
             document.getElementById('modalBody').innerHTML = `
                 <div style="margin-bottom:10px;"><strong>النوع:</strong> ${typeMap[req.requestType]}</div>
                 <div style="margin-bottom:10px;"><strong>الجهة:</strong> ${req.authority}</div>
-                <div style="background:#f8fafc; padding:10px; margin-bottom:10px;">${req.details}</div>
-                <div style="margin-bottom:10px;"><strong>الحالة:</strong> ${statusMap[req.status]}</div>
+                <div style="background:#f8fafc; padding:10px; margin-bottom:10px; border-radius:8px;">${req.details}</div>
+                <div style="margin-bottom:10px;"><strong>الحالة:</strong> <span class="status-badge status-${req.status}">${statusMap[req.status]}</span></div>
                 <div><strong>المستندات:</strong> ${docsHtml}</div>
                 ${repliesHtml}
             `;
@@ -815,7 +823,7 @@
             switchTab('register');
             document.getElementById('reqId').value = req.reqId;
             document.getElementById('reqDate').value = req.reqDate;
-            document.getElementById('reqType').value = req.requestType || 'general'; // Default fallback
+            document.getElementById('reqType').value = req.requestType || 'general'; 
             document.getElementById('reqTitle').value = req.title;
             document.getElementById('reqAuthority').value = req.authority;
             document.getElementById('reqDetails').value = req.details;
@@ -833,14 +841,24 @@
             if(dList.children.length === 0) addDocumentField();
 
             // Restore Replies
-            toggleRepliesSection();
             const rList = document.getElementById('repliesList'); rList.innerHTML = '';
             if(req.repliesList) req.repliesList.forEach(r => {
                  const div = document.createElement('div'); div.className='doc-item';
                 div.innerHTML = `<i class="fas fa-comment"></i><textarea class="reply-input" style="flex:1;border:none;">${r}</textarea><button type="button" onclick="this.parentElement.remove()" style="border:none;background:none;color:red;">x</button>`;
                 rList.appendChild(div);
             });
-            if(req.status === 'replied' && rList.children.length === 0) addReplyField();
+
+            // *** التعديل الهام: إجبار قسم الردود على الظهور إذا كان يوجد بيانات، بغض النظر عن حالة القائمة المنسدلة ***
+            if(req.repliesList && req.repliesList.length > 0) {
+                document.getElementById('repliesSection').style.display = 'block';
+            } else {
+                // لو مفيش ردود، نرجع للوضع الطبيعي بناء على الحالة المختارة
+                toggleRepliesSection();
+            }
+            // إضافة حقل فارغ لو مفيش
+            if(document.getElementById('repliesList').children.length === 0 && document.getElementById('repliesSection').style.display === 'block') {
+                addReplyField();
+            }
 
             document.getElementById('submitButtonText').innerText = 'تحديث الطلب';
         }
@@ -860,6 +878,14 @@
 
         function printRequest() {
             const req = requestsData.find(r => r.firebaseKey === currentRequestKey);
+            let repliesPrintHtml = '';
+            if(req.repliesList && req.repliesList.length > 0) {
+                repliesPrintHtml = `<div style="margin-top:20px; border:1px solid #ddd; padding:15px; background:#f9fffb;">
+                                    <strong>الردود الواردة:</strong>
+                                    <ul>${req.repliesList.map(r=>`<li>${r}</li>`).join('')}</ul>
+                                   </div>`;
+            }
+
             const printArea = document.getElementById('printArea');
             printArea.innerHTML = `
                 ${generatePrintHeader('تفاصيل طلب: ' + req.reqId)}
@@ -871,6 +897,7 @@
                     <div class="print-field"><strong>الحالة:</strong> ${statusMap[req.status]}</div>
                 </div>
                 <div style="margin-top:20px; border:1px solid #ddd; padding:15px;"><strong>التفاصيل:</strong><br>${req.details}</div>
+                ${repliesPrintHtml}
             `;
             setTimeout(() => window.print(), 300);
         }
