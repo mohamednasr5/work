@@ -161,12 +161,36 @@
         .doc-item { display: flex; gap: 10px; align-items: center; background: white; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
         .doc-item input, .doc-item textarea { flex: 1; border: none; padding: 5px; font-family: inherit; }
 
-        /* --- PRINT STYLES --- */
+        /* --- PRINT STYLES (UPDATED) --- */
         #printArea { display: none; } 
         @media print {
-            body { background: white; height: auto; overflow: visible; display: block; margin: 0; padding: 0; }
-            aside, nav.mobile-nav, .header-3d, .modal-overlay, .btn-action, .btn-3d, .stats-grid, .no-print, .close-modal, #searchInput, .report-controls, .filter-container { display: none !important; }
-            #printArea { display: block !important; position: absolute; top: 0; left: 0; width: 100%; visibility: visible; background: white; color: black; padding: 20px; direction: rtl; font-size: 12pt; z-index: 9999; }
+            /* Hide UI Elements */
+            aside, nav.mobile-nav, .header-3d, .modal-overlay, .btn-action, .btn-3d, .stats-grid, .no-print, .close-modal, #searchInput, .report-controls, .filter-container, .table-responsive, .form-grid {
+                display: none !important;
+            }
+
+            /* Hide all main sections (Dashboard, Archive table, Reports) to prevent them from appearing at bottom */
+            .tab-content {
+                display: none !important;
+            }
+
+            /* Show only the print area */
+            #printArea {
+                display: block !important;
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                visibility: visible;
+                background: white;
+                color: black;
+                padding: 20px;
+                z-index: 99999;
+                direction: rtl;
+                font-size: 12pt;
+            }
+
+            /* Print specific styling */
             .print-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
             .print-header h1 { font-size: 18pt; margin: 0; color: #000; }
             .print-header p { margin: 5px 0; font-size: 11pt; }
@@ -176,6 +200,8 @@
             .print-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
             .print-table th, .print-table td { border: 1px solid #333; padding: 8px; text-align: right; font-size: 10pt; white-space: normal; }
             .print-table th { background-color: #eee !important; color: #000; }
+            
+            body { background: white; height: auto; overflow: visible; display: block; margin: 0; padding: 0; }
             @page { size: A4; margin: 10mm; }
         }
 
@@ -489,7 +515,6 @@
         function fetchRealtimeData() {
             RequestManager.listenToRequests((data) => {
                 requestsData = data;
-                // Sort Descending by Date/ID usually better, but keeping Sort Ascending per request
                 requestsData.sort((a, b) => a.reqId.localeCompare(b.reqId, undefined, { numeric: true, sensitivity: 'base' }));
 
                 renderTable(requestsData);
@@ -563,21 +588,18 @@
         // --- 4. Form Handling ---
         document.getElementById('requestForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            
-            // Validate Type
             const reqType = document.getElementById('reqType').value;
             if(!reqType) { alert("يرجى اختيار نوع الطلب"); return; }
 
             const docInputs = document.querySelectorAll('.doc-input');
             const docsList = Array.from(docInputs).map(i => i.value.trim()).filter(v => v !== "");
-            
             const replyInputs = document.querySelectorAll('.reply-input');
             const repliesList = Array.from(replyInputs).map(i => i.value.trim()).filter(v => v !== "");
 
             const requestData = {
                 reqId: document.getElementById('reqId').value,
                 reqDate: document.getElementById('reqDate').value,
-                requestType: reqType, // New Field
+                requestType: reqType,
                 title: document.getElementById('reqTitle').value,
                 authority: document.getElementById('reqAuthority').value,
                 details: document.getElementById('reqDetails').value,
@@ -607,7 +629,7 @@
             document.getElementById('reqDate').valueAsDate = new Date();
             currentRequestKey = null;
             document.getElementById('submitButtonText').innerText = 'حفظ الطلب';
-            document.getElementById('reqType').value = ""; // Reset Select
+            document.getElementById('reqType').value = ""; 
             
             document.getElementById('documentsSection').classList.remove('active');
             document.getElementById('documentsList').innerHTML = ''; 
@@ -618,7 +640,7 @@
             setAutoId();
         }
 
-        // --- 5. Table & Filter (UPDATED LOGIC) ---
+        // --- 5. Table & Filter ---
         function applyFilters() {
             const searchText = document.getElementById('searchInput').value.toLowerCase();
             const typeFilter = document.getElementById('filterType').value;
@@ -627,20 +649,14 @@
             const filtered = requestsData.filter(r => {
                 const matchText = r.title.toLowerCase().includes(searchText) || r.reqId.includes(searchText) || r.authority.toLowerCase().includes(searchText);
                 const matchType = typeFilter === 'all' || r.requestType === typeFilter;
-                
-                // --- التعديل الجديد للفلترة ---
                 let matchStatus = statusFilter === 'all';
                 if (!matchStatus) {
                     if (statusFilter === 'replied') {
-                        // عرض الطلب إذا كانت حالته "تم الرد" أو إذا كان يوجد ردود مسجلة (بغض النظر عن الحالة)
                         matchStatus = (r.status === 'replied') || (r.repliesList && r.repliesList.length > 0);
                     } else {
-                        // للفلترات الأخرى، التحقق التقليدي
                         matchStatus = r.status === statusFilter;
                     }
                 }
-                // ------------------------------
-
                 return matchText && matchType && matchStatus;
             });
             renderTable(filtered);
@@ -749,7 +765,6 @@
         };
 
         function updateAllReports() {
-            // Split Data
             const specials = requestsData.filter(r => r.requestType === 'special');
             const generals = requestsData.filter(r => r.requestType === 'general');
             const briefings = requestsData.filter(r => r.requestType === 'briefing');
@@ -801,7 +816,6 @@
             
             let docsHtml = req.hasDocuments ? (req.documentsList?.length ? `<ul>${req.documentsList.map(d=>`<li>${d}</li>`).join('')}</ul>` : 'يوجد مرفقات') : 'لا يوجد';
             
-            // عرض الردود دائماً إذا وجدت
             let repliesHtml = '';
             if (req.repliesList && req.repliesList.length > 0) {
                 repliesHtml = `<div style="background:#f0fdf4; border: 1px solid #10b981; padding:10px; margin-top:10px; border-radius:8px;">
@@ -843,7 +857,6 @@
             document.getElementById('reqStatus').value = req.status;
             document.getElementById('hasDocuments').checked = req.hasDocuments;
 
-            // Restore Docs
             toggleDocumentsSection();
             const dList = document.getElementById('documentsList'); dList.innerHTML = '';
             if(req.documentsList) req.documentsList.forEach(d => {
@@ -853,7 +866,6 @@
             });
             if(dList.children.length === 0) addDocumentField();
 
-            // Restore Replies
             const rList = document.getElementById('repliesList'); rList.innerHTML = '';
             if(req.repliesList) req.repliesList.forEach(r => {
                  const div = document.createElement('div'); div.className='doc-item';
@@ -861,7 +873,6 @@
                 rList.appendChild(div);
             });
 
-            // إجبار قسم الردود على الظهور إذا كان يوجد بيانات
             if(req.repliesList && req.repliesList.length > 0) {
                 document.getElementById('repliesSection').style.display = 'block';
             } else {
@@ -977,7 +988,7 @@
     <div id="printArea"></div>
 
     <script>
-        // Firebase Config (استخدم نفس الإعدادات الخاصة بك)
+        // Firebase Config
         const firebaseConfig = {
             apiKey: "AIzaSyC4J8ncbuejvzfWvzCTAXRzjFgvrchXpE8",
             authDomain: "hedor-bea3c.firebaseapp.com",
