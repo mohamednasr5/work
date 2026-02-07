@@ -117,6 +117,8 @@
         .btn-3d { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border: none; padding: 12px 25px; border-radius: 10px; font-family: inherit; font-weight: 700; cursor: pointer; box-shadow: 0 4px 0 #1e3a8a; transition: all 0.1s; display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; }
         .btn-3d:active { transform: translateY(4px); box-shadow: none; }
         .btn-3d.secondary { background: linear-gradient(135deg, #64748b, #475569); box-shadow: 0 4px 0 #334155; }
+        .btn-3d.danger { background: linear-gradient(135deg, #ef4444, #b91c1c); box-shadow: 0 4px 0 #991b1b; }
+        .btn-3d.success { background: linear-gradient(135deg, #10b981, #047857); box-shadow: 0 4px 0 #065f46; }
         .btn-sm { padding: 8px 15px; font-size: 0.9rem; }
 
         /* --- Table --- */
@@ -152,6 +154,25 @@
         .modal-actions { display: flex; gap: 10px; padding: 20px; border-top: 1px solid #e2e8f0; }
         .btn-action { flex: 1; padding: 10px; border: none; border-radius: 8px; cursor: pointer; color: white; font-weight: bold; display: flex; justify-content: center; align-items: center; gap: 5px; }
 
+        /* --- Backup & Notifications Styles --- */
+        .backup-container { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 800px; margin: 0 auto; }
+        .backup-card { background: white; padding: 30px; border-radius: var(--radius); text-align: center; border: 2px dashed #cbd5e1; transition: 0.3s; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; }
+        .backup-card:hover { border-color: var(--primary); background: #f8fafc; }
+        .backup-icon { font-size: 3rem; color: var(--text-light); margin-bottom: 15px; }
+        .last-backup-info { margin-top: 20px; padding: 15px; background: #fff7ed; border-radius: 8px; border-right: 4px solid #f59e0b; text-align: right; }
+
+        .notification-toast {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            width: 90%; max-width: 500px;
+            background: white; padding: 15px 20px; border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            display: none; z-index: 3000;
+            border-right: 5px solid #ef4444;
+            align-items: center; gap: 15px;
+            animation: slideDown 0.4s ease;
+        }
+        @keyframes slideDown { from { transform: translate(-50%, -50px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+        
         /* --- Documents & Replies --- */
         #documentsSection, #repliesSection { display: none; padding: 15px; border-radius: 12px; margin-top: 15px; }
         #documentsSection { background: #f8fafc; border: 2px dashed #cbd5e1; }
@@ -161,36 +182,16 @@
         .doc-item { display: flex; gap: 10px; align-items: center; background: white; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
         .doc-item input, .doc-item textarea { flex: 1; border: none; padding: 5px; font-family: inherit; }
 
-        /* --- PRINT STYLES (UPDATED) --- */
+        /* --- PRINT STYLES --- */
         #printArea { display: none; } 
         @media print {
-            /* Hide UI Elements */
-            aside, nav.mobile-nav, .header-3d, .modal-overlay, .btn-action, .btn-3d, .stats-grid, .no-print, .close-modal, #searchInput, .report-controls, .filter-container, .table-responsive, .form-grid {
+            aside, nav.mobile-nav, .header-3d, .modal-overlay, .btn-action, .btn-3d, .stats-grid, .no-print, .close-modal, #searchInput, .report-controls, .filter-container, .table-responsive, .form-grid, .backup-container {
                 display: none !important;
             }
-
-            /* Hide all main sections (Dashboard, Archive table, Reports) to prevent them from appearing at bottom */
-            .tab-content {
-                display: none !important;
-            }
-
-            /* Show only the print area */
+            .tab-content { display: none !important; }
             #printArea {
-                display: block !important;
-                position: absolute;
-                top: 0;
-                left: 0;
-                width: 100%;
-                visibility: visible;
-                background: white;
-                color: black;
-                padding: 20px;
-                z-index: 99999;
-                direction: rtl;
-                font-size: 12pt;
+                display: block !important; position: absolute; top: 0; left: 0; width: 100%; visibility: visible; background: white; color: black; padding: 20px; z-index: 99999; direction: rtl; font-size: 12pt;
             }
-
-            /* Print specific styling */
             .print-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 20px; }
             .print-header h1 { font-size: 18pt; margin: 0; color: #000; }
             .print-header p { margin: 5px 0; font-size: 11pt; }
@@ -200,7 +201,6 @@
             .print-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
             .print-table th, .print-table td { border: 1px solid #333; padding: 8px; text-align: right; font-size: 10pt; white-space: normal; }
             .print-table th { background-color: #eee !important; color: #000; }
-            
             body { background: white; height: auto; overflow: visible; display: block; margin: 0; padding: 0; }
             @page { size: A4; margin: 10mm; }
         }
@@ -209,11 +209,23 @@
             .sidebar { display: none; }
             .mobile-nav { display: flex; }
             .form-grid { grid-template-columns:1fr; }
+            .backup-container { grid-template-columns: 1fr; }
             th:nth-child(5), td:nth-child(5), th:nth-child(6), td:nth-child(6) { display: none; } 
         }
     </style>
 </head>
 <body>
+    <!-- Notification Toast -->
+    <div id="notification-toast" class="notification-toast">
+        <div style="background: #fef2f2; padding: 10px; border-radius: 50%; color: #ef4444;"><i class="fas fa-exclamation-triangle"></i></div>
+        <div style="flex:1;">
+            <h4 style="margin:0; font-size:0.95rem; color:#b91c1c;">تنبيه: النسخ الاحتياطي قديم</h4>
+            <p style="margin:5px 0 0; font-size:0.85rem; color:#64748b;">لم تقم بعمل نسخة احتياطية منذ أسبوع. يُنصح بعمل نسخة حالاً لحماية البيانات.</p>
+        </div>
+        <button class="btn-3d btn-sm" onclick="dismissNotification()" style="background:var(--secondary)">متابعة</button>
+        <button class="btn-3d btn-sm" onclick="goToBackup()">نسخ احتياطي</button>
+    </div>
+
     <aside class="sidebar no-print">
         <div class="logo">
             <i class="fas fa-landmark"></i>
@@ -233,6 +245,9 @@
                 <li onclick="switchTab('archive', this)">
                     <i class="fas fa-archive"></i> <span>الأرشيف</span>
                 </li>
+                <li onclick="switchTab('backup', this)" style="margin-top: 30px; border-top: 1px solid #f1f5f9;">
+                    <i class="fas fa-database" style="color: var(--primary);"></i> <span style="color: var(--primary);">النسخ الاحتياطي</span>
+                </li>
             </ul>
         </nav>
     </aside>
@@ -242,6 +257,7 @@
         <div class="mobile-nav-item" onclick="switchTab('reports', this)"><i class="fas fa-file-invoice"></i><span>التقارير</span></div>
         <div class="mobile-nav-item" onclick="switchTab('register', this)"><i class="fas fa-plus-circle"></i><span>إضافة</span></div>
         <div class="mobile-nav-item" onclick="switchTab('archive', this)"><i class="fas fa-list"></i><span>الأرشيف</span></div>
+        <div class="mobile-nav-item" onclick="switchTab('backup', this)"><i class="fas fa-database"></i><span>حفظ</span></div>
     </nav>
 
     <main class="main-content">
@@ -443,6 +459,41 @@
                 </div>
             </div>
         </section>
+
+        <section id="backup" class="tab-content">
+            <div class="header-3d no-print">
+                <h1><i class="fas fa-database"></i> 💾 النسخ الاحتياطي واستعادة البيانات</h1>
+            </div>
+            <div class="glass-panel">
+                <div class="backup-container">
+                    <!-- Export Card -->
+                    <div class="backup-card">
+                        <div class="backup-icon"><i class="fas fa-file-export"></i></div>
+                        <h3>تصدير قاعدة البيانات</h3>
+                        <p style="color:#64748b; margin-bottom:20px;">قم بتنزيل نسخة كاملة من جميع الطلبات كملف JSON للحفظ على جهازك.</p>
+                        <button class="btn-3d success" onclick="exportDatabase()">
+                            <i class="fas fa-download"></i> تصدير النسخة الاحتياطية
+                        </button>
+                    </div>
+
+                    <!-- Import Card -->
+                    <div class="backup-card">
+                        <div class="backup-icon"><i class="fas fa-file-import"></i></div>
+                        <h3>استيراد قاعدة البيانات</h3>
+                        <p style="color:#64748b; margin-bottom:20px;">استرجاع البيانات من ملف نسخة سابقة. (تنبيه: سيتم استبدال البيانات الحالية).</p>
+                        <button class="btn-3d danger" onclick="triggerFileUpload()">
+                            <i class="fas fa-upload"></i> استيراد واستعادة
+                        </button>
+                        <input type="file" id="dbFileInput" accept=".json" style="display: none;" onchange="handleFileImport(this)">
+                    </div>
+                </div>
+
+                <div class="last-backup-info">
+                    <h4><i class="fas fa-history"></i> سجل النسخ الاحتياطي</h4>
+                    <p id="lastBackupText" style="margin-top: 5px;">لم يتم عمل نسخة احتياطية من قبل.</p>
+                </div>
+            </div>
+        </section>
     </main>
 
     <div id="detailsModal" class="modal-overlay">
@@ -504,6 +555,9 @@
             addDocumentField(); 
             addReplyField(); 
             
+            checkBackupStatus(); // Weekly Notification Check
+            updateLastBackupUI();
+
             if (typeof RequestManager !== 'undefined') {
                 fetchRealtimeData();
             } else {
@@ -511,7 +565,142 @@
             }
         });
 
-        // --- 1. Fetch Data ---
+        // --- 1. Security & Passcode ---
+        function checkPasscode(action) {
+            // Use a custom modal or prompt. Using prompt as requested but implemented securely in logic.
+            const code = prompt("أدخل الرمز السري للمتابعة:");
+            if (code === SECURE_CODE) {
+                if (action === 'edit') performEdit();
+                else if (action === 'delete') performDelete();
+                else if (action === 'export') performExport();
+                else if (action === 'import') return true; // For import flow
+            } else { 
+                if(code !== null) alert("رمز خاطئ! لا تملك الصلاحية."); 
+                return false;
+            }
+        }
+
+        // --- 2. Backup & Import Logic ---
+        function updateLastBackupUI() {
+            const lastBackup = localStorage.getItem('lastBackupTime');
+            const textEl = document.getElementById('lastBackupText');
+            if (lastBackup) {
+                const date = new Date(parseInt(lastBackup));
+                textEl.innerText = `آخر نسخة احتياطية: ${date.toLocaleDateString('ar-EG')} - ${date.toLocaleTimeString('ar-EG')}`;
+            } else {
+                textEl.innerText = "لم يتم عمل نسخة احتياطية من قبل.";
+            }
+        }
+
+        function checkBackupStatus() {
+            const lastBackup = localStorage.getItem('lastBackupTime');
+            const toast = document.getElementById('notification-toast');
+            
+            if (!lastBackup) {
+                toast.style.display = 'flex';
+                return;
+            }
+
+            const diffTime = Math.abs(Date.now() - parseInt(lastBackup));
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
+
+            if (diffDays >= 7) {
+                toast.style.display = 'flex';
+            }
+        }
+
+        function dismissNotification() {
+            document.getElementById('notification-toast').style.display = 'none';
+        }
+        
+        function goToBackup() {
+            dismissNotification();
+            // Find the backup tab li and click it
+            const items = document.querySelectorAll('.nav-links li');
+            if(items.length > 4) {
+                items[4].click(); // Backup is the 5th item
+            } else {
+                document.querySelectorAll('.mobile-nav-item')[4].click();
+            }
+        }
+
+        function exportDatabase() {
+            if (!checkPasscode('export')) return;
+
+            try {
+                const dataStr = JSON.stringify(requestsData, null, 2);
+                const blob = new Blob([dataStr], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                
+                const a = document.createElement('a');
+                a.href = url;
+                const dateStr = new Date().toISOString().split('T')[0];
+                a.download = `Parliament_Backup_${dateStr}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                // Save Timestamp
+                localStorage.setItem('lastBackupTime', Date.now());
+                updateLastBackupUI();
+                dismissNotification();
+                alert("تم تصدير قاعدة البيانات بنجاح.");
+            } catch (e) {
+                console.error(e);
+                alert("حدث خطأ أثناء التصدير.");
+            }
+        }
+
+        function triggerFileUpload() {
+            document.getElementById('dbFileInput').click();
+        }
+
+        function handleFileUpload() {
+             const fileInput = document.getElementById('dbFileInput');
+             if (!fileInput.files.length) return;
+             const file = fileInput.files[0];
+             
+             const reader = new FileReader();
+             reader.onload = function(e) {
+                 try {
+                     const json = JSON.parse(e.target.result);
+                     if (Array.isArray(json)) {
+                         // Security Check before Import
+                         if (checkPasscode('import')) {
+                             performImport(json);
+                         }
+                     } else {
+                         alert("تنسيق الملف غير صحيح.");
+                     }
+                 } catch (err) {
+                     alert("ملف تالف أو غير صالح.");
+                 }
+             };
+             reader.readAsText(file);
+             fileInput.value = ''; // Reset
+        }
+
+        async function performImport(data) {
+            if (!confirm("تحذير: سيتم حذف جميع البيانات الحالية واستبدالها بهذا النسخة. هل أنت متأكد؟")) return;
+            
+            try {
+                // We replace the whole 'parliament-requests' node
+                await window.database.ref('parliament-requests').set(null); // Clear old
+                await window.database.ref('parliament-requests').set(data); // Set new
+                
+                // Update local timestamp to avoid immediate warning
+                localStorage.setItem('lastBackupTime', Date.now());
+                updateLastBackupUI();
+                
+                alert("تم استعادة قاعدة البيانات بنجاح.");
+            } catch (err) {
+                console.error(err);
+                alert("فشلت العملية. تحقق من الاتصال.");
+            }
+        }
+
+        // --- 3. Fetch Data ---
         function fetchRealtimeData() {
             RequestManager.listenToRequests((data) => {
                 requestsData = data;
@@ -523,7 +712,7 @@
             });
         }
 
-        // --- 2. Navigation & Auto ID ---
+        // --- 4. Navigation & Auto ID ---
         function switchTab(tabId, element) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.getElementById(tabId).classList.add('active');
@@ -548,7 +737,7 @@
             document.getElementById('reqId').value = (maxId + 1).toString();
         }
 
-        // --- 3. UI Helpers ---
+        // --- 5. UI Helpers ---
         function toggleDocumentsSection() {
             const isChecked = document.getElementById('hasDocuments').checked;
             const section = document.getElementById('documentsSection');
@@ -585,7 +774,7 @@
             container.appendChild(div);
         }
 
-        // --- 4. Form Handling ---
+        // --- 6. Form Handling ---
         document.getElementById('requestForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const reqType = document.getElementById('reqType').value;
@@ -640,7 +829,7 @@
             setAutoId();
         }
 
-        // --- 5. Table & Filter ---
+        // --- 7. Table & Filter ---
         function applyFilters() {
             const searchText = document.getElementById('searchInput').value.toLowerCase();
             const typeFilter = document.getElementById('filterType').value;
@@ -690,7 +879,7 @@
             });
         }
 
-        // --- 6. Dashboard Stats ---
+        // --- 8. Dashboard Stats ---
         function updateDashboard() {
             const total = requestsData.length;
             const special = requestsData.filter(r => r.requestType === 'special').length;
@@ -721,7 +910,7 @@
             });
         }
 
-        // --- 7. Grouped Reports Logic ---
+        // --- 9. Grouped Reports Logic ---
         const AI_AuthorityMatcher = {
             stopWords: ['وزارة', 'الهيئة', 'المؤسسة', 'المصلحة', 'الجهاز', 'المجلس', 'البنك', 'الشركة', 'العامة', 'القومية', 'المركزية'],
             cleanText: function(text) {
@@ -805,7 +994,7 @@
         }
         function closeAuthorityModal() { document.getElementById('authorityModal').style.display = 'none'; }
 
-        // --- 8. Modal & Actions ---
+        // --- 10. Modal & Actions ---
         function openModal(key) {
             const req = requestsData.find(r => r.firebaseKey === key);
             if (!req) return;
@@ -835,14 +1024,6 @@
             document.getElementById('detailsModal').style.display = 'flex';
         }
         function closeModal() { document.getElementById('detailsModal').style.display = 'none'; currentRequestKey = null; }
-
-        function checkPasscode(action) {
-            const code = prompt("أدخل الرمز السري:");
-            if (code === SECURE_CODE) {
-                if (action === 'edit') performEdit();
-                else if (action === 'delete') performDelete();
-            } else { alert("رمز خاطئ"); }
-        }
 
         async function performEdit() {
             const req = requestsData.find(r => r.firebaseKey === currentRequestKey);
@@ -892,7 +1073,7 @@
             }
         }
 
-        // --- 9. Printing Logic ---
+        // --- 11. Printing Logic ---
         function generatePrintHeader(title) {
             const now = new Date();
             return `<div class="print-header"><h1>نظام إدارة طلبات البرلمان</h1><p>${title}</p><p>${now.toLocaleDateString('ar-EG')} ${now.toLocaleTimeString('ar-EG')}</p></div><hr>`;
