@@ -22,9 +22,9 @@
             --warning: #f59e0b;
             --danger: #ef4444;
             --info: #8b5cf6; 
-            --type-special: #7c3aed; /* بنفسجي للخاص */
-            --type-general: #0891b2; /* سماوي للعام */
-            --type-briefing: #ea580c; /* برتقالي للإحاطة */
+            --type-special: #7c3aed;
+            --type-general: #0891b2;
+            --type-briefing: #ea580c;
             --background: #f1f5f9;
             --surface: #ffffff;
             --text-main: #1e293b;
@@ -34,6 +34,7 @@
             --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
             --radius: 16px;
             --nav-height-mobile: 65px;
+            --gold-gradient: linear-gradient(135deg, #fcd34d 0%, #d97706 100%);
         }
 
         * { box-sizing: border-box; margin: 0; padding: 0; outline: none; -webkit-tap-highlight-color: transparent; }
@@ -182,10 +183,102 @@
         .doc-item { display: flex; gap: 10px; align-items: center; background: white; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
         .doc-item input, .doc-item textarea { flex: 1; border: none; padding: 5px; font-family: inherit; }
 
+        /* --- Luxury Footer Styles --- */
+        .luxury-footer {
+            margin-top: 40px;
+            padding-bottom: 20px;
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            color: #fff;
+            border-radius: var(--radius) var(--radius) 0 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+            border-top: 3px solid #d97706;
+        }
+        
+        .luxury-footer::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23d97706' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            z-index: 1;
+            opacity: 0.3;
+        }
+
+        .footer-content {
+            position: relative;
+            z-index: 2;
+            padding: 40px 20px 20px;
+        }
+
+        .footer-title {
+            color: #94a3b8;
+            font-size: 1rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .heart-icon {
+            color: #ef4444;
+            margin: 0 8px;
+            animation: heartbeat 1.5s infinite;
+            display: inline-block;
+        }
+
+        .footer-name {
+            font-size: 1.8rem;
+            font-weight: 800;
+            background: var(--gold-gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 10px rgba(217, 119, 6, 0.3);
+        }
+
+        .footer-contact {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .contact-item {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(5px);
+            padding: 10px 20px;
+            border-radius: 50px;
+            color: #f1f5f9;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 0.95rem;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .contact-item:hover {
+            background: var(--gold-gradient);
+            color: #1e293b;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(217, 119, 6, 0.4);
+        }
+
+        @keyframes heartbeat {
+            0% { transform: scale(1); }
+            15% { transform: scale(1.3); }
+            30% { transform: scale(1); }
+            45% { transform: scale(1.15); }
+            60% { transform: scale(1); }
+        }
+
         /* --- PRINT STYLES --- */
         #printArea { display: none; } 
         @media print {
-            aside, nav.mobile-nav, .header-3d, .modal-overlay, .btn-action, .btn-3d, .stats-grid, .no-print, .close-modal, #searchInput, .report-controls, .filter-container, .table-responsive, .form-grid, .backup-container {
+            aside, nav.mobile-nav, .header-3d, .modal-overlay, .btn-action, .btn-3d, .stats-grid, .no-print, .close-modal, #searchInput, .report-controls, .filter-container, .table-responsive, .form-grid, .backup-container, .luxury-footer {
                 display: none !important;
             }
             .tab-content { display: none !important; }
@@ -211,6 +304,10 @@
             .form-grid { grid-template-columns:1fr; }
             .backup-container { grid-template-columns: 1fr; }
             th:nth-child(5), td:nth-child(5), th:nth-child(6), td:nth-child(6) { display: none; } 
+            
+            .footer-name { font-size: 1.4rem; }
+            .footer-contact { flex-direction: column; gap: 10px; }
+            .contact-item { width: 100%; justify-content: center; }
         }
     </style>
 </head>
@@ -521,6 +618,23 @@
                 </div>
             </div>
         </section>
+
+        <!-- Luxury Footer -->
+        <footer class="luxury-footer no-print">
+            <div class="footer-content">
+                <p class="footer-title">تم البرمجة والتطوير بكل حب <i class="fas fa-heartbeat heart-icon"></i></p>
+                <h3 class="footer-name">المهندس محمد حماد</h3>
+                <div class="footer-contact">
+                    <a href="tel:01279934735" class="contact-item">
+                        <i class="fas fa-phone-alt"></i> 01279934735
+                    </a>
+                    <a href="https://www.facebook.com/en.mohamed.nasr" target="_blank" class="contact-item">
+                        <i class="fab fa-facebook"></i> فيسبوك
+                    </a>
+                </div>
+            </div>
+        </footer>
+
     </main>
 
     <div id="detailsModal" class="modal-overlay">
@@ -602,7 +716,7 @@
             if (code === SECURE_CODE) {
                 if (action === 'edit') performEdit();
                 else if (action === 'delete') performDelete();
-                else if (action === 'export') { performExport(); return true; } // FIXED: Added return true to allow download
+                else if (action === 'export') { performExport(); return true; } 
                 else if (action === 'import') return true;
             } else { 
                 if(code !== null) alert("رمز خاطئ! لا تملك الصلاحية."); 
