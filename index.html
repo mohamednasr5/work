@@ -25,6 +25,7 @@
             --type-special: #7c3aed;
             --type-general: #0891b2;
             --type-briefing: #ea580c;
+            --type-urgent: #dc2626; /* لون جديد للبيان العاجل */
             --background: #f1f5f9;
             --surface: #ffffff;
             --text-main: #1e293b;
@@ -73,6 +74,7 @@
         .stat-card.type-special::before { background: var(--type-special); }
         .stat-card.type-general::before { background: var(--type-general); }
         .stat-card.type-briefing::before { background: var(--type-briefing); }
+        .stat-card.type-urgent::before { background: var(--type-urgent); }
         
         .stat-card .icon { font-size: 2rem; margin-bottom: 10px; display: block; }
         .stat-card h3 { font-size: 0.9rem; color: var(--text-light); margin-bottom: 5px; }
@@ -138,6 +140,7 @@
         .bg-special { background-color: var(--type-special); }
         .bg-general { background-color: var(--type-general); }
         .bg-briefing { background-color: var(--type-briefing); }
+        .bg-urgent { background-color: var(--type-urgent); }
 
         /* --- Mobile Navigation --- */
         .mobile-nav { display: none; position: fixed; bottom: 0; left: 0; width: 100%; height: var(--nav-height-mobile); background: var(--surface); box-shadow: 0 -5px 20px rgba(0,0,0,0.05); z-index: 1000; justify-content: space-around; align-items: center; padding-bottom: env(safe-area-inset-bottom); }
@@ -380,6 +383,9 @@
                 <div class="stat-card type-briefing">
                     <div class="icon">📜</div><h3>طلبات إحاطة</h3><span class="number" id="statsBriefing">0</span>
                 </div>
+                <div class="stat-card type-urgent">
+                    <div class="icon">🚨</div><h3>بيانات عاجلة</h3><span class="number" id="statsUrgent">0</span>
+                </div>
                 <div class="stat-card success">
                     <div class="icon">✅</div><h3>مكتملة</h3><span class="number" id="completedRequests">0</span>
                 </div>
@@ -418,6 +424,11 @@
                     <i class="fas fa-scroll"></i> طلبات الإحاطة
                 </div>
                 <div id="gridBriefing" class="authority-grid"></div>
+
+                <div class="report-section-title" style="color: var(--type-urgent); border-color: var(--type-urgent);">
+                    <i class="fas fa-exclamation-circle"></i> البيانات العاجلة
+                </div>
+                <div id="gridUrgent" class="authority-grid"></div>
             </div>
         </section>
 
@@ -444,6 +455,7 @@
                                 <option value="special">طلب خاص</option>
                                 <option value="general">طلب عام</option>
                                 <option value="briefing">طلب إحاطة</option>
+                                <option value="urgent">بيان عاجل</option>
                             </select>
                         </div>
 
@@ -523,6 +535,7 @@
                     <option value="special">طلب خاص</option>
                     <option value="general">طلب عام</option>
                     <option value="briefing">طلب إحاطة</option>
+                    <option value="urgent">بيان عاجل</option>
                 </select>
 
                 <select id="filterStatus" onchange="applyFilters()">
@@ -688,7 +701,7 @@
             'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'replied': 'تم الرد', 'completed': 'مكتمل', 'rejected': 'مرفوض'
         };
         const typeMap = {
-            'special': 'طلب خاص', 'general': 'طلب عام', 'briefing': 'طلب إحاطة'
+            'special': 'طلب خاص', 'general': 'طلب عام', 'briefing': 'طلب إحاطة', 'urgent': 'بيان عاجل'
         };
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -1185,26 +1198,28 @@
             const special = requestsData.filter(r => r.requestType === 'special').length;
             const general = requestsData.filter(r => r.requestType === 'general').length;
             const briefing = requestsData.filter(r => r.requestType === 'briefing').length;
+            const urgent = requestsData.filter(r => r.requestType === 'urgent').length;
             
             document.getElementById("totalRequests").innerText = total;
             document.getElementById("statsSpecial").innerText = special;
             document.getElementById("statsGeneral").innerText = general;
             document.getElementById("statsBriefing").innerText = briefing;
+            document.getElementById("statsUrgent").innerText = urgent;
 
             document.getElementById("completedRequests").innerText = requestsData.filter(r => r.status === 'completed').length;
             document.getElementById("pendingRequests").innerText = requestsData.filter(r => r.status === 'execution' || r.status === 'review').length;
 
-            renderChart(special, general, briefing);
+            renderChart(special, general, briefing, urgent);
         }
 
-        function renderChart(s, g, b) {
+        function renderChart(s, g, b, u) {
             const ctx = document.getElementById('requestsChart').getContext('2d');
             if (chartInstance) chartInstance.destroy();
             chartInstance = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['خاص', 'عام', 'إحاطة'],
-                    datasets: [{ data: [s, g, b], backgroundColor: ['#7c3aed', '#0891b2', '#ea580c'], borderWidth: 0 }]
+                    labels: ['خاص', 'عام', 'إحاطة', 'عاجل'],
+                    datasets: [{ data: [s, g, b, u], backgroundColor: ['#7c3aed', '#0891b2', '#ea580c', '#dc2626'], borderWidth: 0 }]
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Cairo' } } } } }
             });
@@ -1257,10 +1272,12 @@
             const specials = requestsData.filter(r => r.requestType === 'special');
             const generals = requestsData.filter(r => r.requestType === 'general');
             const briefings = requestsData.filter(r => r.requestType === 'briefing');
+            const urgents = requestsData.filter(r => r.requestType === 'urgent');
 
             renderAuthorityGrid(specials, 'gridSpecial');
             renderAuthorityGrid(generals, 'gridGeneral');
             renderAuthorityGrid(briefings, 'gridBriefing');
+            renderAuthorityGrid(urgents, 'gridUrgent');
         }
 
         function renderAuthorityGrid(data, elementId) {
@@ -1455,12 +1472,14 @@
             const specials = requestsData.filter(r => r.requestType === 'special');
             const generals = requestsData.filter(r => r.requestType === 'general');
             const briefings = requestsData.filter(r => r.requestType === 'briefing');
+            const urgents = requestsData.filter(r => r.requestType === 'urgent');
 
             printArea.innerHTML = `
                 ${generatePrintHeader('التقرير الشامل المصنف')}
                 ${createSection('أولاً: الطلبات الخاصة', specials)}
                 ${createSection('ثانياً: الطلبات العامة', generals)}
                 ${createSection('ثالثاً: طلبات الإحاطة', briefings)}
+                ${createSection('رابعاً: البيانات العاجلة', urgents)}
             `;
             setTimeout(() => window.print(), 300);
         }
