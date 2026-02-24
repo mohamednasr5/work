@@ -25,7 +25,7 @@
             --type-special: #7c3aed;
             --type-general: #0891b2;
             --type-briefing: #ea580c;
-            --type-urgent: #dc2626; /* لون جديد للبيان العاجل */
+            --type-urgent: #dc2626;
             --background: #f1f5f9;
             --surface: #ffffff;
             --text-main: #1e293b;
@@ -695,6 +695,7 @@
         let chartInstance = null;
         let currentAuthorityData = []; 
         const SECURE_CODE = "521988";
+        const AUTH_STORAGE_KEY = "sys_auth_remember";
 
         // Translation Maps
         const statusMap = {
@@ -723,18 +724,30 @@
             }
         });
 
-        // --- 1. Security & Passcode ---
+        // --- 1. Security & Passcode (Modified for Remember Me) ---
         function checkPasscode(action) {
+            // Check if already authenticated on this device
+            if (localStorage.getItem(AUTH_STORAGE_KEY) === 'true') {
+                return handleAction(action);
+            }
+
+            // If not, ask for password
             const code = prompt("أدخل الرمز السري للمتابعة:");
             if (code === SECURE_CODE) {
-                if (action === 'edit') performEdit();
-                else if (action === 'delete') performDelete();
-                else if (action === 'export') { performExport(); return true; } 
-                else if (action === 'import') return true;
+                localStorage.setItem(AUTH_STORAGE_KEY, 'true'); // Remember this device
+                return handleAction(action);
             } else { 
                 if(code !== null) alert("رمز خاطئ! لا تملك الصلاحية."); 
                 return false;
             }
+        }
+
+        function handleAction(action) {
+            if (action === 'edit') performEdit();
+            else if (action === 'delete') performDelete();
+            else if (action === 'export') { performExport(); return true; } 
+            else if (action === 'import') return true;
+            return true;
         }
 
         // --- 2. Logs Manager (Smart Device Detection) ---
@@ -748,58 +761,54 @@
 
             // Smart function to get detailed device info using API + Local specs
             getDetailedDeviceInfo: async function() {
-                // 1. Hardware & Browser Specs (Client Side)
+                // 1. Hardware & Browser Specs
                 const ua = navigator.userAgent;
                 let os = "Unknown OS";
                 let browser = "Unknown Browser";
                 
                 if (/iPad/.test(ua) && !window.MSStream) {
-                    os = "iPad (Tablet)"; browser = "Safari";
+                    os = "iPad"; browser = "Safari";
                 } else if (/iPhone/.test(ua) && !window.MSStream) {
                     os = "iPhone"; browser = "Safari";
                 } else if (/Android/.test(ua)) {
-                    os = "Android"; browser = /Chrome/.test(ua) ? "Chrome" : "Android Browser";
+                    os = "Android"; browser = /Chrome/.test(ua) ? "Chrome" : "Browser";
                 } else if (/Windows/.test(ua)) {
                     os = "Windows"; 
                     if (/Firefox/.test(ua)) browser = "Firefox";
+                    else if (/Edg/.test(ua)) browser = "Edge";
                     else if (/Chrome/.test(ua)) browser = "Chrome";
-                    else if (/Edge/.test(ua)) browser = "Edge";
-                    else browser = "IE/Other";
+                    else browser = "Explorer";
                 } else if (/Macintosh|Mac OS X/.test(ua)) {
                     os = "macOS"; 
                     if (/Chrome/.test(ua)) browser = "Chrome";
                     else if (/Safari/.test(ua)) browser = "Safari";
-                } else if (/Linux/.test(ua)) {
-                    os = "Linux"; browser = "Unknown";
                 }
 
                 const screen = `${window.screen.width}x${window.screen.height}`;
                 const cores = navigator.hardwareConcurrency || '?';
                 const mem = navigator.deviceMemory ? `${navigator.deviceMemory}GB` : '?';
-                const lang = navigator.language;
 
-                // 2. Network & Location Specs (API: ipapi.co)
-                let ip = "Hidden", city = "Unknown", country = "Unknown", isp = "Unknown";
+                // 2. Network Specs (Using API)
+                let ip = "Hidden", city = "Unknown", country = "Unknown";
                 try {
+                    // Using a reliable API for IP info
                     const response = await fetch('https://ipapi.co/json/');
                     if (response.ok) {
                         const data = await response.json();
                         ip = data.ip || "Hidden";
                         city = data.city || "Unknown";
                         country = data.country_name || "Unknown";
-                        isp = data.org || "Unknown";
                     }
                 } catch (e) {
-                    console.log("API Error or Blocked, using local data only.");
+                    console.log("Could not fetch IP info");
                 }
 
                 // 3. Construct Detailed String
-                return `📍 ${country}, ${city} | 🌐 IP: ${ip} | 💻 OS: ${os} | 🧩 Browser: ${browser} | 🖥️ Screen: ${screen} | 🧠 CPU: ${cores} Cores / RAM: ${mem}`;
+                return `📍 ${country}, ${city} | 🌐 IP: ${ip} | 💻 ${os} | 🧩 ${browser} | 🖥️ Screen: ${screen}`;
             },
 
             log: async function(action, details) {
                 if(!this.ref) return;
-                // Get smart device info (Async)
                 const deviceInfo = await this.getDetailedDeviceInfo();
                 
                 const logEntry = {
@@ -815,7 +824,7 @@
                 if(!this.ref) return;
                 if(this.listener) this.ref.off();
                 
-                this.listener = this.ref.orderByChild('timestamp').limitToLast(50).on('value', snap => {
+                this.listener = this.ref.orderByChild('timestamp').limitToLast(100).on('value', snap => {
                     const data = snap.val();
                     const logsArr = data ? Object.values(data) : [];
                     logsArr.sort((a, b) => b.timestamp - a.timestamp);
@@ -832,10 +841,15 @@
 
         function openSecureTab(tabId, element) {
             if(tabId === 'logs') {
-                const code = prompt("من فضلك أدخل الرمز السري للاطلاع على السجل:");
-                if (code !== SECURE_CODE) {
-                    alert("رمز خاطئ! لا تملك الصلاحية.");
-                    return;
+                // Check memory first
+                if (localStorage.getItem(AUTH_STORAGE_KEY) !== 'true') {
+                    const code = prompt("من فضلك أدخل الرمز السري للاطلاع على السجل:");
+                    if (code !== SECURE_CODE) {
+                        alert("رمز خاطئ! لا تملك الصلاحية.");
+                        return;
+                    }
+                    // If correct, remember for future
+                    localStorage.setItem(AUTH_STORAGE_KEY, 'true');
                 }
             }
             
@@ -846,6 +860,7 @@
 
             if (tabId === 'logs') {
                 LogManager.startListening();
+                LogManager.log("تصفح", "دخل على قسم: سجل النشاطات");
             } else {
                 LogManager.stopListening();
             }
@@ -870,6 +885,7 @@
                 else if(log.action.includes('تعديل')) actionClass = 'log-action-edit';
                 else if(log.action.includes('حذف')) actionClass = 'log-action-delete';
                 else if(log.action.includes('نسخ') || log.action.includes('استرجاع')) actionClass = 'log-action-backup';
+                else if(log.action.includes('تصفح')) actionClass = 'log-action-view';
 
                 const deviceClass = (log.device.includes('iPhone') || log.device.includes('Android')) ? 'log-device-mobile' : 'log-device-desktop';
 
@@ -879,8 +895,12 @@
                             <div style="font-weight:bold;">${dateStr}</div>
                             <div style="font-size:0.8rem; color:#64748b;">${timeStr}</div>
                         </td>
-                        <td><span class="${deviceClass}" style="font-size:0.85rem; line-height:1.4; display:block;">${log.device}</span></td>
-                        <td><span class="${actionClass}">${log.action}</span></td>
+                        <td>
+                            <span class="${deviceClass}" style="font-size:0.85rem; line-height:1.4; display:block; white-space:normal; max-width:300px;">
+                                ${log.device}
+                            </span>
+                        </td>
+                        <td><span class="${actionClass}" style="font-weight:bold; color:var(--primary);">${log.action}</span></td>
                         <td style="font-size:0.9rem;">${log.details}</td>
                     </tr>
                 `;
@@ -924,12 +944,12 @@
         function goToBackup() {
             dismissNotification();
             const items = document.querySelectorAll('.nav-links li');
-            if(items.length > 4) items[4].click(); // Backup is 5th item usually
+            if(items.length > 4) items[4].click(); 
             else document.querySelectorAll('.mobile-nav-item')[4].click();
         }
 
         function performExport() {
-            // Placeholder logic handled in exportDatabase via return true flow
+            // Logic handled inside exportDatabase
         }
 
         function exportDatabase() {
@@ -949,12 +969,10 @@
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
 
-                // Save Timestamp
                 localStorage.setItem('lastBackupTime', Date.now());
                 updateLastBackupUI();
                 dismissNotification();
                 
-                // Log Export
                 LogManager.log("تصدير قاعدة بيانات", "تم تنزيل نسخة احتياطية");
                 alert("تم تصدير قاعدة البيانات بنجاح.");
             } catch (e) {
@@ -967,17 +985,15 @@
             document.getElementById('dbFileInput').click();
         }
 
-        function handleFileUpload() {
-             const fileInput = document.getElementById('dbFileInput');
-             if (!fileInput.files.length) return;
-             const file = fileInput.files[0];
+        function handleFileImport(input) {
+             if (!input.files.length) return;
+             const file = input.files[0];
              
              const reader = new FileReader();
              reader.onload = function(e) {
                  try {
                      const json = JSON.parse(e.target.result);
                      if (Array.isArray(json)) {
-                         // Security Check before Import
                          if (checkPasscode('import')) {
                              performImport(json);
                          }
@@ -989,22 +1005,19 @@
                  }
              };
              reader.readAsText(file);
-             fileInput.value = ''; // Reset
+             input.value = ''; 
         }
 
         async function performImport(data) {
             if (!confirm("تحذير: سيتم حذف جميع البيانات الحالية واستبدالها بهذا النسخة. هل أنت متأكد؟")) return;
             
             try {
-                // We replace the whole 'parliament-requests' node
-                await window.database.ref('parliament-requests').set(null); // Clear old
-                await window.database.ref('parliament-requests').set(data); // Set new
+                await window.database.ref('parliament-requests').set(null); 
+                await window.database.ref('parliament-requests').set(data);
                 
-                // Update local timestamp to avoid immediate warning
                 localStorage.setItem('lastBackupTime', Date.now());
                 updateLastBackupUI();
                 
-                // Log Import
                 LogManager.log("استيراد قاعدة بيانات", "تم استعادة النسخة الاحتياطية");
                 alert("تم استعادة قاعدة البيانات بنجاح.");
             } catch (err) {
@@ -1031,7 +1044,21 @@
             document.getElementById(tabId).classList.add('active');
             document.querySelectorAll('.nav-links li, .mobile-nav-item').forEach(item => item.classList.remove('active'));
             if (element) element.classList.add('active');
+            
             if (tabId === 'register') setAutoId();
+
+            // --- Log Navigation ---
+            const tabNames = {
+                'dashboard': 'لوحة التحكم',
+                'reports': 'التقارير المصنفة',
+                'register': 'تسجيل طلب جديد',
+                'archive': 'الأرشيف',
+                'backup': 'النسخ الاحتياطي'
+            };
+            // Only log if it's not the logs tab (logs tab has its own logic in openSecureTab)
+            if (tabId !== 'logs') {
+                LogManager.log("تصفح", `دخل على قسم: ${tabNames[tabId] || tabId}`);
+            }
         }
 
         function setAutoId() {
@@ -1509,19 +1536,16 @@
             addRequest: async (data) => {
                 const ref = window.database.ref('parliament-requests').push();
                 await ref.set({ ...data, firebaseKey: ref.key });
-                // Log the action
                 LogManager.log("إضافة طلب جديد", `رقم الطلب: ${data.reqId} - ${data.title}`);
                 return true;
             },
             updateRequest: async (key, data) => {
                 await window.database.ref(`parliament-requests/${key}`).update(data);
-                // Log the action
                 LogManager.log("تعديل طلب", `رقم الطلب: ${data.reqId} - ${data.title}`);
                 return true;
             },
             deleteRequest: async (key) => {
                 await window.database.ref(`parliament-requests/${key}`).remove();
-                // Log the action
                 LogManager.log("حذف طلب", "تم حذف طلب من النظام");
                 return true;
             },
