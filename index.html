@@ -1273,11 +1273,8 @@
             }
             let maxId = 0;
             requestsData.forEach(req => {
-                const matches = req.reqId.match(/\d+/g);
-                if (matches) {
-                    const num = parseInt(matches.join(''), 10);
-                    if (num > maxId) maxId = num;
-                }
+                const num = parseInt(req.reqId, 10);
+                if (!isNaN(num) && num > maxId) maxId = num;
             });
             document.getElementById('reqId').value = (maxId + 1).toString();
         }
@@ -1616,7 +1613,9 @@
             tbody.innerHTML = '';
             if (data.length === 0) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;">لا توجد طلبات</td></tr>'; return; }
 
-            data.forEach(req => {
+            // الترقيم الوهمي المتسلسل في الواجهة فقط — reqId الأصلي محفوظ في Firebase
+            data.forEach((req, idx) => {
+                const displayNum = idx + 1;
                 const st = statusMap[req.status] || req.status;
                 const stClass = 'status-' + req.status;
                 const tp = typeMap[req.requestType] || 'غير محدد';
@@ -1624,7 +1623,7 @@
 
                 const row = `
                     <tr onclick="openModal('${req.firebaseKey}')" style="cursor:pointer">
-                        <td>${req.reqId}</td>
+                        <td style="font-weight:700; color:var(--primary);">${displayNum}</td>
                         <td><span class="type-badge ${tpClass}">${tp}</span></td>
                         <td style="font-weight:bold;">${req.title}</td>
                         <td>${req.authority}</td>
@@ -1830,10 +1829,9 @@
         }
 
         async function performDelete() {
-            if(confirm('هل أنت متأكد؟')) {
-                await RequestManager.deleteRequest(currentRequestKey);
-                closeModal();
-            }
+            if (!confirm('هل أنت متأكد من حذف هذا الطلب؟')) return;
+            await RequestManager.deleteRequest(currentRequestKey);
+            closeModal();
         }
 
         // --- 12. Printing Logic ---
