@@ -197,6 +197,52 @@
         }
 
         /* ============================================================
+           TITLE DUPLICATE INLINE WARNING - تنبيه تكرار العنوان
+           ============================================================ */
+        #title-duplicate-warning {
+            display: none;
+            margin-top: 8px;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1.5px solid #fbbf24;
+            background: #fffbeb;
+            animation: fadeInWarn 0.3s ease;
+        }
+        #title-duplicate-warning.visible { display: block; }
+        @keyframes fadeInWarn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        .title-warn-header {
+            display: flex; align-items: center; gap: 8px;
+            padding: 9px 13px;
+            background: #fef3c7;
+            border-bottom: 1px solid #fde68a;
+            font-size: 0.85rem; font-weight: 700; color: #92400e;
+        }
+        .title-warn-header i { color: #d97706; font-size: 1rem; flex-shrink: 0; }
+        .title-warn-list { display: flex; flex-direction: column; gap: 0; }
+        .title-warn-item {
+            display: flex; align-items: center; gap: 8px;
+            padding: 8px 13px;
+            border-bottom: 1px solid #fde68a;
+            font-size: 0.82rem; cursor: pointer;
+            transition: background 0.15s;
+        }
+        .title-warn-item:last-child { border-bottom: none; }
+        .title-warn-item:hover { background: #fef9c3; }
+        .title-warn-num {
+            background: #d97706; color: white;
+            padding: 2px 8px; border-radius: 5px;
+            font-weight: 800; font-size: 0.78rem; flex-shrink: 0;
+        }
+        .title-warn-text { flex: 1; color: #1e293b; font-weight: 600; }
+        .title-warn-status {
+            font-size: 0.72rem; padding: 2px 7px; border-radius: 10px; flex-shrink: 0;
+        }
+        .title-warn-authority { font-size: 0.75rem; color: #64748b; flex-shrink: 0; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        /* ============================================================
            DUPLICATE WARNING TOAST - التعديل #2: تحذير الاسم المكرر
            ============================================================ */
         #duplicate-authority-toast {
@@ -617,7 +663,15 @@
 
                         <div class="input-group full-width">
                             <label><i class="fas fa-heading"></i> عنوان الطلب</label>
-                            <input type="text" id="reqTitle" required placeholder="عنوان مختصر للطلب">
+                            <input type="text" id="reqTitle" required placeholder="عنوان مختصر للطلب" oninput="checkDuplicateTitle(this.value)">
+                            <!-- تنبيه التكرار الثابت تحت الخانة -->
+                            <div id="title-duplicate-warning">
+                                <div class="title-warn-header">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span id="title-warn-msg">يوجد طلبات مشابهة</span>
+                                </div>
+                                <div id="title-warn-list" class="title-warn-list"></div>
+                            </div>
                         </div>
                         <div class="input-group full-width">
                             <label><i class="fas fa-building"></i> الجهة المعنية</label>
@@ -1297,6 +1351,67 @@
         }
 
         let duplicateCheckTimer = null;
+        let titleCheckTimer = null;
+
+        // ============================================================
+        // كشف التكرار في خانة عنوان الطلب — inline ولا يختفي تلقائياً
+        // ============================================================
+        function checkDuplicateTitle(inputVal) {
+            clearTimeout(titleCheckTimer);
+
+            const warning = document.getElementById('title-duplicate-warning');
+            // إخفاء التنبيه فوراً لو الخانة فارغة أو قصيرة
+            if (!inputVal || inputVal.trim().length < 3) {
+                warning.classList.remove('visible');
+                return;
+            }
+
+            titleCheckTimer = setTimeout(() => {
+                const currentKey = currentRequestKey; // تجاهل الطلب الحالي عند التعديل
+                const matches = requestsData.filter(req => {
+                    if (currentKey && req.firebaseKey === currentKey) return false;
+                    return calculateTextSimilarity(inputVal, req.title) >= 0.6;
+                });
+
+                const warnMsg  = document.getElementById('title-warn-msg');
+                const warnList = document.getElementById('title-warn-list');
+
+                if (matches.length === 0) {
+                    warning.classList.remove('visible');
+                    return;
+                }
+
+                // بناء رسالة الرأس
+                warnMsg.innerHTML = `تم إيجاد <strong>${matches.length}</strong> طلب مشابه — اضغط لعرض التفاصيل`;
+
+                // بناء القائمة
+                warnList.innerHTML = '';
+                matches.slice(0, 6).forEach(req => {
+                    const item = document.createElement('div');
+                    item.className = 'title-warn-item';
+                    item.title = 'اضغط لعرض الطلب';
+                    item.innerHTML = `
+                        <span class="title-warn-num">#${req.reqId}</span>
+                        <span class="title-warn-text">${req.title}</span>
+                        <span class="title-warn-authority">${req.authority || ''}</span>
+                        <span class="title-warn-status status-badge status-${req.status}">${statusMap[req.status] || ''}</span>
+                    `;
+                    item.onclick = () => {
+                        if (req.firebaseKey) {
+                            switchTab('archive');
+                            setTimeout(() => openModal(req.firebaseKey), 300);
+                        }
+                    };
+                    warnList.appendChild(item);
+                });
+
+                if (matches.length > 6) {
+                    warnList.innerHTML += `<div style="text-align:center;padding:7px;font-size:0.8rem;color:#92400e;background:#fef9c3;">... و ${matches.length - 6} طلبات أخرى مشابهة</div>`;
+                }
+
+                warning.classList.add('visible');
+            }, 500);
+        }
 
         function checkDuplicateAuthority(inputVal) {
             // debounce: انتظر 600ms بعد آخر كتابة
@@ -1377,6 +1492,7 @@
 
             // إغلاق toast التكرار عند الحفظ
             closeDuplicateToast();
+            document.getElementById('title-duplicate-warning').classList.remove('visible');
 
             const docInputs = document.querySelectorAll('.doc-input');
             const docsList = Array.from(docInputs).map(i => i.value.trim()).filter(v => v !== "");
@@ -1426,6 +1542,8 @@
             addReplyField();
             setAutoId();
             closeDuplicateToast();
+            // إخفاء تنبيه تكرار العنوان
+            document.getElementById('title-duplicate-warning').classList.remove('visible');
         }
 
         // ============================================================
