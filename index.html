@@ -107,14 +107,151 @@
         .input-group input[readonly] { background-color: #f1f5f9; color: #64748b; cursor: not-allowed; border-color: #cbd5e1; }
         .input-group input:focus, .input-group select:focus, .input-group textarea:focus { border-color: var(--primary); }
 
-        /* --- Filter Controls --- */
+        /* ============================================================
+           ARCHIVE STICKY FILTER BAR - التعديل #1: تثبيت شريط البحث
+           ============================================================ */
+        #archive-sticky-bar {
+            position: sticky;
+            top: -20px; /* compensates for main-content padding */
+            z-index: 200;
+            background: var(--background);
+            padding: 12px 0 8px;
+            margin: -20px -20px 15px -20px;
+            padding: 12px 20px 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border-bottom: 2px solid #e2e8f0;
+            transition: box-shadow 0.2s;
+        }
+
+        #archive-sticky-bar.scrolled {
+            box-shadow: 0 6px 20px rgba(37,99,235,0.12);
+            border-bottom-color: var(--primary);
+        }
+
         .filter-container {
-            background: #f8fafc; padding: 15px; border-radius: 12px; margin-bottom: 15px;
-            display: flex; flex-wrap: wrap; gap: 15px; align-items: center; border: 1px dashed #cbd5e1;
+            background: #f8fafc; padding: 12px 15px; border-radius: 12px;
+            display: flex; flex-wrap: wrap; gap: 12px; align-items: center; border: 1px dashed #cbd5e1;
         }
         .filter-container select, .filter-container input[type="text"] { flex: 1; min-width: 150px; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; }
         .filter-checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; user-select: none; }
         .filter-checkbox input { width: 18px; height: 18px; }
+
+        /* ============================================================
+           RESULT COUNT BADGE - التعديل #3: عداد النتائج بجانب البحث
+           ============================================================ */
+        .search-wrapper {
+            flex: 2;
+            min-width: 200px;
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .search-input-wrap {
+            position: relative;
+            flex: 1;
+        }
+        .search-input-wrap i.search-icon {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-light);
+            pointer-events: none;
+        }
+        .search-input-wrap input {
+            padding-right: 35px;
+            width: 100%;
+        }
+        .results-count-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            font-size: 0.75rem;
+            font-weight: 700;
+            min-width: 36px;
+            height: 36px;
+            padding: 0 8px;
+            border-radius: 20px;
+            white-space: nowrap;
+            box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+            transition: all 0.3s ease;
+            font-family: 'Cairo', sans-serif;
+            flex-shrink: 0;
+        }
+        .results-count-badge.zero {
+            background: linear-gradient(135deg, #94a3b8, #64748b);
+            box-shadow: none;
+        }
+        .results-count-badge.has-filter {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            box-shadow: 0 2px 8px rgba(245,158,11,0.4);
+            animation: pulse-badge 0.4s ease;
+        }
+        @keyframes pulse-badge {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); }
+        }
+
+        /* ============================================================
+           DUPLICATE WARNING TOAST - التعديل #2: تحذير الاسم المكرر
+           ============================================================ */
+        #duplicate-authority-toast {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-80px);
+            width: 92%;
+            max-width: 520px;
+            background: white;
+            border-radius: 14px;
+            box-shadow: 0 15px 40px rgba(0,0,0,0.18);
+            z-index: 4000;
+            border-right: 5px solid #f59e0b;
+            display: none;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            overflow: hidden;
+        }
+        #duplicate-authority-toast.show {
+            display: flex;
+            flex-direction: column;
+            transform: translateX(-50%) translateY(0);
+        }
+        .dup-toast-header {
+            background: #fffbeb;
+            padding: 12px 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-bottom: 1px solid #fde68a;
+        }
+        .dup-toast-header i { color: #d97706; font-size: 1.3rem; }
+        .dup-toast-header strong { color: #92400e; font-size: 0.95rem; }
+        .dup-toast-body { padding: 12px 15px; }
+        .dup-toast-body p { font-size: 0.85rem; color: #64748b; margin-bottom: 8px; }
+        .dup-req-list { display: flex; flex-direction: column; gap: 6px; max-height: 160px; overflow-y: auto; }
+        .dup-req-item {
+            display: flex; gap: 8px; align-items: center;
+            background: #f8fafc; padding: 8px 12px; border-radius: 8px;
+            border: 1px solid #e2e8f0; font-size: 0.85rem; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .dup-req-item:hover { background: #eff6ff; border-color: var(--primary); }
+        .dup-req-item .req-num { 
+            background: var(--primary); color: white; 
+            padding: 2px 8px; border-radius: 6px; font-weight: 700; font-size: 0.8rem;
+            flex-shrink: 0;
+        }
+        .dup-req-item .req-title { color: var(--text-main); flex: 1; }
+        .dup-req-item .req-status { font-size: 0.75rem; color: var(--text-light); flex-shrink: 0; }
+        .dup-toast-footer { padding: 10px 15px; border-top: 1px solid #f1f5f9; display: flex; justify-content: flex-end; }
+        .dup-toast-footer button { 
+            background: var(--secondary); color: white; border: none;
+            padding: 7px 18px; border-radius: 8px; cursor: pointer; font-family: inherit; font-weight: 600;
+        }
 
         /* --- Buttons --- */
         .btn-3d { background: linear-gradient(135deg, var(--primary), var(--primary-dark)); color: white; border: none; padding: 12px 25px; border-radius: 10px; font-family: inherit; font-weight: 700; cursor: pointer; box-shadow: 0 4px 0 #1e3a8a; transition: all 0.1s; display: inline-flex; align-items: center; gap: 8px; font-size: 1rem; }
@@ -311,11 +448,13 @@
             .footer-name { font-size: 1.4rem; }
             .footer-contact { flex-direction: column; gap: 10px; }
             .contact-item { width: 100%; justify-content: center; }
+
+            #archive-sticky-bar { margin: -20px -20px 15px -20px; padding: 10px 15px 8px; }
         }
     </style>
 </head>
 <body>
-    <!-- Notification Toast -->
+    <!-- Notification Toast (Backup) -->
     <div id="notification-toast" class="notification-toast">
         <div style="background: #fef2f2; padding: 10px; border-radius: 50%; color: #ef4444;"><i class="fas fa-exclamation-triangle"></i></div>
         <div style="flex:1;">
@@ -324,6 +463,23 @@
         </div>
         <button class="btn-3d btn-sm" onclick="dismissNotification()" style="background:var(--secondary)">متابعة</button>
         <button class="btn-3d btn-sm" onclick="goToBackup()">نسخ احتياطي</button>
+    </div>
+
+    <!-- ============================================================
+         DUPLICATE AUTHORITY TOAST - تحذير التكرار
+         ============================================================ -->
+    <div id="duplicate-authority-toast">
+        <div class="dup-toast-header">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>تنبيه: تم إيجاد طلبات سابقة لنفس الجهة</strong>
+        </div>
+        <div class="dup-toast-body">
+            <p id="dup-toast-desc">يوجد طلبات مسجلة مسبقاً لجهة مشابهة:</p>
+            <div id="dup-req-list" class="dup-req-list"></div>
+        </div>
+        <div class="dup-toast-footer">
+            <button onclick="closeDuplicateToast()"><i class="fas fa-times"></i> إغلاق</button>
+        </div>
     </div>
 
     <aside class="sidebar no-print">
@@ -364,7 +520,7 @@
         <div class="mobile-nav-item" onclick="switchTab('backup', this)"><i class="fas fa-database"></i><span>حفظ</span></div>
     </nav>
 
-    <main class="main-content">
+    <main class="main-content" id="mainContent">
         <section id="dashboard" class="tab-content active">
             <div class="header-3d no-print">
                 <h1><i class="fas fa-chart-line"></i> 📊 لوحة المعلومات والتنبيهات</h1>
@@ -465,7 +621,8 @@
                         </div>
                         <div class="input-group full-width">
                             <label><i class="fas fa-building"></i> الجهة المعنية</label>
-                            <input type="text" id="reqAuthority" required placeholder="الوزارة أو المؤسسة">
+                            <!-- التعديل #2: إضافة oninput لكشف التكرار -->
+                            <input type="text" id="reqAuthority" required placeholder="الوزارة أو المؤسسة" oninput="checkDuplicateAuthority(this.value)">
                             <small style="color: var(--text-light); font-size: 0.8rem;">سيقوم النظام بتجميع الأسماء المتشابهة تلقائياً في التقارير</small>
                         </div>
                         <div class="input-group full-width">
@@ -519,36 +676,47 @@
             </div>
         </section>
 
+        <!-- ============================================================
+             ARCHIVE SECTION - قسم الأرشيف مع التعديلات الثلاثة
+             ============================================================ -->
         <section id="archive" class="tab-content">
             <div class="header-3d no-print">
                 <h1><i class="fas fa-archive"></i> 📋 سجل الطلبات والأرشيف</h1>
             </div>
             
-            <div class="filter-container no-print">
-                <div style="flex: 2; min-width: 200px; position: relative;">
-                    <i class="fas fa-search" style="position: absolute; right: 12px; top: 12px; color: var(--text-light);"></i>
-                    <input type="text" id="searchInput" style="padding-right: 35px;" placeholder="بحث بالعنوان أو الرقم..." oninput="applyFilters()">
-                </div>
-                
-                <select id="filterType" onchange="applyFilters()">
-                    <option value="all">كل الأنواع</option>
-                    <option value="special">طلب خاص</option>
-                    <option value="general">طلب عام</option>
-                    <option value="briefing">طلب إحاطة</option>
-                    <option value="urgent">بيان عاجل</option>
-                </select>
+            <!-- التعديل #1 + #3: شريط الفلتر الثابت مع عداد النتائج -->
+            <div id="archive-sticky-bar" class="no-print">
+                <div class="filter-container">
+                    <!-- التعديل #3: خانة البحث مع badge العداد -->
+                    <div class="search-wrapper">
+                        <div class="search-input-wrap">
+                            <i class="fas fa-search search-icon"></i>
+                            <input type="text" id="searchInput" placeholder="بحث بالعنوان أو الرقم أو الجهة..." oninput="applyFilters()">
+                        </div>
+                        <!-- Badge عداد النتائج -->
+                        <div class="results-count-badge" id="resultsCountBadge" title="عدد النتائج">0</div>
+                    </div>
+                    
+                    <select id="filterType" onchange="applyFilters()">
+                        <option value="all">كل الأنواع</option>
+                        <option value="special">طلب خاص</option>
+                        <option value="general">طلب عام</option>
+                        <option value="briefing">طلب إحاطة</option>
+                        <option value="urgent">بيان عاجل</option>
+                    </select>
 
-                <select id="filterStatus" onchange="applyFilters()">
-                    <option value="all">كل الحالات</option>
-                    <option value="execution">قيد التنفيذ</option>
-                    <option value="review">قيد المراجعة</option>
-                    <option value="replied">تم الرد</option>
-                    <option value="completed">مكتمل</option>
-                    <option value="rejected">مرفوض</option>
-                </select>
-                <button class="btn-3d btn-sm" onclick="printFilteredReport()">
-                    <i class="fas fa-print"></i> طباعة النتائج
-                </button>
+                    <select id="filterStatus" onchange="applyFilters()">
+                        <option value="all">كل الحالات</option>
+                        <option value="execution">قيد التنفيذ</option>
+                        <option value="review">قيد المراجعة</option>
+                        <option value="replied">تم الرد</option>
+                        <option value="completed">مكتمل</option>
+                        <option value="rejected">مرفوض</option>
+                    </select>
+                    <button class="btn-3d btn-sm" onclick="printFilteredReport()">
+                        <i class="fas fa-print"></i> طباعة النتائج
+                    </button>
+                </div>
             </div>
 
             <div class="glass-panel">
@@ -603,7 +771,6 @@
             </div>
             <div class="glass-panel">
                 <div class="backup-container">
-                    <!-- Export Card -->
                     <div class="backup-card">
                         <div class="backup-icon"><i class="fas fa-file-export"></i></div>
                         <h3>تصدير قاعدة البيانات</h3>
@@ -613,7 +780,6 @@
                         </button>
                     </div>
 
-                    <!-- Import Card -->
                     <div class="backup-card">
                         <div class="backup-icon"><i class="fas fa-file-import"></i></div>
                         <h3>استيراد قاعدة البيانات</h3>
@@ -632,7 +798,6 @@
             </div>
         </section>
 
-        <!-- Luxury Footer -->
         <footer class="luxury-footer no-print">
             <div class="footer-content">
                 <p class="footer-title">تم البرمجة والتطوير بكل حب <i class="fas fa-heartbeat heart-icon"></i></p>
@@ -697,6 +862,21 @@
         const SECURE_CODE = "521988";
         const AUTH_STORAGE_KEY = "sys_auth_remember";
 
+        // ============================================================
+        // التعديل #1: تثبيت شريط الفلتر عند الـ Scroll
+        // ============================================================
+        const mainContent = document.getElementById('mainContent');
+        mainContent.addEventListener('scroll', function() {
+            const stickyBar = document.getElementById('archive-sticky-bar');
+            if (stickyBar) {
+                if (mainContent.scrollTop > 60) {
+                    stickyBar.classList.add('scrolled');
+                } else {
+                    stickyBar.classList.remove('scrolled');
+                }
+            }
+        });
+
         // Translation Maps
         const statusMap = {
             'execution': 'قيد التنفيذ', 'review': 'قيد المراجعة', 'replied': 'تم الرد', 'completed': 'مكتمل', 'rejected': 'مرفوض'
@@ -710,31 +890,26 @@
             addDocumentField(); 
             addReplyField(); 
             
-            // Initialize Logs & Backup Check
             LogManager.init();
             checkBackupStatus();
             updateLastBackupUI();
 
             if (typeof RequestManager !== 'undefined') {
                 fetchRealtimeData();
-                // Log App Start
                 setTimeout(() => { LogManager.log("فتح النظام", "تم فتح التطبيق"); }, 1000);
             } else {
                 alert('خطأ: لم يتم العثور على قاعدة البيانات');
             }
         });
 
-        // --- 1. Security & Passcode (Modified for Remember Me) ---
+        // --- 1. Security & Passcode ---
         function checkPasscode(action) {
-            // Check if already authenticated on this device
             if (localStorage.getItem(AUTH_STORAGE_KEY) === 'true') {
                 return handleAction(action);
             }
-
-            // If not, ask for password
             const code = prompt("أدخل الرمز السري للمتابعة:");
             if (code === SECURE_CODE) {
-                localStorage.setItem(AUTH_STORAGE_KEY, 'true'); // Remember this device
+                localStorage.setItem(AUTH_STORAGE_KEY, 'true');
                 return handleAction(action);
             } else { 
                 if(code !== null) alert("رمز خاطئ! لا تملك الصلاحية."); 
@@ -750,7 +925,7 @@
             return true;
         }
 
-        // --- 2. Logs Manager (Smart Device Detection) ---
+        // --- 2. Logs Manager ---
         const LogManager = {
             ref: null,
             listener: null,
@@ -759,9 +934,7 @@
                 if(window.database) this.ref = window.database.ref('system_logs');
             },
 
-            // Smart function to get detailed device info using API + Local specs
             getDetailedDeviceInfo: async function() {
-                // 1. Hardware & Browser Specs
                 const ua = navigator.userAgent;
                 let os = "Unknown OS";
                 let browser = "Unknown Browser";
@@ -788,10 +961,8 @@
                 const cores = navigator.hardwareConcurrency || '?';
                 const mem = navigator.deviceMemory ? `${navigator.deviceMemory}GB` : '?';
 
-                // 2. Network Specs (Using API)
                 let ip = "Hidden", city = "Unknown", country = "Unknown";
                 try {
-                    // Using a reliable API for IP info
                     const response = await fetch('https://ipapi.co/json/');
                     if (response.ok) {
                         const data = await response.json();
@@ -803,14 +974,12 @@
                     console.log("Could not fetch IP info");
                 }
 
-                // 3. Construct Detailed String
                 return `📍 ${country}, ${city} | 🌐 IP: ${ip} | 💻 ${os} | 🧩 ${browser} | 🖥️ Screen: ${screen}`;
             },
 
             log: async function(action, details) {
                 if(!this.ref) return;
                 const deviceInfo = await this.getDetailedDeviceInfo();
-                
                 const logEntry = {
                     timestamp: Date.now(),
                     device: deviceInfo,
@@ -823,7 +992,6 @@
             startListening: function() {
                 if(!this.ref) return;
                 if(this.listener) this.ref.off();
-                
                 this.listener = this.ref.orderByChild('timestamp').limitToLast(100).on('value', snap => {
                     const data = snap.val();
                     const logsArr = data ? Object.values(data) : [];
@@ -841,14 +1009,12 @@
 
         function openSecureTab(tabId, element) {
             if(tabId === 'logs') {
-                // Check memory first
                 if (localStorage.getItem(AUTH_STORAGE_KEY) !== 'true') {
                     const code = prompt("من فضلك أدخل الرمز السري للاطلاع على السجل:");
                     if (code !== SECURE_CODE) {
                         alert("رمز خاطئ! لا تملك الصلاحية.");
                         return;
                     }
-                    // If correct, remember for future
                     localStorage.setItem(AUTH_STORAGE_KEY, 'true');
                 }
             }
@@ -923,23 +1089,13 @@
         function checkBackupStatus() {
             const lastBackup = localStorage.getItem('lastBackupTime');
             const toast = document.getElementById('notification-toast');
-            
-            if (!lastBackup) {
-                toast.style.display = 'flex';
-                return;
-            }
-
+            if (!lastBackup) { toast.style.display = 'flex'; return; }
             const diffTime = Math.abs(Date.now() - parseInt(lastBackup));
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-
-            if (diffDays >= 7) {
-                toast.style.display = 'flex';
-            }
+            if (diffDays >= 7) { toast.style.display = 'flex'; }
         }
 
-        function dismissNotification() {
-            document.getElementById('notification-toast').style.display = 'none';
-        }
+        function dismissNotification() { document.getElementById('notification-toast').style.display = 'none'; }
         
         function goToBackup() {
             dismissNotification();
@@ -948,18 +1104,14 @@
             else document.querySelectorAll('.mobile-nav-item')[4].click();
         }
 
-        function performExport() {
-            // Logic handled inside exportDatabase
-        }
+        function performExport() {}
 
         function exportDatabase() {
             if (!checkPasscode('export')) return;
-
             try {
                 const dataStr = JSON.stringify(requestsData, null, 2);
                 const blob = new Blob([dataStr], { type: "application/json" });
                 const url = URL.createObjectURL(blob);
-                
                 const a = document.createElement('a');
                 a.href = url;
                 const dateStr = new Date().toISOString().split('T')[0];
@@ -968,11 +1120,9 @@
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
-
                 localStorage.setItem('lastBackupTime', Date.now());
                 updateLastBackupUI();
                 dismissNotification();
-                
                 LogManager.log("تصدير قاعدة بيانات", "تم تنزيل نسخة احتياطية");
                 alert("تم تصدير قاعدة البيانات بنجاح.");
             } catch (e) {
@@ -981,28 +1131,19 @@
             }
         }
 
-        function triggerFileUpload() {
-            document.getElementById('dbFileInput').click();
-        }
+        function triggerFileUpload() { document.getElementById('dbFileInput').click(); }
 
         function handleFileImport(input) {
              if (!input.files.length) return;
              const file = input.files[0];
-             
              const reader = new FileReader();
              reader.onload = function(e) {
                  try {
                      const json = JSON.parse(e.target.result);
                      if (Array.isArray(json)) {
-                         if (checkPasscode('import')) {
-                             performImport(json);
-                         }
-                     } else {
-                         alert("تنسيق الملف غير صحيح.");
-                     }
-                 } catch (err) {
-                     alert("ملف تالف أو غير صالح.");
-                 }
+                         if (checkPasscode('import')) { performImport(json); }
+                     } else { alert("تنسيق الملف غير صحيح."); }
+                 } catch (err) { alert("ملف تالف أو غير صالح."); }
              };
              reader.readAsText(file);
              input.value = ''; 
@@ -1010,14 +1151,11 @@
 
         async function performImport(data) {
             if (!confirm("تحذير: سيتم حذف جميع البيانات الحالية واستبدالها بهذا النسخة. هل أنت متأكد؟")) return;
-            
             try {
                 await window.database.ref('parliament-requests').set(null); 
                 await window.database.ref('parliament-requests').set(data);
-                
                 localStorage.setItem('lastBackupTime', Date.now());
                 updateLastBackupUI();
-                
                 LogManager.log("استيراد قاعدة بيانات", "تم استعادة النسخة الاحتياطية");
                 alert("تم استعادة قاعدة البيانات بنجاح.");
             } catch (err) {
@@ -1031,8 +1169,8 @@
             RequestManager.listenToRequests((data) => {
                 requestsData = data;
                 requestsData.sort((a, b) => a.reqId.localeCompare(b.reqId, undefined, { numeric: true, sensitivity: 'base' }));
-
                 renderTable(requestsData);
+                updateResultsCountBadge(requestsData.length, requestsData.length);
                 updateDashboard();
                 updateAllReports(); 
             });
@@ -1047,7 +1185,6 @@
             
             if (tabId === 'register') setAutoId();
 
-            // --- Log Navigation ---
             const tabNames = {
                 'dashboard': 'لوحة التحكم',
                 'reports': 'التقارير المصنفة',
@@ -1055,9 +1192,14 @@
                 'archive': 'الأرشيف',
                 'backup': 'النسخ الاحتياطي'
             };
-            // Only log if it's not the logs tab (logs tab has its own logic in openSecureTab)
             if (tabId !== 'logs') {
                 LogManager.log("تصفح", `دخل على قسم: ${tabNames[tabId] || tabId}`);
+            }
+
+            // عند الانتقال للأرشيف، نحدث العداد
+            if (tabId === 'archive') {
+                const filtered = window.currentFilteredData || requestsData;
+                updateResultsCountBadge(filtered.length, requestsData.length);
             }
         }
 
@@ -1114,11 +1256,127 @@
             container.appendChild(div);
         }
 
+        // ============================================================
+        // التعديل #2: كشف التكرار الذكي للجهات
+        // تجاهل الهمزات: أ إ آ ا / ؤ و / ئ ي ى
+        // ============================================================
+        
+        // دالة تطبيع النص: تحويل كل أشكال الحروف المتشابهة لشكل واحد
+        function normalizeArabicText(text) {
+            if (!text) return "";
+            let normalized = text.trim().toLowerCase();
+            // توحيد الألف بكل أشكالها
+            normalized = normalized.replace(/[أإآا]/g, 'ا');
+            // توحيد الياء بكل أشكالها
+            normalized = normalized.replace(/[ىئي]/g, 'ي');
+            // توحيد الواو والهمزة
+            normalized = normalized.replace(/[ؤو]/g, 'و');
+            // توحيد الهاء والتاء المربوطة
+            normalized = normalized.replace(/[ةه]/g, 'ه');
+            // إزالة التشكيل
+            normalized = normalized.replace(/[\u064B-\u065F]/g, '');
+            // إزالة المسافات الزائدة
+            normalized = normalized.replace(/\s+/g, ' ').trim();
+            return normalized;
+        }
+
+        // حساب نسبة التشابه بين نصين
+        function calculateTextSimilarity(str1, str2) {
+            if (!str1 || !str2) return 0;
+            const s1 = normalizeArabicText(str1);
+            const s2 = normalizeArabicText(str2);
+            if (s1 === s2) return 1.0;
+            if (s1.includes(s2) || s2.includes(s1)) return 0.85;
+            // Jaccard similarity على كلمات
+            const words1 = new Set(s1.split(' ').filter(w => w.length > 1));
+            const words2 = new Set(s2.split(' ').filter(w => w.length > 1));
+            const intersection = new Set([...words1].filter(w => words2.has(w)));
+            const union = new Set([...words1, ...words2]);
+            if (union.size === 0) return 0;
+            return intersection.size / union.size;
+        }
+
+        let duplicateCheckTimer = null;
+
+        function checkDuplicateAuthority(inputVal) {
+            // debounce: انتظر 600ms بعد آخر كتابة
+            clearTimeout(duplicateCheckTimer);
+            closeDuplicateToast();
+
+            if (!inputVal || inputVal.trim().length < 3) return;
+
+            duplicateCheckTimer = setTimeout(() => {
+                const currentKey = currentRequestKey; // إذا كنا في وضع تعديل
+                const matches = requestsData.filter(req => {
+                    // تجاهل الطلب الحالي في وضع التعديل
+                    if (currentKey && req.firebaseKey === currentKey) return false;
+                    const similarity = calculateTextSimilarity(inputVal, req.authority);
+                    return similarity >= 0.6; // عتبة التشابه 60%
+                });
+
+                if (matches.length > 0) {
+                    showDuplicateToast(inputVal, matches);
+                }
+            }, 600);
+        }
+
+        function showDuplicateToast(inputName, matches) {
+            const toast = document.getElementById('duplicate-authority-toast');
+            const listEl = document.getElementById('dup-req-list');
+            const descEl = document.getElementById('dup-toast-desc');
+
+            descEl.innerHTML = `تم إيجاد <strong style="color:#d97706">${matches.length}</strong> طلب/طلبات مشابهة لـ "<strong>${inputName}</strong>":`;
+            
+            listEl.innerHTML = '';
+            matches.slice(0, 5).forEach(req => { // عرض أول 5 نتائج كحد أقصى
+                const item = document.createElement('div');
+                item.className = 'dup-req-item';
+                item.title = 'اضغط للعرض';
+                item.innerHTML = `
+                    <span class="req-num">#${req.reqId}</span>
+                    <span class="req-title">${req.title || 'بدون عنوان'}</span>
+                    <span style="font-size:0.75rem; color:#64748b; flex-shrink:0;">${req.authority}</span>
+                    <span class="req-status status-badge status-${req.status}" style="font-size:0.7rem; padding:3px 6px;">${statusMap[req.status]}</span>
+                `;
+                // عند الضغط على أي طلب من القائمة، افتح التفاصيل
+                item.onclick = () => {
+                    closeDuplicateToast();
+                    if (req.firebaseKey) {
+                        switchTab('archive');
+                        setTimeout(() => openModal(req.firebaseKey), 300);
+                    }
+                };
+                listEl.appendChild(item);
+            });
+
+            if (matches.length > 5) {
+                listEl.innerHTML += `<div style="text-align:center; font-size:0.8rem; color:#64748b; padding:5px;">... و ${matches.length - 5} طلبات أخرى</div>`;
+            }
+
+            toast.style.display = 'flex';
+            // تأخير بسيط لتفعيل الأنيميشن
+            requestAnimationFrame(() => {
+                toast.classList.add('show');
+            });
+
+            // إغلاق تلقائي بعد 8 ثوانٍ
+            setTimeout(() => closeDuplicateToast(), 8000);
+        }
+
+        function closeDuplicateToast() {
+            const toast = document.getElementById('duplicate-authority-toast');
+            toast.classList.remove('show');
+            setTimeout(() => { toast.style.display = 'none'; }, 400);
+        }
+
         // --- 7. Form Handling ---
         document.getElementById('requestForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const reqType = document.getElementById('reqType').value;
             if(!reqType) { alert("يرجى اختيار نوع الطلب"); return; }
+
+            // إغلاق toast التكرار عند الحفظ
+            closeDuplicateToast();
 
             const docInputs = document.querySelectorAll('.doc-input');
             const docsList = Array.from(docInputs).map(i => i.value.trim()).filter(v => v !== "");
@@ -1167,16 +1425,38 @@
             document.getElementById('repliesList').innerHTML = '';
             addReplyField();
             setAutoId();
+            closeDuplicateToast();
         }
 
-        // --- 8. Table & Filter ---
+        // ============================================================
+        // التعديل #3: تحديث Badge عداد النتائج
+        // ============================================================
+        function updateResultsCountBadge(filteredCount, totalCount) {
+            const badge = document.getElementById('resultsCountBadge');
+            if (!badge) return;
+
+            badge.textContent = filteredCount;
+            badge.title = `${filteredCount} نتيجة من أصل ${totalCount}`;
+
+            // تغيير اللون حسب الحالة
+            badge.classList.remove('zero', 'has-filter');
+            if (filteredCount === 0) {
+                badge.classList.add('zero');
+            } else if (filteredCount < totalCount) {
+                badge.classList.add('has-filter');
+            }
+        }
+
+        // --- 8. Table & Filter (Archive Only) ---
         function applyFilters() {
             const searchText = document.getElementById('searchInput').value.toLowerCase();
             const typeFilter = document.getElementById('filterType').value;
             const statusFilter = document.getElementById('filterStatus').value;
 
             const filtered = requestsData.filter(r => {
-                const matchText = r.title.toLowerCase().includes(searchText) || r.reqId.includes(searchText) || r.authority.toLowerCase().includes(searchText);
+                const matchText = r.title.toLowerCase().includes(searchText) || 
+                                  r.reqId.includes(searchText) || 
+                                  r.authority.toLowerCase().includes(searchText);
                 const matchType = typeFilter === 'all' || r.requestType === typeFilter;
                 let matchStatus = statusFilter === 'all';
                 if (!matchStatus) {
@@ -1188,7 +1468,10 @@
                 }
                 return matchText && matchType && matchStatus;
             });
+
             renderTable(filtered);
+            // تحديث Badge العداد
+            updateResultsCountBadge(filtered.length, requestsData.length);
             window.currentFilteredData = filtered;
         }
 
