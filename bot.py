@@ -35,10 +35,10 @@ FIREBASE_JSON = os.environ["FIREBASE_CREDENTIALS_JSON"]   # محتوى ملف ا
     MAIN_MENU,
     SEARCH_QUERY,
     ADD_ID, ADD_TITLE, ADD_DETAILS, ADD_AUTHORITY,
-    ADD_DATE, ADD_STATUS,
+    ADD_DATE, ADD_REQ_TYPE, ADD_STATUS,
     ADD_DOCS_CONFIRM, ADD_DOC_TYPE, ADD_DOC_DATE, ADD_DOC_DESC, ADD_DOC_MORE,
     CONFIRM_SAVE,
-) = range(15)
+) = range(16)
 
 # ─── تخزين مؤقت ──────────────────────────────────────────────
 authenticated: set = set()
@@ -90,6 +90,13 @@ STATUS = {
     "completed": "✅ مكتمل",
     "rejected":  "❌ مرفوض",
 }
+REQ_TYPE = {
+    "special":   "🟣 طلب خاص",
+    "general":   "🔵 طلب عام",
+    "briefing":  "🟠 طلب إحاطة",
+    "urgent":    "🔴 بيان عاجل",
+}
+
 DOC_TYPE = {
     "official-request": "📄 طلب رسمي",
     "response":         "📩 رد الجهة",
@@ -170,6 +177,7 @@ def search(query: str, reqs: list) -> list:
             r.get("authority", ""),
             r.get("details", ""),
             STATUS.get(r.get("status",""), ""),
+            REQ_TYPE.get(r.get("requestType",""), ""),
             fmt_date(r.get("submissionDate", "")),
         ])).lower()
         # بحث في المستندات
@@ -193,6 +201,7 @@ def format_request(r: dict, short=False) -> str:
     s = STATUS.get(r.get("status",""), r.get("status","غير محدد"))
     lines = [
         f"📌 *رقم الطلب:* `{r.get('reqId','—')}`",
+        f"🗂️ *نوع الطلب:* {REQ_TYPE.get(r.get('requestType',''), 'غير محدد')}",
         f"📝 *العنوان:* {r.get('title','—')}",
         f"🏛️ *الجهة:* {r.get('authority','—')}",
         f"📅 *تاريخ التقديم:* {fmt_date(r.get('submissionDate',''))}",
@@ -509,7 +518,25 @@ async def add_date(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         return ADD_DATE
     temp[uid]["submissionDate"] = date_str
     await update.message.reply_text(
-        "الخطوة 6/7 — اختر *حالة الطلب*:",
+        "الخطوة 6/8 — اختر *نوع الطلب*:",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([
+            [InlineKeyboardButton("🟣 طلب خاص",     callback_data="rtype_special")],
+            [InlineKeyboardButton("🔵 طلب عام",      callback_data="rtype_general")],
+            [InlineKeyboardButton("🟠 طلب إحاطة",   callback_data="rtype_briefing")],
+            [InlineKeyboardButton("🔴 بيان عاجل",   callback_data="rtype_urgent")],
+        ])
+    )
+    return ADD_REQ_TYPE
+
+async def add_req_type(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+    uid = query.from_user.id
+    temp[uid]["requestType"] = query.data.replace("rtype_", "")
+    chosen = REQ_TYPE.get(temp[uid]["requestType"], "")
+    await query.edit_message_text(
+        f"✅ نوع الطلب: {chosen}\n\nالخطوة 7/8 — اختر *حالة الطلب*:",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([
             [InlineKeyboardButton("⏳ قيد التنفيذ",  callback_data="status_execution")],
@@ -526,7 +553,7 @@ async def add_status(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = query.from_user.id
     temp[uid]["status"] = query.data.replace("status_", "")
     await query.edit_message_text(
-        "الخطوة 7/7 — هل تريد إضافة *مستندات / مرفقات*؟",
+        "الخطوة 8/8 — هل تريد إضافة *مستندات / مرفقات*؟",
         parse_mode="Markdown",
         reply_markup=yes_no_keyboard()
     )
@@ -628,6 +655,7 @@ async def show_summary(query, uid):
     summary = (
         f"📋 *ملخص الطلب قبل الحفظ:*\n\n"
         f"🔢 *الرقم:* {d.get('reqId','')}\n"
+        f"🗂️ *نوع الطلب:* {REQ_TYPE.get(d.get('requestType',''), 'غير محدد')}\n"
         f"📝 *العنوان:* {d.get('title','')}\n"
         f"🏛️ *الجهة:* {d.get('authority','')}\n"
         f"📅 *التاريخ:* {fmt_date(d.get('submissionDate',''))}\n"
@@ -726,6 +754,8 @@ def main():
             ADD_AUTHORITY: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_authority),
                             CallbackQueryHandler(cancel_handler, pattern="^cancel$")],
             ADD_DATE:      [MessageHandler(filters.TEXT & ~filters.COMMAND, add_date),
+                            CallbackQueryHandler(cancel_handler, pattern="^cancel$")],
+            ADD_REQ_TYPE:  [CallbackQueryHandler(add_req_type, pattern="^rtype_"),
                             CallbackQueryHandler(cancel_handler, pattern="^cancel$")],
             ADD_STATUS:    [CallbackQueryHandler(add_status, pattern="^status_")],
             ADD_DOCS_CONFIRM: [CallbackQueryHandler(add_docs_confirm, pattern="^(yes|no)$")],
