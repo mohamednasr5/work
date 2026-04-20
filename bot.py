@@ -13,7 +13,8 @@ from firebase_admin import credentials, db
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
-    filters, ContextTypes, ConversationHandler, CallbackQueryHandler
+    filters, ContextTypes, ConversationHandler, CallbackQueryHandler,
+    PicklePersistence
 )
 
 # ─── إعداد السجل ──────────────────────────────────────────────
@@ -41,8 +42,17 @@ FIREBASE_JSON = os.environ["FIREBASE_CREDENTIALS_JSON"]   # محتوى ملف ا
 ) = range(16)
 
 # ─── تخزين مؤقت ──────────────────────────────────────────────
-authenticated: set = set()
-temp: dict = {}           # بيانات الإضافة المؤقتة
+temp: dict = {}           # بيانات الإضافة المؤقتة (في الذاكرة فقط — لا تحتاج persistence)
+
+def is_auth(ctx) -> set:
+    """يعيد set المستخدمين المصادق عليهم من bot_data (محفوظ عبر PicklePersistence)"""
+    return ctx.bot_data.setdefault("authenticated", set())
+
+def set_auth(ctx, uid: int):
+    is_auth(ctx).add(uid)
+
+def check_auth(ctx, uid: int) -> bool:
+    return uid in is_auth(ctx)
 
 # ─── تهيئة Firebase ──────────────────────────────────────────
 def init_firebase():
@@ -262,7 +272,7 @@ def yes_no_keyboard():
 
 async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
-    if uid in authenticated:
+    if check_auth(ctx, uid):
         await update.message.reply_text(
             "👋 أهلاً بعودتك!\nاختر ما تريد:",
             reply_markup=main_keyboard()
@@ -279,7 +289,7 @@ async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 async def check_password(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
     if update.message.text.strip() == PASSWORD:
-        authenticated.add(uid)
+        set_auth(ctx, uid)
         await update.message.reply_text(
             "✅ *تم التحقق بنجاح!*\n\nمرحباً بك في نظام إدارة الطلبات.\nاختر ما تريد:",
             parse_mode="Markdown",
@@ -295,7 +305,7 @@ async def main_menu_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     uid = query.from_user.id
 
-    if uid not in authenticated:
+    if not check_auth(ctx, uid):
         await query.edit_message_text("⛔ انتهت جلستك. أرسل /start للبدء من جديد.")
         return ConversationHandler.END
 
@@ -366,7 +376,7 @@ async def main_menu_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 # ─── البحث ────────────────────────────────────────────────────
 async def do_search(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
-    if uid not in authenticated:
+    if not check_auth(ctx, uid):
         return ConversationHandler.END
 
     q = update.message.text.strip()
@@ -716,7 +726,7 @@ async def cancel_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
 async def unknown_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     uid = update.effective_user.id
-    if uid not in authenticated:
+    if not check_auth(ctx, uid):
         await update.message.reply_text("أرسل /start للبدء.")
         return
     await update.message.reply_text(
@@ -731,10 +741,13 @@ async def unknown_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 def main():
     init_firebase()
 
-    app = Application.builder().token(BOT_TOKEN).build()
+    persistence = PicklePersistence(filepath="bot_data.pkl")
+    app = Application.builder().token(BOT_TOKEN).persistence(persistence).build()
 
     conv = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
+        name="main_conv",
+        persistent=True,
         states={
             WAIT_PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, check_password)],
             MAIN_MENU: [
