@@ -1,0 +1,38 @@
+name: 🤖 Telegram Bot
+
+on:
+  # ─── تشغيل تلقائي كل 50 دقيقة ─────────────────────────────
+  schedule:
+    - cron: '*/50 * * * *'
+  # ─── تشغيل يدوي من GitHub ──────────────────────────────────
+  workflow_dispatch:
+
+jobs:
+  run-bot:
+    name: Run Telegram Bot
+    runs-on: ubuntu-latest
+    timeout-minutes: 55          # أقصى وقت للـ job
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: 📦 Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: 🤖 Run bot (50 minutes)
+        env:
+          BOT_TOKEN:                   ${{ secrets.BOT_TOKEN }}
+          BOT_PASSWORD:                ${{ secrets.BOT_PASSWORD }}
+          FIREBASE_URL:                ${{ secrets.FIREBASE_URL }}
+          FIREBASE_CREDENTIALS_JSON:   ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
+        run: |
+          # تشغيل البوت بـ timeout 50 دقيقة
+          # الـ cron يعيد تشغيله كل 50 دقيقة تلقائياً → يعمل 24/7
+          timeout 2950 python bot.py || true
