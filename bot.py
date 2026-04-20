@@ -109,6 +109,54 @@ def deadline_text(sub: str) -> str:
     except:
         return "غير محدد"
 
+def get_next_req_id(reqs: list) -> str:
+    """
+    يستنتج رقم الطلب التالي تلقائياً بناءً على آخر طلب مضاف.
+    يدعم أنماط متعددة:
+      - أرقام بحتة:       "25"       → "26"
+      - بادئة + رقم:      "REQ-25"   → "REQ-26"
+      - سنة + رقم:        "2024-15"  → "2024-16"
+      - سنة/رقم:          "2024/15"  → "2024/16"
+      - أي نمط آخر:       يُقترح العدد الكلي + 1
+    """
+    if not reqs:
+        return "1"
+
+    ids = [str(r.get("reqId", "")).strip() for r in reqs if r.get("reqId")]
+    if not ids:
+        return str(len(reqs) + 1)
+
+    import re
+
+    best_num = 0
+    best_id  = ids[-1]   # fallback: آخر إدخال
+
+    for rid in ids:
+        # استخرج آخر سلسلة أرقام في النص
+        nums = re.findall(r'\d+', rid)
+        if nums:
+            n = int(nums[-1])
+            if n > best_num:
+                best_num = n
+                best_id  = rid
+
+    if best_num == 0:
+        return str(len(reqs) + 1)
+
+    # أعد بناء الرقم التالي بنفس النمط
+    import re as _re
+    # استبدل آخر تكرار للرقم بالرقم التالي
+    next_num = str(best_num + 1)
+    # احتفظ بنفس عدد الأصفار البادئة إن وُجدت
+    last_match = list(_re.finditer(r'\d+', best_id))[-1]
+    old_num_str = last_match.group()
+    if old_num_str.startswith('0') and len(old_num_str) > 1:
+        next_num = next_num.zfill(len(old_num_str))
+
+    next_id = best_id[:last_match.start()] + next_num + best_id[last_match.end():]
+    return next_id
+
+
 def search(query: str, reqs: list) -> list:
     """بحث ذكي في كل الحقول مع دعم البحث التقريبي"""
     q = query.strip().lower()
@@ -253,11 +301,20 @@ async def main_menu_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
 
     elif query.data == "add":
         temp[uid] = {"documents": []}
+        # اقترح رقم الطلب التالي تلقائياً
+        all_r = get_all()
+        suggested = get_next_req_id(all_r)
+        temp[uid]["_suggested_id"] = suggested
         await query.edit_message_text(
-            "➕ *إضافة طلب جديد*\n\n"
-            "الخطوة 1/7 — أدخل *رقم الطلب*:",
+            f"➕ *إضافة طلب جديد*\n\n"
+            f"الخطوة 1/7 — *رقم الطلب*\n\n"
+            f"📌 الرقم المقترح تلقائياً: `{suggested}`\n\n"
+            f"اضغط ✅ *تأكيد* لقبوله، أو اكتب رقماً مختلفاً:",
             parse_mode="Markdown",
-            reply_markup=cancel_keyboard()
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"✅ تأكيد الرقم {suggested}", callback_data="confirm_id")],
+                [InlineKeyboardButton("❌ إلغاء", callback_data="cancel")],
+            ])
         )
         return ADD_ID
 
@@ -369,21 +426,46 @@ async def view_request(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     return MAIN_MENU
 
 # ─── إضافة طلب — خطوة بخطوة ─────────────────────────────────
+
+async def add_id_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """المستخدم ضغط زر ✅ تأكيد الرقم المقترح"""
+    query = update.callback_query
+    await query.answer()
+    uid = query.from_user.id
+    suggested = temp[uid].get("_suggested_id", "1")
+    temp[uid]["reqId"] = suggested
+    await query.edit_message_text(
+        f"✅ تم تأكيد رقم الطلب: `{suggested}`\n\n"
+        f"الخطوة 2/7 — أدخل *عنوان الطلب*:",
+        parse_mode="Markdown",
+        reply_markup=cancel_keyboard()
+    )
+    return ADD_TITLE
+
 async def add_id(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """المستخدم كتب رقماً مختلفاً يدوياً"""
     uid = update.effective_user.id
     req_id = update.message.text.strip()
-    # تحقق من عدم التكرار
     all_r = get_all()
     if any(r.get("reqId") == req_id for r in all_r):
+        suggested = temp[uid].get("_suggested_id", "")
         await update.message.reply_text(
-            f"❌ رقم الطلب *{req_id}* موجود مسبقاً!\nأدخل رقماً آخر:",
-            parse_mode="Markdown", reply_markup=cancel_keyboard()
+            f"❌ رقم الطلب *{req_id}* موجود مسبقاً!\n\n"
+            f"📌 الرقم المقترح: `{suggested}`\n"
+            f"اضغط تأكيد أو اكتب رقماً آخر:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton(f"✅ تأكيد الرقم {suggested}", callback_data="confirm_id")],
+                [InlineKeyboardButton("❌ إلغاء", callback_data="cancel")],
+            ])
         )
         return ADD_ID
     temp[uid]["reqId"] = req_id
     await update.message.reply_text(
-        "الخطوة 2/7 — أدخل *عنوان الطلب*:",
-        parse_mode="Markdown", reply_markup=cancel_keyboard()
+        f"✅ رقم الطلب: `{req_id}`\n\n"
+        f"الخطوة 2/7 — أدخل *عنوان الطلب*:",
+        parse_mode="Markdown",
+        reply_markup=cancel_keyboard()
     )
     return ADD_TITLE
 
@@ -628,14 +710,14 @@ def main():
         states={
             WAIT_PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, check_password)],
             MAIN_MENU: [
-                CallbackQueryHandler(main_menu_callback, pattern="^(search|add|stats|cancel|back_main)$"),
-                CallbackQueryHandler(view_request, pattern="^view_"),
+                CallbackQueryHandler(main_menu_callback, pattern="^(search|add|stats|cancel|back_main)$"),                CallbackQueryHandler(view_request, pattern="^view_"),
             ],
             SEARCH_QUERY: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, do_search),
                 CallbackQueryHandler(cancel_handler, pattern="^cancel$"),
             ],
             ADD_ID:        [MessageHandler(filters.TEXT & ~filters.COMMAND, add_id),
+                            CallbackQueryHandler(add_id_confirm, pattern="^confirm_id$"),
                             CallbackQueryHandler(cancel_handler, pattern="^cancel$")],
             ADD_TITLE:     [MessageHandler(filters.TEXT & ~filters.COMMAND, add_title),
                             CallbackQueryHandler(cancel_handler, pattern="^cancel$")],
