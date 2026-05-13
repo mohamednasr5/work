@@ -38,6 +38,7 @@ jobs:
           BOT_PASSWORD:                ${{ secrets.BOT_PASSWORD }}
           FIREBASE_URL:                ${{ secrets.FIREBASE_URL }}
           FIREBASE_CREDENTIALS_JSON:   ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
+          ARCHIVE_CHANNEL_ID:          ${{ secrets.ARCHIVE_CHANNEL_ID }}
         run: |
           timeout 2950 python bot.py || true
 
