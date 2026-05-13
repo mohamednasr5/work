@@ -4,6 +4,7 @@
 # بوت تليجرام - نظام إدارة طلبات البرلمان
 # برمجة وتطوير: مهندس محمد حماد
 # نسخة محسّنة: استجابة أسرع + إصلاح المصادقة + نوع الطلب
+# + نظام أرشيف الملفات (Telegram File Archive)
 # ============================================================
 
 import os, json, logging, asyncio
@@ -30,6 +31,11 @@ PASSWORD     = os.getenv("BOT_PASSWORD", "521988")
 FIREBASE_URL = os.getenv("FIREBASE_URL", "https://hedor-bea3c-default-rtdb.firebaseio.com")
 FIREBASE_JSON = os.environ["FIREBASE_CREDENTIALS_JSON"]
 
+# ─── قناة الأرشيف (اختياري) ──────────────────────────────────
+# أنشئ قناة خاصة وأضف البوت كمشرف، ثم ضع ID القناة هنا
+# مثال: ARCHIVE_CHANNEL_ID = "-1001234567890"
+ARCHIVE_CHANNEL_ID = os.getenv("ARCHIVE_CHANNEL_ID", "")
+
 # ─── حالات المحادثة ───────────────────────────────────────────
 (
     WAIT_PASSWORD,
@@ -40,7 +46,8 @@ FIREBASE_JSON = os.environ["FIREBASE_CREDENTIALS_JSON"]
     ADD_DOCS_CONFIRM, ADD_DOC_TYPE, ADD_DOC_DATE, ADD_DOC_DESC, ADD_DOC_MORE,
     CONFIRM_SAVE,
     SMART_SEARCH,
-) = range(17)
+    UPLOAD_REQ_ID, UPLOAD_FILE,   # ← حالات رفع الملفات
+) = range(19)
 
 # ─── تخزين مؤقت ──────────────────────────────────────────────
 temp: dict = {}
@@ -86,6 +93,49 @@ def invalidate_cache():
     """إبطال الكاش بعد إضافة أو تعديل"""
     _cache["data"] = None
     _cache["ts"] = 0
+
+# ─── دوال أرشيف الملفات ──────────────────────────────────────
+def get_files_for_request(req_id: str) -> list:
+    """جلب قائمة الملفات المرفوعة لطلب معين من Firebase"""
+    try:
+        data = db.reference(f"archive/{req_id}").get()
+        if not data:
+            return []
+        if isinstance(data, list):
+            return [f for f in data if f]
+        if isinstance(data, dict):
+            return list(data.values())
+        return []
+    except Exception as e:
+        logger.error(f"get_files error: {e}")
+        return []
+
+def save_file_to_archive(req_id: str, file_id: str, file_type: str,
+                          file_name: str, caption: str = "") -> bool:
+    """حفظ file_id في Firebase تحت مسار archive/{req_id}"""
+    try:
+        ref = db.reference(f"archive/{req_id}").push()
+        ref.set({
+            "file_id":   file_id,
+            "file_type": file_type,   # "document" أو "photo"
+            "file_name": file_name,
+            "caption":   caption,
+            "uploadedAt": datetime.now().isoformat(),
+        })
+        logger.info(f"✅ Saved file {file_id} for req {req_id}")
+        return True
+    except Exception as e:
+        logger.error(f"save_file error: {e}")
+        return False
+
+def delete_file_from_archive(req_id: str, file_key: str) -> bool:
+    """حذف ملف من الأرشيف بمفتاحه"""
+    try:
+        db.reference(f"archive/{req_id}/{file_key}").delete()
+        return True
+    except Exception as e:
+        logger.error(f"delete_file error: {e}")
+        return False
 
 def add_to_firebase(data: dict) -> bool:
     try:
@@ -565,10 +615,24 @@ async def view_request(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text("❌ لم يتم العثور على الطلب.")
         return MAIN_MENU
 
+    req_id = req.get("reqId", "")
+    files  = get_files_for_request(req_id)
+
     text = format_request(req)
+    if files:
+        text += f"\n\n📁 *الملفات المؤرشفة:* {len(files)} ملف"
+
+    # أزرار: رجوع + عرض الملفات إن وُجدت
+    buttons = [[InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_main")]]
+    if files:
+        buttons.insert(0, [InlineKeyboardButton(
+            f"📎 عرض الملفات ({len(files)})",
+            callback_data=f"showfiles_{req_id}"
+        )])
+
     await query.edit_message_text(
         text, parse_mode="Markdown",
-        reply_markup=back_keyboard()
+        reply_markup=InlineKeyboardMarkup(buttons)
     )
     return MAIN_MENU
 
@@ -904,6 +968,161 @@ async def unknown_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
     return MAIN_MENU
 
 # ═══════════════════════════════════════════════════════════════
+# ─── نظام أرشيف الملفات ──────────────────────────────────────
+# ═══════════════════════════════════════════════════════════════
+
+async def show_archived_files(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """عرض الملفات المؤرشفة لطلب معين وإرسالها"""
+    query = update.callback_query
+    await query.answer()
+    uid = query.from_user.id
+    if not check_auth(ctx, uid):
+        return MAIN_MENU
+
+    req_id = query.data.replace("showfiles_", "")
+    files  = get_files_for_request(req_id)
+
+    if not files:
+        await query.answer("لا توجد ملفات لهذا الطلب.", show_alert=True)
+        return MAIN_MENU
+
+    await query.edit_message_text(
+        f"📁 *ملفات الطلب #{req_id}*\n\nجاري إرسال {len(files)} ملف...",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_main")
+        ]])
+    )
+
+    # إرسال كل ملف بالـ file_id مباشرة (بدون إعادة رفع)
+    for i, f in enumerate(files, 1):
+        fid   = f.get("file_id", "")
+        ftype = f.get("file_type", "document")
+        cap   = f.get("caption") or f.get("file_name") or f"ملف {i}"
+        cap_full = f"📎 *{cap}*\n🔢 طلب #{req_id} — ملف {i}/{len(files)}"
+        try:
+            if ftype == "photo":
+                await ctx.bot.send_photo(
+                    chat_id=query.message.chat_id,
+                    photo=fid,
+                    caption=cap_full,
+                    parse_mode="Markdown"
+                )
+            else:
+                await ctx.bot.send_document(
+                    chat_id=query.message.chat_id,
+                    document=fid,
+                    caption=cap_full,
+                    parse_mode="Markdown"
+                )
+        except Exception as e:
+            logger.error(f"send file error: {e}")
+            await ctx.bot.send_message(
+                chat_id=query.message.chat_id,
+                text=f"⚠️ تعذّر إرسال الملف {i}: {cap}"
+            )
+    return MAIN_MENU
+
+
+async def upload_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """/upload — بدء رفع ملف وربطه برقم طلب"""
+    uid = update.effective_user.id
+    if not check_auth(ctx, uid):
+        await update.message.reply_text("أرسل /start للبدء.")
+        return ConversationHandler.END
+
+    await update.message.reply_text(
+        "📤 *رفع ملف إلى الأرشيف*\n\n"
+        "أدخل *رقم الطلب* الذي تريد إرفاق الملف به:",
+        parse_mode="Markdown",
+        reply_markup=cancel_keyboard()
+    )
+    return UPLOAD_REQ_ID
+
+
+async def upload_get_req_id(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """استلام رقم الطلب قبل الملف"""
+    uid  = update.effective_user.id
+    rid  = update.message.text.strip()
+    reqs = get_all()
+    req  = next((r for r in reqs if str(r.get("reqId","")).strip() == rid), None)
+
+    if not req:
+        await update.message.reply_text(
+            f"❌ لا يوجد طلب برقم *{rid}*.\n"
+            f"تأكد من الرقم أو اكتب رقماً آخر:",
+            parse_mode="Markdown",
+            reply_markup=cancel_keyboard()
+        )
+        return UPLOAD_REQ_ID
+
+    ctx.user_data["upload_req_id"] = rid
+    await update.message.reply_text(
+        f"✅ *طلب #{rid}* — {req.get('title','')}\n\n"
+        f"الآن أرسل *الملف* (PDF أو صورة) وسيُحفظ في الأرشيف:",
+        parse_mode="Markdown",
+        reply_markup=cancel_keyboard()
+    )
+    return UPLOAD_FILE
+
+
+async def upload_receive_file(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+    """استلام الملف أو الصورة وحفظ file_id في Firebase"""
+    uid = update.effective_user.id
+    rid = ctx.user_data.get("upload_req_id", "")
+
+    msg = update.message
+    file_id   = None
+    file_type = "document"
+    file_name = "ملف"
+
+    if msg.document:
+        file_id   = msg.document.file_id
+        file_name = msg.document.file_name or "ملف"
+        file_type = "document"
+    elif msg.photo:
+        file_id   = msg.photo[-1].file_id   # أعلى دقة
+        file_name = f"صورة_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        file_type = "photo"
+    else:
+        await msg.reply_text(
+            "⚠️ يرجى إرسال ملف PDF أو صورة فقط.",
+            reply_markup=cancel_keyboard()
+        )
+        return UPLOAD_FILE
+
+    caption = msg.caption or ""
+
+    # إن كانت قناة الأرشيف مضبوطة → أعد توجيه الملف إليها
+    if ARCHIVE_CHANNEL_ID:
+        try:
+            fwd = await msg.forward(chat_id=ARCHIVE_CHANNEL_ID)
+            logger.info(f"Forwarded to archive channel, msg_id={fwd.message_id}")
+        except Exception as e:
+            logger.warning(f"Could not forward to archive channel: {e}")
+
+    ok = save_file_to_archive(rid, file_id, file_type, file_name, caption)
+
+    if ok:
+        await msg.reply_text(
+            f"✅ *تم حفظ الملف بنجاح!*\n\n"
+            f"📎 *{file_name}*\n"
+            f"🔢 مرتبط بالطلب: #{rid}\n\n"
+            f"يمكنك رفع ملف آخر للنفس الطلب، أو /start للقائمة.",
+            parse_mode="Markdown",
+            reply_markup=back_keyboard()
+        )
+    else:
+        await msg.reply_text(
+            "❌ حدث خطأ أثناء الحفظ. حاول مرة أخرى.",
+            reply_markup=cancel_keyboard()
+        )
+        return UPLOAD_FILE
+
+    ctx.user_data.pop("upload_req_id", None)
+    return MAIN_MENU
+
+# ═══════════════════════════════════════════════════════════════
 # ─── تشغيل البوت ─────────────────────────────────────────────
 # ═══════════════════════════════════════════════════════════════
 def main():
@@ -931,6 +1150,7 @@ def main():
                 CallbackQueryHandler(main_menu_callback,
                     pattern="^(search|add|stats|quick_filter|cancel|back_main|filter_.+)$"),
                 CallbackQueryHandler(view_request, pattern="^view_"),
+                CallbackQueryHandler(show_archived_files, pattern="^showfiles_"),
             ],
             SEARCH_QUERY: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, do_search),
@@ -976,10 +1196,20 @@ def main():
                 CallbackQueryHandler(cancel_handler, pattern="^cancel$"),
             ],
             ADD_DOC_MORE: [CallbackQueryHandler(add_doc_more, pattern="^(yes|no)$")],
-            CONFIRM_SAVE: [CallbackQueryHandler(confirm_save, pattern="^(yes|no)$")],
+            CONFIRM_SAVE:  [CallbackQueryHandler(confirm_save, pattern="^(yes|no)$")],
+            # ─── حالات رفع الملفات ───────────────────────────
+            UPLOAD_REQ_ID: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, upload_get_req_id),
+                CallbackQueryHandler(cancel_handler, pattern="^cancel$"),
+            ],
+            UPLOAD_FILE: [
+                MessageHandler(filters.Document.ALL | filters.PHOTO, upload_receive_file),
+                CallbackQueryHandler(cancel_handler, pattern="^cancel$"),
+            ],
         },
         fallbacks=[
             CommandHandler("start", start),
+            CommandHandler("upload", upload_start),
             MessageHandler(filters.TEXT & ~filters.COMMAND, unknown_text),
         ],
         allow_reentry=True,
@@ -987,6 +1217,8 @@ def main():
     )
 
     app.add_handler(conv)
+    # أمر /upload يُفعَّل من أي مكان حتى خارج المحادثة
+    app.add_handler(CommandHandler("upload", upload_start))
 
     logger.info("🤖 البوت يعمل الآن...")
     app.run_polling(
