@@ -230,12 +230,16 @@ def main_kb() -> InlineKeyboardMarkup:
 def req_kb(key: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("✏️ تعديل الحالة",  callback_data=f"edit_status:{key}"),
-            InlineKeyboardButton("✏️ تعديل العنوان", callback_data=f"edit_title:{key}"),
+            InlineKeyboardButton("📄 عرض الطلب كامل",   callback_data=f"view_full:{key}"),
+            InlineKeyboardButton("📎 المستندات المرفقة", callback_data=f"view_docs:{key}"),
         ],
         [
-            InlineKeyboardButton("🗑️ حذف",           callback_data=f"delete:{key}"),
-            InlineKeyboardButton("🏠 القائمة",        callback_data="home"),
+            InlineKeyboardButton("✏️ تعديل الحالة",     callback_data=f"edit_status:{key}"),
+            InlineKeyboardButton("✏️ تعديل العنوان",    callback_data=f"edit_title:{key}"),
+        ],
+        [
+            InlineKeyboardButton("🗑️ حذف",              callback_data=f"delete:{key}"),
+            InlineKeyboardButton("🏠 القائمة",           callback_data="home"),
         ],
     ])
 
@@ -454,7 +458,62 @@ async def main_cb(update, ctx) -> int:
         await send(update, "📝 أدخل *عنوان* الطلب:", edit=True)
         return ADD_TITLE
 
-    # ── تعديل الحالة ─────────────────────────
+    # ── عرض الطلب كامل ──────────────────────
+    elif data.startswith("view_full:"):
+        key = data.split(":")[1]
+        r   = get_req(key)
+        if not r:
+            await send(update, "❌ لم يُعثر على الطلب.", main_kb(), edit=True)
+            return MAIN_MENU
+        text = format_req(r, short=False)
+        back_kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📎 المستندات", callback_data=f"view_docs:{key}"),
+             InlineKeyboardButton("🔙 رجوع",      callback_data="home")],
+        ])
+        await send(update, text, back_kb, edit=True)
+        return MAIN_MENU
+
+    # ── عرض المستندات المرفقة ────────────────
+    elif data.startswith("view_docs:"):
+        key  = data.split(":")[1]
+        r    = get_req(key)
+        if not r:
+            await send(update, "❌ لم يُعثر على الطلب.", main_kb(), edit=True)
+            return MAIN_MENU
+        req_id  = r.get("reqId", "—")
+        docs    = r.get("documents") or r.get("attachments") or []
+        back_kb = InlineKeyboardMarkup([
+            [InlineKeyboardButton("📄 عرض الطلب", callback_data=f"view_full:{key}"),
+             InlineKeyboardButton("🔙 رجوع",       callback_data="home")],
+        ])
+        header = f"📎 *مستندات الطلب رقم {req_id}*\n"
+        if not docs and not r.get("hasDocuments"):
+            await send(update, header + "\nلا توجد مستندات مرفقة بهذا الطلب.", back_kb, edit=True)
+            return MAIN_MENU
+        if isinstance(docs, list) and docs:
+            lines = [header]
+            for i, doc in enumerate(docs, 1):
+                if isinstance(doc, str):
+                    lines.append(f"{i}. {doc}")
+                elif isinstance(doc, dict):
+                    name = doc.get("name", f"مستند {i}")
+                    url  = doc.get("url", "")
+                    lines.append(f"{i}. [{name}]({url})" if url else f"{i}. {name}")
+            await send(update, "\n".join(lines), back_kb, edit=True)
+        elif isinstance(docs, dict):
+            lines = [header]
+            for i, (k2, v2) in enumerate(docs.items(), 1):
+                url  = v2.get("url", "") if isinstance(v2, dict) else str(v2)
+                name = v2.get("name", k2) if isinstance(v2, dict) else k2
+                lines.append(f"{i}. [{name}]({url})" if url else f"{i}. {name}")
+            await send(update, "\n".join(lines), back_kb, edit=True)
+        else:
+            await send(update,
+                header + "\n_يرجى مراجعة لوحة التحكم لعرض المستندات._",
+                back_kb, edit=True)
+        return MAIN_MENU
+
+        # ── تعديل الحالة ─────────────────────────
     elif data.startswith("edit_status:"):
         key = data.split(":")[1]
         await send(update, "اختر الحالة الجديدة:", status_kb(key), edit=True)
