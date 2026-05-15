@@ -679,22 +679,129 @@ async def main_cb(update, ctx) -> int:
             await q.answer("ℹ️ لا توجد مستندات مخزنة", show_alert=False)
             return MAIN_MENU
         
-        doc_list = "\n\n".join([
-            f"*{i}. {doc.get('file_name', 'بدون اسم')}*\n"
-            f"{FILE_TYPE_ICONS.get(doc.get('file_type', 'document'), '📄')} "
-            f"النوع: {doc.get('file_type', 'document')}\n"
-            f"⏰ {doc.get('uploadedAt', '')[:10]}"
-            for i, doc in enumerate(docs, 1)
+        # عرض قائمة المستندات مع أزرار لفتح كل واحد
+        buttons = []
+        for i, doc in enumerate(docs, 1):
+            doc_name = doc.get('file_name', 'بدون اسم')
+            file_type = doc.get('file_type', 'document')
+            icon = FILE_TYPE_ICONS.get(file_type, '📄')
+            buttons.append([
+                InlineKeyboardButton(
+                    f"{icon} {i}. {doc_name[:30]}",
+                    callback_data=f"open_doc:{key}:{i-1}"
+                )
+            ])
+        
+        # إضافة أزرار التحكم
+        buttons.append([
+            InlineKeyboardButton("📢 رفع على القناة", callback_data=f"send_to_channel:{key}"),
+            InlineKeyboardButton("🔙 عودة", callback_data="home"),
         ])
         
         await send(update,
-            f"📎 *مستندات الطلب رقم {req_id}*\n\n{doc_list}",
-            InlineKeyboardMarkup([[
-                InlineKeyboardButton("📢 رفع على القناة", callback_data=f"send_to_channel:{key}"),
-                InlineKeyboardButton("🔙 عودة", callback_data="home"),
-            ]]),
+            f"📎 *مستندات الطلب رقم {req_id}* ({len(docs)})\n\n"
+            f"اضغط على أي مستند لعرضه:",
+            InlineKeyboardMarkup(buttons),
             edit=True
         )
+        return MAIN_MENU
+    
+    # فتح وعرض مستند معين
+    if action.startswith("open_doc:"):
+        parts = action.split(":")
+        key = parts[1]
+        doc_index = int(parts[2]) if len(parts) > 2 else 0
+        
+        req = get_req(key)
+        req_id = req.get("reqId") if req else "؟"
+        
+        docs = get_archive_docs(req_id)
+        if not docs or doc_index >= len(docs):
+            await q.answer("❌ المستند غير متاح", show_alert=True)
+            return MAIN_MENU
+        
+        doc = docs[doc_index]
+        file_id = doc.get("file_id")
+        file_name = doc.get("file_name", "مستند")
+        file_type = doc.get("file_type", "document")
+        caption = doc.get("caption", "")
+        uploaded_at = doc.get("uploadedAt", "")
+        
+        # بناء التسمية التوضيحية
+        doc_caption = (
+            f"*{file_name}*\n\n"
+            f"📁 النوع: {file_type}\n"
+            f"⏰ التاريخ: {uploaded_at[:10]}\n"
+            f"📌 الطلب: {req_id}"
+        )
+        if caption:
+            doc_caption += f"\n📝 ملاحظة: {caption}"
+        
+        # إنشاء أزرار التنقل
+        nav_buttons = []
+        if doc_index > 0:
+            nav_buttons.append(InlineKeyboardButton("⬅️ السابق", callback_data=f"open_doc:{key}:{doc_index-1}"))
+        
+        nav_buttons.append(InlineKeyboardButton(f"{doc_index+1}/{len(docs)}", callback_data="noop"))
+        
+        if doc_index < len(docs) - 1:
+            nav_buttons.append(InlineKeyboardButton("التالي ➡️", callback_data=f"open_doc:{key}:{doc_index+1}"))
+        
+        try:
+            if file_type == "photo":
+                await q.message.reply_photo(
+                    photo=file_id,
+                    caption=doc_caption,
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=InlineKeyboardMarkup([
+                        nav_buttons,
+                        [InlineKeyboardButton("🔙 عودة للمستندات", callback_data=f"view_archive:{key}")]
+                    ])
+                )
+            elif file_type == "document":
+                await q.message.reply_document(
+                    document=file_id,
+                    caption=doc_caption,
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=InlineKeyboardMarkup([
+                        nav_buttons,
+                        [InlineKeyboardButton("🔙 عودة للمستندات", callback_data=f"view_archive:{key}")]
+                    ])
+                )
+            elif file_type == "video":
+                await q.message.reply_video(
+                    video=file_id,
+                    caption=doc_caption,
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=InlineKeyboardMarkup([
+                        nav_buttons,
+                        [InlineKeyboardButton("🔙 عودة للمستندات", callback_data=f"view_archive:{key}")]
+                    ])
+                )
+            elif file_type == "audio":
+                await q.message.reply_audio(
+                    audio=file_id,
+                    caption=doc_caption,
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=InlineKeyboardMarkup([
+                        nav_buttons,
+                        [InlineKeyboardButton("🔙 عودة للمستندات", callback_data=f"view_archive:{key}")]
+                    ])
+                )
+            else:
+                await q.message.reply_text(
+                    f"❌ نوع الملف '{file_type}' غير مدعوم للعرض المباشر\n\n{doc_caption}",
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=InlineKeyboardMarkup([
+                        [InlineKeyboardButton("🔙 عودة للمستندات", callback_data=f"view_archive:{key}")]
+                    ])
+                )
+            
+            await q.answer()
+        except Exception as e:
+            logger.error(f"Error opening document: {e}")
+            await q.answer("❌ فشل فتح المستند", show_alert=True)
+        
         return MAIN_MENU
     
     # رفع على القناة
@@ -712,6 +819,11 @@ async def main_cb(update, ctx) -> int:
             await send(update, "🗑️ تم حذف الطلب.", main_kb(), edit=True)
         else:
             await q.answer("❌ فشل الحذف", show_alert=True)
+        return MAIN_MENU
+    
+    # زر بدون فعل (لعرض الرقم فقط)
+    if action == "noop":
+        await q.answer()
         return MAIN_MENU
     
     # الحد الأدنى من المعالجة الأخرى
