@@ -52,8 +52,8 @@ CHANNEL_ID     = os.getenv("TELEGRAM_CHANNEL_ID", "")  # معرف القناة
 (
     WAIT_PASSWORD, MAIN_MENU, SEARCH_QUERY,
     EDIT_VALUE, ADD_TITLE, ADD_TYPE, ADD_AUTH, ADD_DETAILS, ADD_CONFIRM,
-    UPLOAD_WAIT, VIEW_ARCHIVE_DOCS,
-) = range(11)
+    UPLOAD_WAIT, VIEW_ARCHIVE_DOCS, UPLOAD_REQ_ID, UPLOAD_FILE,
+) = range(13)
 
 # ─────────────────────────────────────────
 # Firebase
@@ -421,13 +421,168 @@ async def cmd_upload(update, ctx) -> int:
     await update.message.reply_text(
         "📌 أدخل *رقم الطلب* المراد رفع مستند له:",
         parse_mode=ParseMode.MARKDOWN)
-    ctx.user_data["upload_mode"] = "wait_req_id"
-    return UPLOAD_WAIT
+    return UPLOAD_REQ_ID
+
+
+# ─────────────────────────────────────────
+# معالجة إدخال رقم الطلب لرفع مستند
+# ─────────────────────────────────────────
+async def handle_upload_req_id(update, ctx) -> int:
+    if not check_auth(ctx, update.effective_user.id):
+        await update.message.reply_text("🔐 أرسل /start لتسجيل الدخول.")
+        return WAIT_PASSWORD
+    
+    req_id = update.message.text.strip()
+    reqs = get_all()
+    req = next((r for r in reqs if r.get("reqId") == req_id), None)
+    
+    if not req:
+        await update.message.reply_text(
+            f"❌ الطلب رقم *{req_id}* غير موجود.\n\nحاول مرة أخرى أو أرسل /start للعودة.",
+            parse_mode=ParseMode.MARKDOWN)
+        return UPLOAD_REQ_ID
+    
+    ctx.user_data["upload_req_id"] = req_id
+    ctx.user_data["upload_req_key"] = req.get("firebaseKey")
+    
+    await update.message.reply_text(
+        f"✅ تم التحقق من الطلب رقم *{req_id}*\n\n"
+        f"📝 *العنوان:* {req.get('title')}\n"
+        f"🏛️ *الجهة:* {req.get('authority')}\n\n"
+        f"📤 الآن أرسل الملف أو الصورة (PDF، صورة، فيديو، إلخ)\n\n"
+        f"أو اكتب /cancel للإلغاء",
+        parse_mode=ParseMode.MARKDOWN)
+    return UPLOAD_FILE
 
 
 # ─────────────────────────────────────────
 # معالجة رفع المستندات
 # ─────────────────────────────────────────
+async def handle_upload_file(update, ctx) -> int:
+    """معالجة رفع الملف للطلب المحدد"""
+    if not check_auth(ctx, update.effective_user.id):
+        await update.message.reply_text("🔐 أرسل /start لتسجيل الدخول.")
+        return WAIT_PASSWORD
+    
+    # التحقق من الإلغاء
+    if update.message.text and update.message.text.lower() == "/cancel":
+        await update.message.reply_text("❌ تم الإلغاء.", reply_markup=main_kb())
+        ctx.user_data.pop("upload_req_id", None)
+        ctx.user_data.pop("upload_req_key", None)
+        return MAIN_MENU
+    
+    # استخراج بيانات الملف
+    doc_info = {}
+    file_id = None
+    file_name = "بدون اسم"
+    file_type = "document"
+    
+    if update.message.document:
+        file_id = update.message.document.file_id
+        file_name = update.message.document.file_name or file_name
+        file_type = "document"
+    elif update.message.photo:
+        file_id = update.message.photo[-1].file_id
+        file_name = f"صورة_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+        file_type = "photo"
+    elif update.message.video:
+        file_id = update.message.video.file_id
+        file_name = update.message.video.file_name or "فيديو"
+        file_type = "video"
+    elif update.message.audio:
+        file_id = update.message.audio.file_id
+        file_name = update.message.audio.file_name or "صوت"
+        file_type = "audio"
+    elif update.message.text:
+        # في حالة إرسال نص بدلاً من ملف
+        await update.message.reply_text(
+            "❌ يرجى إرسال ملف، صورة، أو فيديو.\n\nأو اكتب /cancel للإلغاء")
+        return UPLOAD_FILE
+    else:
+        await update.message.reply_text(
+            "❌ نوع الملف غير مدعوم.\n\nيرجى إرسال: PDF، صورة، فيديو، أو صوت\n\nأو اكتب /cancel للإلغاء")
+        return UPLOAD_FILE
+    
+    # إنشاء معلومات المستند
+    doc_info = {
+        "file_id": file_id,
+        "file_name": file_name,
+        "file_type": file_type,
+        "caption": update.message.caption or "",
+        "uploadedAt": datetime.now().isoformat(),
+    }
+    
+    req_key = ctx.user_data.get("upload_req_key")
+    req_id = ctx.user_data.get("upload_req_id")
+    req = get_req(req_key)
+    
+    # إضافة المستند لقاعدة البيانات
+    if not add_document_to_req(req_key, doc_info):
+        await update.message.reply_text(
+            "❌ فشل رفع المستند. حاول مرة أخرى.",
+            reply_markup=main_kb())
+        ctx.user_data.pop("upload_req_id", None)
+        ctx.user_data.pop("upload_req_key", None)
+        return MAIN_MENU
+    
+    # إرسال المستند للقناة
+    if CHANNEL_ID:
+        try:
+            header_text = (
+                f"📌 *مستند جديد*\n\n"
+                f"📎 *الملف:* {file_name}\n"
+                f"🔤 *النوع:* {file_type}\n"
+                f"📋 *الطلب:* #{req_id}\n"
+                f"📝 *العنوان:* {req.get('title', '—')}\n"
+                f"🏛️ *الجهة:* {req.get('authority', '—')}\n"
+                f"👤 *تم الرفع بواسطة:* {update.effective_user.first_name}\n"
+                f"⏰ *التاريخ:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+            
+            # إرسال الملف للقناة
+            if file_type == "photo":
+                await ctx.bot.send_photo(
+                    chat_id=CHANNEL_ID,
+                    photo=file_id,
+                    caption=header_text,
+                    parse_mode=ParseMode.MARKDOWN
+                )
+            elif file_type == "document":
+                await ctx.bot.send_document(
+                    chat_id=CHANNEL_ID,
+                    document=file_id,
+                    caption=header_text,
+                    parse_mode=ParseMode.MARKDOWN
+                )
+            elif file_type == "video":
+                await ctx.bot.send_video(
+                    chat_id=CHANNEL_ID,
+                    video=file_id,
+                    caption=header_text,
+                    parse_mode=ParseMode.MARKDOWN
+                )
+            elif file_type == "audio":
+                await ctx.bot.send_audio(
+                    chat_id=CHANNEL_ID,
+                    audio=file_id,
+                    caption=header_text,
+                    parse_mode=ParseMode.MARKDOWN
+                )
+            logger.info(f"✅ تم إرسال المستند '{file_name}' للقناة")
+        except Exception as e:
+            logger.error(f"❌ فشل إرسال الملف للقناة: {e}")
+    
+    # إرسال رسالة نجاح
+    msg = f"✅ تم رفع المستند *'{file_name}'* للطلب رقم *{req_id}* بنجاح!\n\n📎 تم حفظ البيانات في قاعدة البيانات والإرسال للقناة."
+    await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=main_kb())
+    
+    # تنظيف البيانات
+    ctx.user_data.pop("upload_req_id", None)
+    ctx.user_data.pop("upload_req_key", None)
+    
+    return MAIN_MENU
+
+
 async def handle_upload(update, ctx) -> int:
     if not check_auth(ctx, update.effective_user.id):
         await update.message.reply_text("🔐 أرسل /start لتسجيل الدخول.")
@@ -1048,6 +1203,15 @@ def main() -> None:
                 MessageHandler(file_filter, handle_upload),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_upload),
                 CommandHandler("cancel", handle_upload),
+            ],
+            UPLOAD_REQ_ID: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_upload_req_id),
+                CommandHandler("cancel", cmd_start),
+            ],
+            UPLOAD_FILE: [
+                MessageHandler(file_filter, handle_upload_file),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_upload_file),
+                CommandHandler("cancel", handle_upload_file),
             ],
         },
         fallbacks=[
