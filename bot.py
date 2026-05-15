@@ -44,7 +44,9 @@ FIREBASE_JSON  = os.environ["FIREBASE_CREDENTIALS_JSON"]
 FIREBASE_PATH  = os.getenv("FIREBASE_PATH", "parliament-requests")
 ARCHIVE_PATH   = "archive"  # مسار قسم المستندات
 STORAGE_BUCKET = os.getenv("FIREBASE_STORAGE_BUCKET", "")
-CHANNEL_ID     = os.getenv("TELEGRAM_CHANNEL_ID", "")  # معرف القناة
+
+# ✅ معرف القناة
+CHANNEL_ID     = "-1003882612870"معرف القناة
 
 # ─────────────────────────────────────────
 # حالات المحادثة
