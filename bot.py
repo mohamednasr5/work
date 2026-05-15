@@ -139,10 +139,44 @@ def add_document_to_req(key: str, doc_info: dict) -> bool:
         return False
 
 
+def add_document_to_archive(req_id: str, doc_info: dict) -> bool:
+    """إضافة مستند لقسم archive بناءً على رقم الطلب"""
+    try:
+        req_index = int(req_id)
+        archive_ref = db.reference(ARCHIVE_PATH)
+        
+        # جلب البيانات الحالية
+        archive_data = archive_ref.get() or []
+        if isinstance(archive_data, dict):
+            archive_data = list(archive_data.values())
+        
+        # التأكد من أن القائمة كبيرة بما يكفي
+        while len(archive_data) <= req_index:
+            archive_data.append(None)
+        
+        # إنشاء مفتاح فريد للمستند
+        doc_key = archive_ref.child(str(req_index)).push().key
+        
+        # إضافة المستند
+        if archive_data[req_index] is None:
+            archive_data[req_index] = {}
+        
+        archive_data[req_index][doc_key] = doc_info
+        
+        # حفظ البيانات
+        archive_ref.set(archive_data)
+        logger.info(f"✅ تم حفظ المستند في archive للطلب {req_id}")
+        return True
+    except Exception as e:
+        logger.error(f"add_document_to_archive error: {e}")
+        return False
+
+
 def get_archive_docs(req_id: str) -> list:
     """
     جلب جميع المستندات المرتبطة برقم طلب معين من قسم archive
     البنية: archive -> [index] -> {document_key: {file_info}}
+    ملاحظة: الفهرس = reqId (الطلب يأخذ نفس رقمه كفهرس في القائمة)
     """
     try:
         archive_data = db.reference(ARCHIVE_PATH).get()
@@ -165,12 +199,18 @@ def get_archive_docs(req_id: str) -> list:
         
         # التحقق من أن الفهرس ضمن النطاق
         if req_index < 0 or req_index >= len(archive_list):
-            logger.warning(f"req_index {req_index} out of range")
+            logger.warning(f"req_index {req_index} out of range (max: {len(archive_list)-1})")
             return []
         
         # جلب المستندات في هذا الفهرس
         req_docs = archive_list[req_index]
+        
+        # إذا كان None، لا توجد مستندات
+        if req_docs is None:
+            return []
+        
         if not isinstance(req_docs, dict):
+            logger.warning(f"req_docs at index {req_index} is not a dict")
             return []
         
         # تحويل المستندات إلى قائمة مع الحفاظ على المعلومات
@@ -516,7 +556,7 @@ async def handle_upload_file(update, ctx) -> int:
     req_id = ctx.user_data.get("upload_req_id")
     req = get_req(req_key)
     
-    # إضافة المستند لقاعدة البيانات
+    # إضافة المستند لقاعدة البيانات (في parliament-requests)
     if not add_document_to_req(req_key, doc_info):
         await update.message.reply_text(
             "❌ فشل رفع المستند. حاول مرة أخرى.",
@@ -524,6 +564,12 @@ async def handle_upload_file(update, ctx) -> int:
         ctx.user_data.pop("upload_req_id", None)
         ctx.user_data.pop("upload_req_key", None)
         return MAIN_MENU
+    
+    # إضافة المستند أيضاً في archive
+    try:
+        add_document_to_archive(req_id, doc_info)
+    except Exception as e:
+        logger.warning(f"⚠️ فشل حفظ المستند في archive: {e}")
     
     # إرسال المستند للقناة
     if CHANNEL_ID:
