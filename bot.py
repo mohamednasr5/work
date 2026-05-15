@@ -572,6 +572,7 @@ async def handle_upload_file(update, ctx) -> int:
         logger.warning(f"⚠️ فشل حفظ المستند في archive: {e}")
     
     # إرسال المستند للقناة
+    channel_sent = False
     if CHANNEL_ID:
         try:
             header_text = (
@@ -615,11 +616,18 @@ async def handle_upload_file(update, ctx) -> int:
                     parse_mode=ParseMode.MARKDOWN
                 )
             logger.info(f"✅ تم إرسال المستند '{file_name}' للقناة")
+            channel_sent = True
         except Exception as e:
             logger.error(f"❌ فشل إرسال الملف للقناة: {e}")
     
-    # إرسال رسالة نجاح
-    msg = f"✅ تم رفع المستند *'{file_name}'* للطلب رقم *{req_id}* بنجاح!\n\n📎 تم حفظ البيانات في قاعدة البيانات والإرسال للقناة."
+    # إرسال رسالة النجاح المناسبة
+    if channel_sent:
+        msg = f"✅ تم رفع المستند *'{file_name}'* للطلب رقم *{req_id}* بنجاح!\n\n📎 تم حفظ البيانات في قاعدة البيانات\n📢 تم إرسال المستند للقناة"
+    elif CHANNEL_ID:
+        msg = f"⚠️ تم حفظ المستند *'{file_name}'* في قاعدة البيانات للطلب رقم *{req_id}*\n\n❌ لكن فشل إرساله للقناة. تحقق من معرف القناة والصلاحيات."
+    else:
+        msg = f"✅ تم حفظ المستند *'{file_name}'* في قاعدة البيانات للطلب رقم *{req_id}* بنجاح!\n\n⚠️ لم يتم تعيين معرف القناة، لذا لم يتم إرسال المستند للقناة."
+    
     await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=main_kb())
     
     # تنظيف البيانات
