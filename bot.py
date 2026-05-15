@@ -1,4 +1,3 @@
-```python
 from flask import Flask
 from threading import Thread
 import os
@@ -123,20 +122,16 @@ def check_auth(ctx, uid):
 # ============================================================
 
 def init_firebase():
-
     if not firebase_admin._apps:
-
         cred = credentials.Certificate(
             json.loads(FIREBASE_JSON)
         )
-
         firebase_admin.initialize_app(
             cred,
             {
                 "databaseURL": FIREBASE_URL
             }
         )
-
         logger.info("Firebase initialized")
 
 # ============================================================
@@ -157,7 +152,6 @@ def get_all(force=False):
         return _cache["data"]
 
     try:
-
         data = db.reference(
             "parliament-requests"
         ).get()
@@ -165,7 +159,6 @@ def get_all(force=False):
         result = []
 
         if data:
-
             result = [
                 {
                     **v,
@@ -183,9 +176,7 @@ def get_all(force=False):
         return result
 
     except Exception as e:
-
         logger.error(f"get_all error: {e}")
-
         return _cache["data"] or []
 
 # ============================================================
@@ -208,19 +199,14 @@ MONTHS_AR = [
 ]
 
 def fmt_date(s):
-
     if not s:
         return "غير محدد"
-
     try:
-
         d = datetime.strptime(
             s[:10],
             "%Y-%m-%d"
         )
-
         return f"{d.day} {MONTHS_AR[d.month-1]} {d.year}"
-
     except:
         return s
 
@@ -252,7 +238,6 @@ def search(query, reqs):
     results = []
 
     for r in reqs:
-
         text = " ".join(
             filter(
                 None,
@@ -287,22 +272,15 @@ def format_request(r):
     )
 
     lines = [
-
         f"📌 رقم الطلب: {r.get('reqId','—')}",
-
         f"🗂️ النوع: {rtype}",
-
         f"📝 العنوان: {r.get('title','—')}",
-
         f"🏛️ الجهة: {r.get('authority','—')}",
-
         f"📅 التاريخ: {fmt_date(r.get('submissionDate',''))}",
-
         f"🔖 الحالة: {s}",
     ]
 
     if r.get("details"):
-
         lines.append(
             f"\n📄 التفاصيل:\n{r['details']}"
         )
@@ -314,16 +292,13 @@ def format_request(r):
 # ============================================================
 
 def main_keyboard():
-
     return InlineKeyboardMarkup([
-
         [
             InlineKeyboardButton(
                 "🔍 بحث",
                 callback_data="search"
             )
         ],
-
         [
             InlineKeyboardButton(
                 "📊 إحصائيات",
@@ -341,12 +316,10 @@ async def start(update, ctx):
     uid = update.effective_user.id
 
     if check_auth(ctx, uid):
-
         await update.message.reply_text(
             "🏠 القائمة الرئيسية",
             reply_markup=main_keyboard()
         )
-
         return MAIN_MENU
 
     await update.message.reply_text(
@@ -362,7 +335,6 @@ async def start(update, ctx):
 async def check_password(update, ctx):
 
     uid = update.effective_user.id
-
     text = update.message.text.strip()
 
     try:
@@ -371,24 +343,18 @@ async def check_password(update, ctx):
         pass
 
     if text == PASSWORD:
-
         set_auth(ctx, uid)
-
         await ctx.bot.send_message(
             chat_id=update.effective_chat.id,
             text="✅ تم تسجيل الدخول",
             reply_markup=main_keyboard()
         )
-
         return MAIN_MENU
-
     else:
-
         await ctx.bot.send_message(
             chat_id=update.effective_chat.id,
             text="❌ كلمة المرور غير صحيحة"
         )
-
         return WAIT_PASSWORD
 
 # ============================================================
@@ -398,28 +364,21 @@ async def check_password(update, ctx):
 async def main_menu_callback(update, ctx):
 
     query = update.callback_query
-
     await query.answer()
-
     data = query.data
 
     if data == "search":
-
         await query.edit_message_text(
             "🔍 أرسل كلمة البحث:"
         )
-
         return SEARCH_QUERY
 
     elif data == "stats":
-
         reqs = get_all()
-
         await query.edit_message_text(
             f"📊 إجمالي الطلبات: {len(reqs)}",
             reply_markup=main_keyboard()
         )
-
         return MAIN_MENU
 
 # ============================================================
@@ -429,21 +388,16 @@ async def main_menu_callback(update, ctx):
 async def do_search(update, ctx):
 
     q = update.message.text.strip()
-
     reqs = get_all()
-
     results = search(q, reqs)
 
     if not results:
-
         await update.message.reply_text(
             "❌ لا توجد نتائج"
         )
-
         return MAIN_MENU
 
     for r in results[:10]:
-
         await update.message.reply_text(
             format_request(r)
         )
@@ -460,12 +414,10 @@ async def do_search(update, ctx):
 # ============================================================
 
 async def unknown_text(update, ctx):
-
     await update.message.reply_text(
         "🏠 اختر من القائمة",
         reply_markup=main_keyboard()
     )
-
     return MAIN_MENU
 
 # ============================================================
@@ -490,53 +442,33 @@ def main():
     )
 
     conv = ConversationHandler(
-
         entry_points=[
-            CommandHandler(
-                "start",
-                start
-            )
+            CommandHandler("start", start)
         ],
-
         states={
-
             WAIT_PASSWORD: [
-
                 MessageHandler(
                     filters.TEXT & ~filters.COMMAND,
                     check_password
                 )
             ],
-
             MAIN_MENU: [
-
-                CallbackQueryHandler(
-                    main_menu_callback
-                )
+                CallbackQueryHandler(main_menu_callback)
             ],
-
             SEARCH_QUERY: [
-
                 MessageHandler(
                     filters.TEXT & ~filters.COMMAND,
                     do_search
                 )
             ],
         },
-
         fallbacks=[
-
-            CommandHandler(
-                "start",
-                start
-            ),
-
+            CommandHandler("start", start),
             MessageHandler(
                 filters.TEXT & ~filters.COMMAND,
                 unknown_text
             )
         ],
-
         allow_reentry=True
     )
 
@@ -554,4 +486,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-```
