@@ -4,6 +4,8 @@ on:
   workflow_dispatch:        # تشغيل يدوي
   push:
     branches: [main]        # أو عند رفع كود جديد
+  schedule:
+    - cron: '0 */5 * * *'  # كل 5 ساعات تلقائياً (قبل انتهاء الـ 350 دقيقة)
 
 concurrency:
   group: telegram-bot       # يمنع تشغيل نسختين معاً
