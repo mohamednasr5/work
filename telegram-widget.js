@@ -4,7 +4,7 @@
   /* ─────────────────────────────────────────
      CONFIG — عدّل هذا السطر فقط
   ───────────────────────────────────────── */
-  const WORKER_URL   = 'https://telegram-bot.ahmedyossefah.workers.dev';
+  const WORKER_URL = "https://telegram-bot.ahmedyossefah.workers.dev";
   const BOT_USERNAME = 'AhmedAlHadidiBot';
   const BOT_DISPLAY  = 'بوت إدارة الطلبات';
 
@@ -186,7 +186,7 @@
     document.getElementById('tg-inp').addEventListener('keydown', e => { if (e.key === 'Enter' && !isBusy) sendMsg(); });
 
     // رسالة ترحيب أولى عبر الـ Worker
-    sendToWorker('/start').then(reply => addMsg(reply, 'bot'));
+    sendToWorker('/start', true).then(reply => addMsg(reply, 'bot'));
   }
 
   /* ─────────────────────────────────────────
@@ -278,14 +278,20 @@
      WORKER API
   ───────────────────────────────────────── */
   async function sendToWorker(text) {
-    const res = await fetch(`${WORKER_URL}/chat`, {
+    const base = WORKER_URL.replace(/\/+$/, '');
+    const res = await fetch(base + '/chat', {
       method : 'POST',
       headers: { 'Content-Type': 'application/json' },
       body   : JSON.stringify({ chatId, text })
     });
-    if (!res.ok) throw new Error('Server error ' + res.status);
-    const data = await res.json();
-    return data.reply || '...';
+    const raw = await res.text();
+    try {
+      const data = JSON.parse(raw);
+      return data.reply || '...';
+    } catch {
+      console.error('Worker response is not JSON:', raw);
+      throw new Error('Invalid JSON from worker');
+    }
   }
 
   /* ─────────────────────────────────────────
