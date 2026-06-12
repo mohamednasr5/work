@@ -1206,8 +1206,8 @@
         async function performImport(data) {
             if (!confirm("تحذير: سيتم حذف جميع البيانات الحالية واستبدالها بهذا النسخة. هل أنت متأكد؟")) return;
             try {
-                await window.database.ref('parliament-requests').set(null); 
-                await window.database.ref('parliament-requests').set(data);
+                await getDatabase().ref('parliament-requests').set(null); 
+                await getDatabase().ref('parliament-requests').set(data);
                 localStorage.setItem('lastBackupTime', Date.now());
                 updateLastBackupUI();
                 LogManager.log("استيراد قاعدة بيانات", "تم استعادة النسخة الاحتياطية");
@@ -1267,6 +1267,8 @@
         }
 
         function setAutoId() {
+            // لا تغير الرقم إذا كنا في وضع تعديل
+            if (currentRequestKey) return;
             if (requestsData.length === 0) {
                 document.getElementById('reqId').value = "1";
                 return;
@@ -1615,7 +1617,7 @@
 
             // الترقيم الوهمي المتسلسل في الواجهة فقط — reqId الأصلي محفوظ في Firebase
             data.forEach((req, idx) => {
-                const displayNum = idx + 1;
+                const displayNum = req.reqId; // استخدام رقم الطلب الحقيقي
                 const st = statusMap[req.status] || req.status;
                 const stClass = 'status-' + req.status;
                 const tp = typeMap[req.requestType] || 'غير محدد';
@@ -1789,7 +1791,9 @@
 
         async function performEdit() {
             const req = requestsData.find(r => r.firebaseKey === currentRequestKey);
+            const savedKey = currentRequestKey; // حفظ المفتاح قبل إغلاق المودال
             closeModal();
+            currentRequestKey = savedKey; // إعادة المفتاح بعد closeModal التي تصفّره
             switchTab('register');
             document.getElementById('reqId').value = req.reqId;
             document.getElementById('reqDate').value = req.reqDate;
@@ -1944,30 +1948,56 @@
             measurementId: "G-R2MG1YKQEP"
         };
 
-        if (typeof firebase !== 'undefined') {
-            firebase.initializeApp(firebaseConfig);
-            window.database = firebase.database();
+        function getDatabase() {
+            if (!window.database) {
+                console.error("Firebase غير مهيأ بعد — window.database غير موجود");
+                alert("❌ تعذّر الاتصال بقاعدة البيانات. تحقق من اتصالك بالإنترنت ثم أعد تحميل الصفحة.");
+                throw new Error("window.database is undefined");
+            }
+            return window.database;
         }
+
+        function initFirebase() {
+            if (typeof firebase === 'undefined') {
+                console.error("مكتبة Firebase لم تُحمَّل بعد");
+                return;
+            }
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(firebaseConfig);
+                }
+                window.database = firebase.database();
+                console.log("✅ Firebase مهيأ بنجاح");
+            } catch (e) {
+                console.error("خطأ في تهيئة Firebase:", e);
+            }
+        }
+
+        initFirebase();
 
         window.RequestManager = {
             addRequest: async (data) => {
-                const ref = window.database.ref('parliament-requests').push();
+                const db = getDatabase();
+                const ref = db.ref('parliament-requests').push();
                 await ref.set({ ...data, firebaseKey: ref.key });
                 LogManager.log("إضافة طلب جديد", `رقم الطلب: ${data.reqId} - ${data.title}`);
                 return true;
             },
             updateRequest: async (key, data) => {
-                await window.database.ref(`parliament-requests/${key}`).update(data);
+                const db = getDatabase();
+                await db.ref(`parliament-requests/${key}`).update(data);
                 LogManager.log("تعديل طلب", `رقم الطلب: ${data.reqId} - ${data.title}`);
                 return true;
             },
             deleteRequest: async (key) => {
-                await window.database.ref(`parliament-requests/${key}`).remove();
+                const db = getDatabase();
+                await db.ref(`parliament-requests/${key}`).remove();
                 LogManager.log("حذف طلب", "تم حذف طلب من النظام");
                 return true;
             },
             listenToRequests: (cb) => {
-                window.database.ref('parliament-requests').on('value', snap => {
+                const db = getDatabase();
+                db.ref('parliament-requests').on('value', snap => {
                     const data = snap.val();
                     const arr = data ? Object.values(data) : [];
                     cb(arr);
@@ -1975,5 +2005,7 @@
             }
         };
     </script>
+<!-- Telegram Floating Bot Widget -->
+    <script src="telegram-widget.js"></script>
 </body>
 </html>
