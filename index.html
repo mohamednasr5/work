@@ -964,17 +964,16 @@
         // ==========================================
         // TELEGRAM BOT CONFIGURATION
         // ==========================================
-        // استبدل "yourBotUsername" باسم بوتك الفعلي
-        // مثال: "myParliamentBot" بدون @
-        const AhmedAlHadidiBot = "yourBotUsername";
+        // تم تكوين البوت: AhmedAlHadidiBo
+        const TELEGRAM_BOT_USERNAME = "AhmedAlHadidiBo";
 
         function openTelegramBot() {
-            if (!AhmedAlHadidiBot || AhmedAlHadidiBot === "yourBotUsername") {
-                alert("⚠️ يرجى تحديد اسم بوت التليجرام الصحيح في الكود (AhmedAlHadidiBot)");
+            if (!TELEGRAM_BOT_USERNAME || TELEGRAM_BOT_USERNAME === "yourBotUsername") {
+                alert("⚠️ يرجى تحديد اسم بوت التليجرام الصحيح في الكود (TELEGRAM_BOT_USERNAME)");
                 return;
             }
 
-            const botLink = `https://t.me/${AhmedAlHadidiBot}`;
+            const botLink = `https://t.me/${TELEGRAM_BOT_USERNAME}`;
             
             // كشف ما إذا كان الجهاز موبايل
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
