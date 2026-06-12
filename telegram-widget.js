@@ -4,7 +4,7 @@
   /* ─────────────────────────────────────────
      CONFIG — عدّل هذا السطر فقط
   ───────────────────────────────────────── */
-  const WORKER_URL   = 'https://YOUR-WORKER.YOUR-SUBDOMAIN.workers.dev';
+  const WORKER_URL   = 'https://telegram-bot.ahmedyossefah.workers.dev/';
   const BOT_USERNAME = 'AhmedAlHadidiBot';
   const BOT_DISPLAY  = 'بوت إدارة الطلبات';
 
