@@ -1,12 +1,15 @@
 """
 بوت تليجرام احترافي - إدارة الطلبات البرلمانية
 نسخة محدثة: دعم جلب المستندات من archive حسب رقم الطلب
+نسخة محدثة: التحكم الصوتي بالطلبات باستخدام Whisper
 """
 
 import os
 import json
 import logging
 import sys
+import re
+import tempfile
 from datetime import datetime
 from threading import Thread
 import http.server
@@ -23,6 +26,225 @@ from telegram.ext import (
     ConversationHandler, CallbackQueryHandler
 )
 from telegram.constants import ParseMode
+
+# ─────────────────────────────────────────
+# Whisper - التحكم الصوتي
+# ─────────────────────────────────────────
+import whisper
+
+WHISPER_MODEL_NAME = os.getenv("WHISPER_MODEL", "base")
+whisper_model = None
+
+def load_whisper_model():
+    """تحميل نموذج Whisper مرة واحدة فقط"""
+    global whisper_model
+    if whisper_model is None:
+        logger.info(f"Loading Whisper model '{WHISPER_MODEL_NAME}'...")
+        try:
+            whisper_model = whisper.load_model(WHISPER_MODEL_NAME)
+            logger.info("Whisper model loaded successfully")
+        except Exception as e:
+            logger.error(f"Failed to load Whisper model: {e}")
+            raise
+    return whisper_model
+
+
+async def transcribe_voice(update, ctx) -> str:
+    """تحميل وتحويل الرسالة الصوتية إلى نص باستخدام Whisper"""
+    try:
+        # استخراج الملف الصوتي
+        voice = update.message.voice or update.message.audio
+        if not voice:
+            await update.message.reply_text(
+                "🎙️ لم أتمكن من استخراج الملف الصوتي."
+            )
+            return ""
+
+        # إرسال رسالة انتظار
+        processing_msg = await update.message.reply_text(
+            "🎙️ جاري تحليل الصوت... ⏳"
+        )
+
+        # تحميل الملف من تليجرام
+        file = await ctx.bot.get_file(voice.file_id)
+
+        # حفظه مؤقتاً
+        suffix = ".ogg"
+        if update.message.audio:
+            suffix = ".mp3"
+        with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+            await file.download_to_drive(tmp.name)
+            tmp_path = tmp.name
+
+        try:
+            # تحويل الصوت إلى نص باستخدام Whisper
+            model = load_whisper_model()
+            result = model.transcribe(tmp_path, language="ar")
+            text = result["text"].strip()
+
+            # حذف رسالة الانتظار
+            try:
+                await processing_msg.delete()
+            except Exception:
+                pass
+
+            if text:
+                logger.info(f"Voice transcribed: '{text}'")
+                # عرض النص المستخرج للمستخدم
+                await update.message.reply_text(
+                    f"🎙️ *تم فهم:* `{text}`",
+                    parse_mode=ParseMode.MARKDOWN
+                )
+            else:
+                await update.message.reply_text(
+                    "🎙️ لم أتمكن من فهم الصوت. حاول مرة أخرى."
+                )
+
+            return text
+
+        except Exception as e:
+            logger.error(f"Whisper transcription error: {e}")
+            try:
+                await processing_msg.delete()
+            except Exception:
+                pass
+            await update.message.reply_text(
+                "❌ حدث خطأ أثناء تحليل الصوت. حاول مرة أخرى."
+            )
+            return ""
+        finally:
+            # حذف الملف المؤقت
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+
+    except Exception as e:
+        logger.error(f"Voice download error: {e}")
+        await update.message.reply_text(
+            "❌ حدث خطأ أثناء تحميل الصوت."
+        )
+        return ""
+
+
+# ─────────────────────────────────────────
+# محلل الأوامر الصوتية العربية
+# ─────────────────────────────────────────
+def parse_voice_command(text: str) -> dict:
+    """
+    تحليل النص الصوتي العربي واستخراج الأمر والمعطيات
+    يدعم العربية الفصحى والعامية المصرية
+    """
+    if not text:
+        return {"type": "unknown", "text": ""}
+
+    text_clean = text.strip()
+    text_lower = text_clean
+
+    # ── أمر البدء ──
+    if re.search(
+        r'ابد[أا]\s*(?:البوت|البوت|تليجرام)?\s*$'
+        r'|ابدا\s*(?:البوت)?\s*$'
+        r'|start'
+        r'|ابدأ',
+        text_lower
+    ) and not re.search(r'ابحث|بحث|اضف|اضافة|تعديل|عدل|رفع|ارفع', text_lower):
+        return {"type": "start"}
+
+    # ── أمر تسجيل الخروج ──
+    if re.search(r'خروج|تسجيل خروج|logout|اقفل', text_lower):
+        return {"type": "logout"}
+
+    # ── أمر الإحصائيات ──
+    if re.search(
+        r'(?:ا|أ)حصائيات'
+        r'|إحصائيات'
+        r'|احصائيات الطلبات'
+        r'|الإحصائيات'
+        r'|stats'
+        r'|كم عدد الطلبات'
+        r'|عدد الطلبات',
+        text_lower
+    ):
+        return {"type": "stats"}
+
+    # ── أمر عرض كل الطلبات ──
+    if re.search(
+        r'كل الطلبات'
+        r'|عرض الطلبات'
+        r'|اظهر الطلبات'
+        r'|اظهر كل الطلبات'
+        r'|عرض الكل'
+        r'|list',
+        text_lower
+    ) and not re.search(r'ابحث|بحث|اضف|اضافة|تعديل|عدل', text_lower):
+        return {"type": "list_all"}
+
+    # ── أمر البحث عن طلبات باسم ──
+    # "ابحث عن طلبات باسم أحمد" أو "دور على طلبات باسم أحمد"
+    search_name_match = re.search(
+        r'(?:ابحث عن|ابحث|بحث عن|دور على|دور|ابحث عن طلبات باسم|طلبات باسم)\s+(.+)',
+        text_lower
+    )
+    if search_name_match:
+        query = search_name_match.group(1).strip()
+        # إزالة الكلمات الزائدة
+        query = re.sub(r'^باسم\s*', '', query)
+        query = re.sub(r'^اسم\s*', '', query)
+        if query:
+            return {"type": "search", "query": query}
+        else:
+            return {"type": "search_prompt"}
+
+    # بحث بسيط: "ابحث" بدون تحديد
+    if re.search(r'^ابحث$|^بحث$|^دور$', text_lower):
+        return {"type": "search_prompt"}
+
+    # ── أمر إضافة مستند لطلب رقم ──
+    # "اضافة مستند لطلب رقم 5" أو "ارفع مستند لطلب رقم 5"
+    upload_match = re.search(
+        r'(?:اضافة مستند|اضف مستند|رفع مستند|ارفع مستند|ارفع ملف|اضف ملف|رفع ملف)'
+        r'.*?(?:طلب|رقم|لطلب رقم|لطلب)\s*#?(\d+)',
+        text_lower
+    )
+    if upload_match:
+        return {"type": "upload_doc", "req_id": upload_match.group(1)}
+
+    # ── أمر تعديل طلب رقم ──
+    # "تعديل طلب رقم 5" أو "عدل طلب رقم 5"
+    edit_match = re.search(
+        r'(?:تعديل|عدّل|عدل|تعديل طلب|عدل طلب)'
+        r'.*?(?:طلب|رقم|طلب رقم)\s*#?(\d+)',
+        text_lower
+    )
+    if edit_match:
+        return {"type": "edit", "req_id": edit_match.group(1)}
+
+    # ── أمر إضافة طلب جديد ──
+    if re.search(
+        r'اضافة طلب|اضف طلب|طلب جديد|أضف طلب|إضافة طلب',
+        text_lower
+    ):
+        return {"type": "add_request"}
+
+    # ── أمر الفلترة ──
+    if re.search(r'فلتر|فلترة|تصفية', text_lower):
+        return {"type": "filter"}
+
+    # ── أمر المساعدة ──
+    if re.search(r'مساعدة|مساعده|help|المساعدة', text_lower):
+        return {"type": "help"}
+
+    # ── محاولة استخراج رقم مباشر (لكلمة السر أو رقم طلب) ──
+    # إذا كان النص يحتوي على أرقام فقط أو أرقام مع كلمة "رقم"
+    number_match = re.search(r'#?(\d{3,})', text_lower)
+    if number_match:
+        number = number_match.group(1)
+        return {"type": "number", "value": number}
+
+    # ── نص عادي - يمكن استخدامه كبحث ──
+    return {"type": "text", "text": text_clean}
+
 
 # ─────────────────────────────────────────
 # Logging
@@ -45,7 +267,7 @@ FIREBASE_PATH  = os.getenv("FIREBASE_PATH", "parliament-requests")
 ARCHIVE_PATH   = "archive"  # مسار قسم المستندات
 STORAGE_BUCKET = os.getenv("FIREBASE_STORAGE_BUCKET", "")
 
-# ✅ معرف القناة
+# معرف القناة
 CHANNEL_ID     = "-1003882612870" #معرف القناة
 
 # ─────────────────────────────────────────
@@ -70,9 +292,9 @@ def init_firebase() -> None:
         if STORAGE_BUCKET:
             opts["storageBucket"] = STORAGE_BUCKET
         firebase_admin.initialize_app(cred, opts)
-        logger.info("✅ Firebase initialized")
+        logger.info("Firebase initialized")
     except Exception as e:
-        logger.critical(f"❌ Firebase init failed: {e}")
+        logger.critical(f"Firebase init failed: {e}")
         raise
 
 
@@ -80,7 +302,7 @@ def get_all() -> list:
     try:
         data = db.reference(FIREBASE_PATH).get()
         if not data:
-            logger.warning(f"⚠️ No data at: '{FIREBASE_PATH}'")
+            logger.warning(f"No data at: '{FIREBASE_PATH}'")
             return []
         if isinstance(data, dict):
             return [{"firebaseKey": k, **v} for k, v in data.items() if isinstance(v, dict)]
@@ -167,7 +389,7 @@ def add_document_to_archive(req_id: str, doc_info: dict) -> bool:
         
         # حفظ البيانات
         archive_ref.set(archive_data)
-        logger.info(f"✅ تم حفظ المستند في archive للطلب {req_id}")
+        logger.info(f"Document saved to archive for request {req_id}")
         return True
     except Exception as e:
         logger.error(f"add_document_to_archive error: {e}")
@@ -183,7 +405,7 @@ def get_archive_docs(req_id: str) -> list:
     try:
         archive_data = db.reference(ARCHIVE_PATH).get()
         if not archive_data:
-            logger.warning(f"⚠️ No archive data found")
+            logger.warning(f"No archive data found")
             return []
         
         # تحويل البيانات إلى قائمة
@@ -224,7 +446,7 @@ def get_archive_docs(req_id: str) -> list:
                     **doc_info
                 })
         
-        logger.info(f"✅ Found {len(docs)} documents for req_id {req_id}")
+        logger.info(f"Found {len(docs)} documents for req_id {req_id}")
         return docs
     except Exception as e:
         logger.error(f"get_archive_docs error: {e}")
@@ -240,17 +462,17 @@ MONTHS_AR = [
 ]
 
 STATUS = {
-    "execution": "⏳ قيد التنفيذ",
-    "completed": "✅ مكتمل",
-    "replied":   "📩 تم الرد",
-    "rejected":  "❌ مرفوض",
+    "execution": "قيد التنفيذ",
+    "completed": "مكتمل",
+    "replied":   "تم الرد",
+    "rejected":  "مرفوض",
 }
 
 REQ_TYPE = {
-    "special":  "🟣 طلب خاص",
-    "general":  "🔵 طلب عام",
-    "briefing": "🟠 طلب إحاطة",
-    "urgent":   "🔴 بيان عاجل",
+    "special":  "طلب خاص",
+    "general":  "طلب عام",
+    "briefing": "طلب إحاطة",
+    "urgent":   "بيان عاجل",
 }
 
 FILE_TYPE_ICONS = {
@@ -274,18 +496,18 @@ def fmt_date(s: str) -> str:
 def format_req(r: dict, short: bool = False) -> str:
     s     = STATUS.get(r.get("status", ""), r.get("status", "غير محدد"))
     rtype = REQ_TYPE.get(r.get("requestType", ""), r.get("requestType", "غير محدد"))
-    has_docs = "📎 نعم" if r.get("hasDocuments") else "لا"
+    has_docs = "نعم" if r.get("hasDocuments") else "لا"
     lines = [
-        f"📌 *رقم الطلب:* {r.get('reqId', '—')}",
-        f"🗂️ *النوع:* {rtype}",
-        f"📝 *العنوان:* {r.get('title', '—')}",
-        f"🏛️ *الجهة:* {r.get('authority', '—')}",
-        f"📅 *التاريخ:* {fmt_date(r.get('reqDate', ''))}",
-        f"🔖 *الحالة:* {s}",
-        f"📎 *مستندات:* {has_docs}",
+        f"*رقم الطلب:* {r.get('reqId', '—')}",
+        f"*النوع:* {rtype}",
+        f"*العنوان:* {r.get('title', '—')}",
+        f"*الجهة:* {r.get('authority', '—')}",
+        f"*التاريخ:* {fmt_date(r.get('reqDate', ''))}",
+        f"*الحالة:* {s}",
+        f"*مستندات:* {has_docs}",
     ]
     if not short and r.get("details"):
-        lines.append(f"\n📄 *التفاصيل:*\n{r['details'][:800]}")
+        lines.append(f"\n*التفاصيل:*\n{r['details'][:800]}")
     return "\n".join(lines)
 
 
@@ -301,14 +523,14 @@ def build_stats() -> str:
         by_type[rt]   = by_type.get(rt, 0) + 1
 
     lines = [
-        "📊 *إحصائيات الطلبات*\n",
-        f"🔢 الإجمالي: *{total} طلب*\n",
-        "*📋 حسب الحالة:*",
+        "*إحصائيات الطلبات*\n",
+        f"الإجمالي: *{total} طلب*\n",
+        "*حسب الحالة:*",
     ]
     for k, v in by_status.items():
         pct = round(v / total * 100) if total else 0
         lines.append(f"  {STATUS.get(k, k)}: *{v}* ({pct}%)")
-    lines.append("\n*🗂️ حسب النوع:*")
+    lines.append("\n*حسب النوع:*")
     for k, v in by_type.items():
         pct = round(v / total * 100) if total else 0
         lines.append(f"  {REQ_TYPE.get(k, k)}: *{v}* ({pct}%)")
@@ -357,19 +579,19 @@ def req_kb(key: str) -> InlineKeyboardMarkup:
 
 def type_kb(prefix: str) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🟣 طلب خاص",   callback_data=f"{prefix}special")],
-        [InlineKeyboardButton("🔵 طلب عام",   callback_data=f"{prefix}general")],
-        [InlineKeyboardButton("🟠 طلب إحاطة", callback_data=f"{prefix}briefing")],
-        [InlineKeyboardButton("🔴 بيان عاجل", callback_data=f"{prefix}urgent")],
+        [InlineKeyboardButton("طلب خاص",   callback_data=f"{prefix}special")],
+        [InlineKeyboardButton("طلب عام",   callback_data=f"{prefix}general")],
+        [InlineKeyboardButton("طلب إحاطة", callback_data=f"{prefix}briefing")],
+        [InlineKeyboardButton("بيان عاجل", callback_data=f"{prefix}urgent")],
     ])
 
 
 def status_kb() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("⏳ قيد التنفيذ", callback_data="set_status:execution")],
-        [InlineKeyboardButton("✅ مكتمل",       callback_data="set_status:completed")],
-        [InlineKeyboardButton("📩 تم الرد",     callback_data="set_status:replied")],
-        [InlineKeyboardButton("❌ مرفوض",       callback_data="set_status:rejected")],
+        [InlineKeyboardButton("قيد التنفيذ", callback_data="set_status:execution")],
+        [InlineKeyboardButton("مكتمل",       callback_data="set_status:completed")],
+        [InlineKeyboardButton("تم الرد",     callback_data="set_status:replied")],
+        [InlineKeyboardButton("مرفوض",       callback_data="set_status:rejected")],
     ])
 
 
@@ -390,17 +612,443 @@ def check_auth(ctx, user_id) -> bool:
 
 
 # ─────────────────────────────────────────
+# معالجة الأوامر الصوتية - الدالة الرئيسية
+# ─────────────────────────────────────────
+async def handle_voice_message(update, ctx, current_state: int) -> int:
+    """
+    المعالج الموحد للرسائل الصوتية
+    يقوم بتحويل الصوت إلى نص ثم تحليل الأمر وتنفيذه
+    """
+    # تحويل الصوت إلى نص
+    text = await transcribe_voice(update, ctx)
+    if not text:
+        return current_state
+
+    # تحليل الأمر
+    cmd = parse_voice_command(text)
+    cmd_type = cmd.get("type")
+
+    logger.info(f"Voice command parsed: type={cmd_type}, data={cmd}")
+
+    # ── أمر البدء ──
+    if cmd_type == "start":
+        if not check_auth(ctx, update.effective_user.id):
+            await update.message.reply_text(
+                "🔐 أهلاً وسهلاً!\n\nالرجاء إدخال كلمة المرور للوصول:"
+            )
+            return WAIT_PASSWORD
+        await update.message.reply_text(
+            "*القائمة الرئيسية*", parse_mode=ParseMode.MARKDOWN, reply_markup=main_kb())
+        return MAIN_MENU
+
+    # ── أمر تسجيل الخروج ──
+    if cmd_type == "logout":
+        ctx.user_data["auth"] = False
+        await update.message.reply_text("تم تسجيل الخروج بنجاح.")
+        return WAIT_PASSWORD
+
+    # ── أمر الإحصائيات ──
+    if cmd_type == "stats":
+        if not check_auth(ctx, update.effective_user.id):
+            await update.message.reply_text("🔐 أرسل /start أو قل 'ابدأ البوت' لتسجيل الدخول.")
+            return WAIT_PASSWORD
+        await update.message.reply_text(
+            build_stats(), parse_mode=ParseMode.MARKDOWN, reply_markup=main_kb())
+        return MAIN_MENU
+
+    # ── أمر عرض كل الطلبات ──
+    if cmd_type == "list_all":
+        if not check_auth(ctx, update.effective_user.id):
+            await update.message.reply_text("🔐 أرسل /start أو قل 'ابدأ البوت' لتسجيل الدخول.")
+            return WAIT_PASSWORD
+        reqs = get_all()
+        if not reqs:
+            await update.message.reply_text("📋 لا توجد طلبات.", reply_markup=main_kb())
+            return MAIN_MENU
+        await update.message.reply_text(
+            f"📋 إجمالي الطلبات: *{len(reqs)}*", parse_mode=ParseMode.MARKDOWN)
+        for r in reqs[:15]:
+            await update.message.reply_text(
+                format_req(r, short=True),
+                parse_mode=ParseMode.MARKDOWN,
+                reply_markup=req_kb(r["firebaseKey"]))
+        await update.message.reply_text("🏠", reply_markup=main_kb())
+        return MAIN_MENU
+
+    # ── أمر البحث عن طلبات ──
+    if cmd_type == "search":
+        if not check_auth(ctx, update.effective_user.id):
+            await update.message.reply_text("🔐 أرسل /start أو قل 'ابدأ البوت' لتسجيل الدخول.")
+            return WAIT_PASSWORD
+        query = cmd.get("query", "")
+        if query:
+            # تنفيذ البحث مباشرة
+            q_lower = query.lower()
+            reqs = get_all()
+            found = [
+                r for r in reqs
+                if q_lower in " ".join(filter(None, [
+                    str(r.get("reqId", "")),
+                    r.get("title", ""),
+                    r.get("authority", ""),
+                    r.get("details", ""),
+                    r.get("status", ""),
+                ])).lower()
+            ]
+            if not found:
+                await update.message.reply_text(
+                    f"🔍 لا توجد نتائج لـ *{query}*",
+                    parse_mode=ParseMode.MARKDOWN, reply_markup=main_kb())
+                return MAIN_MENU
+            await update.message.reply_text(
+                f"🔍 وُجد *{len(found)}* نتيجة:", parse_mode=ParseMode.MARKDOWN)
+            for r in found[:10]:
+                await update.message.reply_text(
+                    format_req(r, short=True),
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=req_kb(r["firebaseKey"]))
+            await update.message.reply_text("🏠", reply_markup=main_kb())
+            return MAIN_MENU
+        else:
+            # طلب كلمة البحث
+            return SEARCH_QUERY
+
+    # ── طلب كلمة البحث ──
+    if cmd_type == "search_prompt":
+        if not check_auth(ctx, update.effective_user.id):
+            await update.message.reply_text("🔐 أرسل /start أو قل 'ابدأ البوت' لتسجيل الدخول.")
+            return WAIT_PASSWORD
+        await update.message.reply_text(
+            "🔍 أدخل *كلمة البحث* أو قلها صوتياً:",
+            parse_mode=ParseMode.MARKDOWN)
+        return SEARCH_QUERY
+
+    # ── أمر إضافة مستند لطلب رقم ──
+    if cmd_type == "upload_doc":
+        if not check_auth(ctx, update.effective_user.id):
+            await update.message.reply_text("🔐 أرسل /start أو قل 'ابدأ البوت' لتسجيل الدخول.")
+            return WAIT_PASSWORD
+        req_id = cmd.get("req_id")
+        reqs = get_all()
+        req = next((r for r in reqs if r.get("reqId") == req_id), None)
+        if not req:
+            await update.message.reply_text(
+                f"❌ الطلب رقم *{req_id}* غير موجود.\n\nحاول مرة أخرى أو أرسل /start للعودة.",
+                parse_mode=ParseMode.MARKDOWN)
+            return MAIN_MENU
+        ctx.user_data["upload_req_id"] = req_id
+        ctx.user_data["upload_req_key"] = req.get("firebaseKey")
+        await update.message.reply_text(
+            f"✅ تم التحقق من الطلب رقم *{req_id}*\n\n"
+            f"📝 *العنوان:* {req.get('title')}\n"
+            f"🏛️ *الجهة:* {req.get('authority')}\n\n"
+            f"📤 الآن أرسل الملف أو الصورة (PDF، صورة، فيديو، إلخ)\n\n"
+            f"أو اكتب /cancel للإلغاء",
+            parse_mode=ParseMode.MARKDOWN)
+        return UPLOAD_FILE
+
+    # ── أمر تعديل طلب رقم ──
+    if cmd_type == "edit":
+        if not check_auth(ctx, update.effective_user.id):
+            await update.message.reply_text("🔐 أرسل /start أو قل 'ابدأ البوت' لتسجيل الدخول.")
+            return WAIT_PASSWORD
+        req_id = cmd.get("req_id")
+        reqs = get_all()
+        req = next((r for r in reqs if r.get("reqId") == req_id), None)
+        if not req:
+            await update.message.reply_text(
+                f"❌ الطلب رقم *{req_id}* غير موجود.",
+                parse_mode=ParseMode.MARKDOWN, reply_markup=main_kb())
+            return MAIN_MENU
+        key = req.get("firebaseKey")
+        await update.message.reply_text(
+            format_req(req, short=True),
+            parse_mode=ParseMode.MARKDOWN,
+            reply_markup=req_kb(key))
+        return MAIN_MENU
+
+    # ── أمر إضافة طلب جديد ──
+    if cmd_type == "add_request":
+        if not check_auth(ctx, update.effective_user.id):
+            await update.message.reply_text("🔐 أرسل /start أو قل 'ابدأ البوت' لتسجيل الدخول.")
+            return WAIT_PASSWORD
+        ctx.user_data["new_req"] = {}
+        await update.message.reply_text(
+            "📝 أدخل *عنوان* الطلب:", parse_mode=ParseMode.MARKDOWN)
+        return ADD_TITLE
+
+    # ── أمر الفلترة ──
+    if cmd_type == "filter":
+        if not check_auth(ctx, update.effective_user.id):
+            await update.message.reply_text("🔐 أرسل /start أو قل 'ابدأ البوت' لتسجيل الدخول.")
+            return WAIT_PASSWORD
+        await update.message.reply_text(
+            "🔽 اختر معيار الفلترة:",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("حسب الحالة", callback_data="filter_status")],
+                [InlineKeyboardButton("حسب النوع", callback_data="filter_type")],
+            ]))
+        return MAIN_MENU
+
+    # ── أمر المساعدة ──
+    if cmd_type == "help":
+        help_text = """
+*مساعدة البوت - الأوامر الصوتية*
+
+*الأوامر الصوتية المتاحة:*
+- "ابدأ البوت" — فتح القائمة الرئيسية
+- "احصائيات" — عرض إحصائيات الطلبات
+- "كل الطلبات" — عرض جميع الطلبات
+- "ابحث عن طلبات باسم أحمد" — البحث عن طلبات
+- "اضافة مستند لطلب رقم 5" — رفع مستند لطلب
+- "تعديل طلب رقم 5" — تعديل طلب
+- "اضافة طلب" — إضافة طلب جديد
+- "فلترة" — فلترة الطلبات
+- "مساعدة" — عرض هذه الرسالة
+- "خروج" — تسجيل الخروج
+
+*الأوامر الكتابية:*
+/start — القائمة الرئيسية
+/stats — إحصائيات الطلبات
+/upload — رفع مستند
+/logout — تسجيل الخروج
+/help — المساعدة
+"""
+        await update.message.reply_text(help_text, parse_mode=ParseMode.MARKDOWN)
+        return current_state
+
+    # ── رقم (قد يكون كلمة سر أو رقم طلب) ──
+    if cmd_type == "number":
+        number = cmd.get("value", "")
+        if current_state == WAIT_PASSWORD:
+            # محاولة كلمة السر
+            if number == PASSWORD:
+                ctx.user_data["auth"] = True
+                await update.message.reply_text(
+                    "✅ تم التحقق بنجاح!\n\n*القائمة الرئيسية*",
+                    parse_mode=ParseMode.MARKDOWN, reply_markup=main_kb())
+                return MAIN_MENU
+            else:
+                await update.message.reply_text("❌ كلمة المرور خاطئة. حاول مجدداً:")
+                return WAIT_PASSWORD
+        else:
+            # محاولة البحث برقم الطلب
+            if check_auth(ctx, update.effective_user.id):
+                reqs = get_all()
+                found = [r for r in reqs if str(r.get("reqId", "")) == number]
+                if found:
+                    for r in found:
+                        await update.message.reply_text(
+                            format_req(r, short=True),
+                            parse_mode=ParseMode.MARKDOWN,
+                            reply_markup=req_kb(r["firebaseKey"]))
+                    await update.message.reply_text("🏠", reply_markup=main_kb())
+                    return MAIN_MENU
+                else:
+                    await update.message.reply_text(
+                        f"🔍 لا يوجد طلب رقم *{number}*",
+                        parse_mode=ParseMode.MARKDOWN, reply_markup=main_kb())
+                    return MAIN_MENU
+            else:
+                await update.message.reply_text("🔐 أرسل /start أو قل 'ابدأ البوت' لتسجيل الدخول.")
+                return WAIT_PASSWORD
+
+    # ── نص عادي - يمكن استخدامه حسب الحالة الحالية ──
+    if cmd_type == "text":
+        raw_text = cmd.get("text", "")
+        if current_state == WAIT_PASSWORD:
+            # محاولة كلمة السر بالنص
+            if raw_text.strip() == PASSWORD:
+                ctx.user_data["auth"] = True
+                await update.message.reply_text(
+                    "✅ تم التحقق بنجاح!\n\n*القائمة الرئيسية*",
+                    parse_mode=ParseMode.MARKDOWN, reply_markup=main_kb())
+                return MAIN_MENU
+            else:
+                await update.message.reply_text("❌ كلمة المرور خاطئة. حاول مجدداً:")
+                return WAIT_PASSWORD
+        elif current_state == SEARCH_QUERY:
+            # استخدام النص ككلمة بحث
+            q_lower = raw_text.lower()
+            reqs = get_all()
+            found = [
+                r for r in reqs
+                if q_lower in " ".join(filter(None, [
+                    str(r.get("reqId", "")),
+                    r.get("title", ""),
+                    r.get("authority", ""),
+                    r.get("details", ""),
+                    r.get("status", ""),
+                ])).lower()
+            ]
+            if not found:
+                await update.message.reply_text(
+                    f"🔍 لا توجد نتائج لـ *{raw_text}*",
+                    parse_mode=ParseMode.MARKDOWN, reply_markup=main_kb())
+                return MAIN_MENU
+            await update.message.reply_text(
+                f"🔍 وُجد *{len(found)}* نتيجة:", parse_mode=ParseMode.MARKDOWN)
+            for r in found[:10]:
+                await update.message.reply_text(
+                    format_req(r, short=True),
+                    parse_mode=ParseMode.MARKDOWN,
+                    reply_markup=req_kb(r["firebaseKey"]))
+            await update.message.reply_text("🏠", reply_markup=main_kb())
+            return MAIN_MENU
+        elif current_state == ADD_TITLE:
+            ctx.user_data["new_req"]["title"] = raw_text.strip()
+            await update.message.reply_text(
+                "🗂️ اختر *نوع* الطلب:",
+                parse_mode=ParseMode.MARKDOWN, reply_markup=type_kb("add_type:"))
+            return ADD_TYPE
+        elif current_state == ADD_AUTH:
+            ctx.user_data["new_req"]["authority"] = raw_text.strip()
+            await update.message.reply_text(
+                "📄 أدخل *التفاصيل* (أو أرسل `-` للتخطي):",
+                parse_mode=ParseMode.MARKDOWN)
+            return ADD_DETAILS
+        elif current_state == ADD_DETAILS:
+            val = raw_text.strip()
+            ctx.user_data["new_req"]["details"] = "" if val == "-" else val
+            req = ctx.user_data["new_req"]
+            summary = (
+                f"📋 *ملخص الطلب الجديد:*\n\n"
+                f"📝 *العنوان:* {req.get('title')}\n"
+                f"🗂️ *النوع:* {REQ_TYPE.get(req.get('requestType',''),'—')}\n"
+                f"🏛️ *الجهة:* {req.get('authority')}\n"
+                f"📄 *التفاصيل:* {req.get('details','—')[:200]}\n\n"
+                "هل تريد الحفظ؟"
+            )
+            await update.message.reply_text(
+                summary, parse_mode=ParseMode.MARKDOWN,
+                reply_markup=InlineKeyboardMarkup([
+                    [InlineKeyboardButton("✅ حفظ",  callback_data="confirm_add"),
+                     InlineKeyboardButton("❌ إلغاء", callback_data="home")],
+                ]))
+            return ADD_CONFIRM
+        elif current_state == EDIT_VALUE:
+            key = ctx.user_data.get("edit_key")
+            field = ctx.user_data.get("edit_field", "title")
+            if key:
+                ok = update_req(key, field, raw_text.strip())
+                msg = "✅ تم التحديث بنجاح." if ok else "❌ فشل التحديث."
+                await update.message.reply_text(msg, reply_markup=main_kb())
+            ctx.user_data.pop("edit_key", None)
+            ctx.user_data.pop("edit_field", None)
+            return MAIN_MENU
+        elif current_state == UPLOAD_REQ_ID:
+            req_id = raw_text.strip()
+            reqs = get_all()
+            req = next((r for r in reqs if r.get("reqId") == req_id), None)
+            if not req:
+                await update.message.reply_text(
+                    f"❌ الطلب رقم *{req_id}* غير موجود.\n\nحاول مرة أخرى أو أرسل /start للعودة.",
+                    parse_mode=ParseMode.MARKDOWN)
+                return UPLOAD_REQ_ID
+            ctx.user_data["upload_req_id"] = req_id
+            ctx.user_data["upload_req_key"] = req.get("firebaseKey")
+            await update.message.reply_text(
+                f"✅ تم التحقق من الطلب رقم *{req_id}*\n\n"
+                f"📝 *العنوان:* {req.get('title')}\n"
+                f"🏛️ *الجهة:* {req.get('authority')}\n\n"
+                f"📤 الآن أرسل الملف أو الصورة (PDF، صورة، فيديو، إلخ)\n\n"
+                f"أو اكتب /cancel للإلغاء",
+                parse_mode=ParseMode.MARKDOWN)
+            return UPLOAD_FILE
+        else:
+            # حالة افتراضية - محاولة البحث
+            if check_auth(ctx, update.effective_user.id):
+                q_lower = raw_text.lower()
+                reqs = get_all()
+                found = [
+                    r for r in reqs
+                    if q_lower in " ".join(filter(None, [
+                        str(r.get("reqId", "")),
+                        r.get("title", ""),
+                        r.get("authority", ""),
+                        r.get("details", ""),
+                        r.get("status", ""),
+                    ])).lower()
+                ]
+                if found:
+                    await update.message.reply_text(
+                        f"🔍 وُجد *{len(found)}* نتيجة:", parse_mode=ParseMode.MARKDOWN)
+                    for r in found[:10]:
+                        await update.message.reply_text(
+                            format_req(r, short=True),
+                            parse_mode=ParseMode.MARKDOWN,
+                            reply_markup=req_kb(r["firebaseKey"]))
+                    await update.message.reply_text("🏠", reply_markup=main_kb())
+                    return MAIN_MENU
+            await update.message.reply_text(
+                "🤔 لم أفهم الأمر. حاول مرة أخرى أو استخدم الأزرار.",
+                reply_markup=main_kb())
+            return MAIN_MENU
+
+    # ── أمر غير معروف ──
+    if cmd_type == "unknown":
+        await update.message.reply_text(
+            "🎙️ لم أتمكن من فهم الصوت بوضوح. حاول مرة أخرى.",
+            reply_markup=main_kb() if check_auth(ctx, update.effective_user.id) else None)
+        return current_state
+
+    return current_state
+
+
+# ─────────────────────────────────────────
+# معالجات الرسائل الصوتية لكل حالة
+# ─────────────────────────────────────────
+async def voice_wait_password(update, ctx) -> int:
+    """معالجة الرسالة الصوتية في حالة انتظار كلمة المرور"""
+    return await handle_voice_message(update, ctx, WAIT_PASSWORD)
+
+async def voice_main_menu(update, ctx) -> int:
+    """معالجة الرسالة الصوتية في القائمة الرئيسية"""
+    return await handle_voice_message(update, ctx, MAIN_MENU)
+
+async def voice_search_query(update, ctx) -> int:
+    """معالجة الرسالة الصوتية في حالة البحث"""
+    return await handle_voice_message(update, ctx, SEARCH_QUERY)
+
+async def voice_edit_value(update, ctx) -> int:
+    """معالجة الرسالة الصوتية في حالة التعديل"""
+    return await handle_voice_message(update, ctx, EDIT_VALUE)
+
+async def voice_add_title(update, ctx) -> int:
+    """معالجة الرسالة الصوتية في حالة إضافة العنوان"""
+    return await handle_voice_message(update, ctx, ADD_TITLE)
+
+async def voice_add_auth(update, ctx) -> int:
+    """معالجة الرسالة الصوتية في حالة إضافة الجهة"""
+    return await handle_voice_message(update, ctx, ADD_AUTH)
+
+async def voice_add_details(update, ctx) -> int:
+    """معالجة الرسالة الصوتية في حالة إضافة التفاصيل"""
+    return await handle_voice_message(update, ctx, ADD_DETAILS)
+
+async def voice_upload_req_id(update, ctx) -> int:
+    """معالجة الرسالة الصوتية في حالة انتظار رقم الطلب للرفع"""
+    return await handle_voice_message(update, ctx, UPLOAD_REQ_ID)
+
+async def voice_upload_file(update, ctx) -> int:
+    """معالجة الرسالة الصوتية في حالة انتظار الملف - لا يتعامل مع الصوت كملف"""
+    await update.message.reply_text(
+        "📤 يرجى إرسال ملف (PDF، صورة، فيديو) وليس رسالة صوتية.\n\n"
+        "أو اكتب /cancel للإلغاء")
+    return UPLOAD_FILE
+
+
+# ─────────────────────────────────────────
 # الأوامر الأساسية
 # ─────────────────────────────────────────
 async def cmd_start(update, ctx) -> int:
     user_id = update.effective_user.id
     if not check_auth(ctx, user_id):
         await update.message.reply_text(
-            "🔐 أهلاً وسهلاً!\n\nالرجاء إدخال كلمة المرور للوصول:",
-            reply_markup=InlineKeyboardMarkup([]))
+            "🔐 أهلاً وسهلاً!\n\nالرجاء إدخال كلمة المرور للوصول:")
         return WAIT_PASSWORD
     await update.message.reply_text(
-        "🏠 *القائمة الرئيسية*", reply_markup=main_kb())
+        "*القائمة الرئيسية*", reply_markup=main_kb())
     return MAIN_MENU
 
 
@@ -408,7 +1056,7 @@ async def check_password(update, ctx) -> int:
     if update.message.text.strip() == PASSWORD:
         ctx.user_data["auth"] = True
         await update.message.reply_text(
-            "✅ تم التحقق بنجاح!\n\n🏠 *القائمة الرئيسية*",
+            "✅ تم التحقق بنجاح!\n\n*القائمة الرئيسية*",
             parse_mode=ParseMode.MARKDOWN, reply_markup=main_kb())
         return MAIN_MENU
     await update.message.reply_text("❌ كلمة المرور خاطئة. حاول مجدداً:")
@@ -417,7 +1065,7 @@ async def check_password(update, ctx) -> int:
 
 async def cmd_logout(update, ctx) -> int:
     ctx.user_data["auth"] = False
-    await update.message.reply_text("🚪 تم تسجيل الخروج بنجاح.")
+    await update.message.reply_text("تم تسجيل الخروج بنجاح.")
     return WAIT_PASSWORD
 
 
@@ -432,13 +1080,23 @@ async def cmd_stats(update, ctx) -> int:
 
 async def cmd_help(update, ctx) -> int:
     help_text = """
-🤖 *مساعدة البوت*
+*مساعدة البوت*
 
 *الأوامر الرئيسية:*
 /start — القائمة الرئيسية
 /stats — إحصائيات الطلبات
 /upload — رفع مستند
 /logout — تسجيل الخروج
+
+*الأوامر الصوتية:*
+"ابدأ البوت" — فتح القائمة الرئيسية
+"احصائيات" — عرض إحصائيات الطلبات
+"كل الطلبات" — عرض جميع الطلبات
+"ابحث عن طلبات باسم أحمد" — البحث
+"اضافة مستند لطلب رقم 5" — رفع مستند
+"تعديل طلب رقم 5" — تعديل طلب
+"اضافة طلب" — إضافة طلب جديد
+"خروج" — تسجيل الخروج
 
 *الميزات:*
 📋 عرض جميع الطلبات
@@ -448,9 +1106,7 @@ async def cmd_help(update, ctx) -> int:
 ✏️ تعديل البيانات
 📤 رفع المستندات
 📢 رفع على قناة تليجرام
-
-*هل تحتاج مساعدة إضافية؟*
-تواصل مع المسؤول 👤
+🎙️ التحكم الصوتي بالأوامر
 """
     await update.message.reply_text(help_text, parse_mode=ParseMode.MARKDOWN)
     return -1
@@ -571,7 +1227,7 @@ async def handle_upload_file(update, ctx) -> int:
     try:
         add_document_to_archive(req_id, doc_info)
     except Exception as e:
-        logger.warning(f"⚠️ فشل حفظ المستند في archive: {e}")
+        logger.warning(f"Failed to save document to archive: {e}")
     
     # إرسال المستند للقناة
     channel_sent = False
@@ -617,10 +1273,10 @@ async def handle_upload_file(update, ctx) -> int:
                     caption=header_text,
                     parse_mode=ParseMode.MARKDOWN
                 )
-            logger.info(f"✅ تم إرسال المستند '{file_name}' للقناة")
+            logger.info(f"Document '{file_name}' sent to channel")
             channel_sent = True
         except Exception as e:
-            logger.error(f"❌ فشل إرسال الملف للقناة: {e}")
+            logger.error(f"Failed to send file to channel: {e}")
     
     # إرسال رسالة النجاح المناسبة
     if channel_sent:
@@ -839,8 +1495,8 @@ async def main_cb(update, ctx) -> int:
     
     if action == "filter":
         await send(update, "🔽 اختر معيار الفلترة:", InlineKeyboardMarkup([
-            [InlineKeyboardButton("🔖 حسب الحالة", callback_data="filter_status")],
-            [InlineKeyboardButton("🗂️ حسب النوع", callback_data="filter_type")],
+            [InlineKeyboardButton("حسب الحالة", callback_data="filter_status")],
+            [InlineKeyboardButton("حسب النوع", callback_data="filter_type")],
         ]), edit=True)
         return MAIN_MENU
     
@@ -1177,7 +1833,7 @@ async def post_init(application) -> None:
         BotCommand("logout", "🚪 تسجيل الخروج"),
         BotCommand("help",   "📖 المساعدة"),
     ])
-    logger.info("✅ Bot commands registered")
+    logger.info("Bot commands registered")
 
 
 # ─────────────────────────────────────────
@@ -1199,7 +1855,16 @@ def main() -> None:
             s.serve_forever()
 
     Thread(target=run_web, daemon=True).start()
-    logger.info(f"🌐 Health-check server on port {port}")
+    logger.info(f"Health-check server on port {port}")
+
+    # تحميل نموذج Whisper عند البدء
+    logger.info("Pre-loading Whisper model...")
+    try:
+        load_whisper_model()
+        logger.info("Whisper model ready!")
+    except Exception as e:
+        logger.error(f"Failed to load Whisper model: {e}")
+        logger.warning("Voice commands will not work without Whisper model!")
 
     init_firebase()
 
@@ -1218,6 +1883,9 @@ def main() -> None:
         filters.AUDIO
     )
 
+    # فلتر الرسائل الصوتية
+    voice_filter = filters.VOICE | filters.AUDIO
+
     conv = ConversationHandler(
         entry_points=[
             CommandHandler("start",  cmd_start),
@@ -1228,29 +1896,36 @@ def main() -> None:
         ],
         states={
             WAIT_PASSWORD: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, check_password)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, check_password),
+                MessageHandler(voice_filter, voice_wait_password),
             ],
             MAIN_MENU: [
                 CallbackQueryHandler(main_cb),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, fallback),
+                MessageHandler(voice_filter, voice_main_menu),
             ],
             SEARCH_QUERY: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, do_search)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, do_search),
+                MessageHandler(voice_filter, voice_search_query),
             ],
             EDIT_VALUE: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, do_edit_value)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, do_edit_value),
+                MessageHandler(voice_filter, voice_edit_value),
             ],
             ADD_TITLE: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, add_title)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, add_title),
+                MessageHandler(voice_filter, voice_add_title),
             ],
             ADD_TYPE: [
-                CallbackQueryHandler(add_type_cb, pattern="^add_type:")
+                CallbackQueryHandler(add_type_cb, pattern="^add_type:"),
             ],
             ADD_AUTH: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, add_auth)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, add_auth),
+                MessageHandler(voice_filter, voice_add_auth),
             ],
             ADD_DETAILS: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, add_details)
+                MessageHandler(filters.TEXT & ~filters.COMMAND, add_details),
+                MessageHandler(voice_filter, voice_add_details),
             ],
             ADD_CONFIRM: [
                 CallbackQueryHandler(confirm_add, pattern="^(confirm_add|home)$")
@@ -1262,11 +1937,13 @@ def main() -> None:
             ],
             UPLOAD_REQ_ID: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_upload_req_id),
+                MessageHandler(voice_filter, voice_upload_req_id),
                 CommandHandler("cancel", cmd_start),
             ],
             UPLOAD_FILE: [
                 MessageHandler(file_filter, handle_upload_file),
                 MessageHandler(filters.TEXT & ~filters.COMMAND, handle_upload_file),
+                MessageHandler(voice_filter, voice_upload_file),
                 CommandHandler("cancel", handle_upload_file),
             ],
         },
@@ -1283,7 +1960,7 @@ def main() -> None:
     app.add_handler(conv)
     app.add_handler(CommandHandler("help", cmd_help))
 
-    logger.info("🚀 Bot started — polling for updates...")
+    logger.info("Bot started — polling for updates...")
     app.run_polling(
         drop_pending_updates=True,
         allowed_updates=["message", "callback_query"],
