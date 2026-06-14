@@ -25,8 +25,26 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install ffmpeg (required for Whisper)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ffmpeg
+
+      - name: Cache Whisper model
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/whisper
+          key: whisper-base-model-v1
+          restore-keys: |
+            whisper-base-model-
+
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Pre-download Whisper model
+        run: python -c "import whisper; whisper.load_model('base')"
+        env:
+          WHISPER_MODEL: base
 
       - name: Kill old bot connections
         env:
@@ -42,5 +60,6 @@ jobs:
           FIREBASE_URL:              ${{ secrets.FIREBASE_URL }}
           BOT_PASSWORD:              ${{ secrets.BOT_PASSWORD }}
           FIREBASE_PATH:             ${{ secrets.FIREBASE_PATH }}
+          WHISPER_MODEL:             base
           PORT:                      "8080"
         run: python bot.py
