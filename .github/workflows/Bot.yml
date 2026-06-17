@@ -31,11 +31,15 @@ jobs:
           echo "🔪 Sending deleteWebhook..."
           curl -s "https://api.telegram.org/bot${BOT_TOKEN}/deleteWebhook?drop_pending_updates=false" | python3 -m json.tool || true
 
-          echo "🔪 Kicking any active getUpdates polling..."
+          echo "🔪 Kick #1 — getUpdates to terminate old polling..."
+          curl -s "https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=-1&timeout=0&limit=1" > /dev/null || true
+          sleep 3
+
+          echo "🔪 Kick #2 — second getUpdates for safety..."
           curl -s "https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=-1&timeout=0&limit=1" > /dev/null || true
 
-          echo "⏳ Waiting 5 seconds for old instances to terminate..."
-          sleep 5
+          echo "⏳ Waiting 12 seconds for old instances to fully terminate..."
+          sleep 12
           echo "✅ Done — starting fresh instance"
 
       - name: Run Telegram Bot
