@@ -175,16 +175,55 @@ def save_file_to_firebase(req_id: str, file_id: str, filename: str,
         logger.error(f"❌ Error saving file metadata: {e}")
         return None
 
+def _normalize_file(f: dict) -> dict:
+    """يوحّد مفاتيح الملف — يدعم الصيغة القديمة (file_id/file_type/file_name) والجديدة."""
+    return {
+        "fileid":       f.get("fileid") or f.get("file_id", ""),
+        "filename":     f.get("filename") or f.get("file_name", "—"),
+        "filetype":     f.get("filetype") or f.get("file_type", "document"),
+        "caption":      f.get("caption", ""),
+        "uploadedAt":   f.get("uploadedAt", ""),
+        "channelMsgId": f.get("channelMsgId"),
+    }
+
 def get_request_files(req_id: str):
+    """
+    يجلب ملفات الطلب مع دعم صيغتين من Firebase:
+    - الصيغة القديمة: file_id / file_type / file_name
+    - الصيغة الجديدة: fileid / filetype / filename
+    بنية Firebase: archive/{req_id} قد يكون list أو dict أو dict من dicts
+    """
     try:
         ref  = firebase_db.reference(f"archive/{req_id}")
         data = ref.get()
         if not data:
             return []
-        # دعم القوائم والقواميس
+
         if isinstance(data, list):
-            return [f for f in data if f is not None]
-        return list(data.values())
+            raw_items = [f for f in data if f is not None]
+        elif isinstance(data, dict):
+            raw_items = list(data.values())
+        else:
+            return []
+
+        normalized = []
+        for item in raw_items:
+            if not isinstance(item, dict):
+                continue
+            # إذا كانت القيمة تحتوي dict داخلها (pushKey → data)، نفك الطبقة
+            first_val = next(iter(item.values()), None)
+            if isinstance(first_val, dict):
+                for sub in item.values():
+                    if isinstance(sub, dict):
+                        n = _normalize_file(sub)
+                        if n["fileid"]:
+                            normalized.append(n)
+            else:
+                n = _normalize_file(item)
+                if n["fileid"]:
+                    normalized.append(n)
+
+        return normalized
     except Exception as e:
         logger.error(f"❌ Error fetching files: {e}")
         return []
