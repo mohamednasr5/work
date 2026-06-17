@@ -4,10 +4,13 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    - cron: '*/50 * * * *'   # يُعيد التشغيل كل 50 دقيقة تلقائياً
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
+    timeout-minutes: 55        # حد GitHub Actions الأقصى 6 ساعات لكن 55 دقيقة آمن
 
     steps:
       - name: Checkout code
