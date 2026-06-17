@@ -10,7 +10,7 @@ on:
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-    timeout-minutes: 55        # حد GitHub Actions الأقصى 6 ساعات لكن 55 دقيقة آمن
+    timeout-minutes: 55
 
     steps:
       - name: Checkout code
@@ -23,6 +23,20 @@ jobs:
 
       - name: Install dependencies
         run: pip install -r requirements.txt
+
+      - name: Kill any running bot instances
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          echo "🔪 Sending deleteWebhook..."
+          curl -s "https://api.telegram.org/bot${BOT_TOKEN}/deleteWebhook?drop_pending_updates=false" | python3 -m json.tool || true
+
+          echo "🔪 Kicking any active getUpdates polling..."
+          curl -s "https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=-1&timeout=0&limit=1" > /dev/null || true
+
+          echo "⏳ Waiting 5 seconds for old instances to terminate..."
+          sleep 5
+          echo "✅ Done — starting fresh instance"
 
       - name: Run Telegram Bot
         env:
