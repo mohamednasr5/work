@@ -135,16 +135,17 @@ def delete_request(firebase_key: str):
 def get_stats():
     requests = get_all_requests()
     stats = {
-        "total":     len(requests),
-        "special":   sum(1 for r in requests if r.get("requestType") == "special"),
-        "general":   sum(1 for r in requests if r.get("requestType") == "general"),
-        "briefing":  sum(1 for r in requests if r.get("requestType") == "briefing"),
-        "urgent":    sum(1 for r in requests if r.get("requestType") == "urgent"),
-        "completed": sum(1 for r in requests if r.get("status") == "completed"),
-        "execution": sum(1 for r in requests if r.get("status") == "execution"),
-        "review":    sum(1 for r in requests if r.get("status") == "review"),
-        "rejected":  sum(1 for r in requests if r.get("status") == "rejected"),
-        "with_docs": sum(1 for r in requests if r.get("hasDocuments") or r.get("documents")),
+        "total":         len(requests),
+        "special":       sum(1 for r in requests if r.get("requestType") == "special"),
+        "general":       sum(1 for r in requests if r.get("requestType") == "general"),
+        "briefing":      sum(1 for r in requests if r.get("requestType") == "briefing"),
+        "urgent":        sum(1 for r in requests if r.get("requestType") == "urgent"),
+        "interrogation": sum(1 for r in requests if r.get("requestType") == "interrogation"),
+        "completed":     sum(1 for r in requests if r.get("status") == "completed"),
+        "execution":     sum(1 for r in requests if r.get("status") == "execution"),
+        "review":        sum(1 for r in requests if r.get("status") == "review"),
+        "rejected":      sum(1 for r in requests if r.get("status") == "rejected"),
+        "with_docs":     sum(1 for r in requests if r.get("hasDocuments") or r.get("documents")),
     }
     return stats
 
@@ -179,10 +180,11 @@ def get_request_files(req_id: str):
 #  🔤 الخرائط (عربي)
 # ══════════════════════════════════════════════
 TYPE_MAP = {
-    "special":  "🌟 خاص",
-    "general":  "📢 عام",
-    "briefing": "📜 إحاطة",
-    "urgent":   "🚨 عاجل",
+    "special":       "🌟 خاص",
+    "general":       "📢 عام",
+    "briefing":      "📜 إحاطة",
+    "urgent":        "🚨 عاجل",
+    "interrogation": "🎤 استجواب",
 }
 STATUS_MAP = {
     "execution": "⚙️ قيد التنفيذ",
@@ -241,11 +243,30 @@ def format_request(r: dict, compact=False) -> str:
     return text
 
 # ══════════════════════════════════════════════
-#  🔐 إدارة الجلسات
+#  🔐 إدارة الجلسات (محفوظة في Firebase)
 # ══════════════════════════════════════════════
-authenticated_users = set()
 user_state = {}
 pending_uploads = {}
+
+def is_authenticated(user_id: int) -> bool:
+    """تحقق من جلسة المستخدم في Firebase"""
+    try:
+        ref = firebase_db.reference(f"sessions/{user_id}")
+        val = ref.get()
+        return bool(val and val.get("authenticated"))
+    except Exception:
+        return False
+
+def set_authenticated(user_id: int, value: bool):
+    """حفظ جلسة المستخدم في Firebase"""
+    try:
+        ref = firebase_db.reference(f"sessions/{user_id}")
+        if value:
+            ref.set({"authenticated": True, "loginAt": datetime.utcnow().isoformat()})
+        else:
+            ref.delete()
+    except Exception as e:
+        logger.error(f"Session save error: {e}")
 
 # ══════════════════════════════════════════════
 #  ⌨️ لوحات المفاتيح
@@ -304,15 +325,18 @@ def status_keyboard(firebase_key: str):
 def filter_type_keyboard():
     return InlineKeyboardMarkup([
         [
-            InlineKeyboardButton("🌟 خاص",   callback_data="filter_type:special"),
-            InlineKeyboardButton("📢 عام",   callback_data="filter_type:general"),
+            InlineKeyboardButton("🌟 خاص",    callback_data="filter_type:special"),
+            InlineKeyboardButton("📢 عام",    callback_data="filter_type:general"),
         ],
         [
-            InlineKeyboardButton("📜 إحاطة", callback_data="filter_type:briefing"),
-            InlineKeyboardButton("🚨 عاجل",  callback_data="filter_type:urgent"),
+            InlineKeyboardButton("📜 إحاطة",  callback_data="filter_type:briefing"),
+            InlineKeyboardButton("🚨 عاجل",   callback_data="filter_type:urgent"),
         ],
-        [InlineKeyboardButton("📋 الكل",     callback_data="filter_type:all")],
-        [InlineKeyboardButton("🔙 رجوع",     callback_data="back_main")],
+        [
+            InlineKeyboardButton("🎤 استجواب", callback_data="filter_type:interrogation"),
+            InlineKeyboardButton("📋 الكل",    callback_data="filter_type:all"),
+        ],
+        [InlineKeyboardButton("🔙 رجوع",      callback_data="back_main")],
     ])
 
 def filter_status_keyboard():
@@ -351,7 +375,7 @@ def pagination_keyboard(page: int, total_pages: int,
 # ══════════════════════════════════════════════
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    if user.id in authenticated_users:
+    if is_authenticated(user.id):
         await update.message.reply_text(
             f"مرحباً *{user.first_name}* 👋\nأنت مسجّل الدخول بالفعل ✅",
             parse_mode="Markdown",
@@ -372,7 +396,7 @@ async def password_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("❓ أرسل: /password كلمة_المرور")
         return
     if args[0] == BOT_PASSWORD:
-        authenticated_users.add(user.id)
+        set_authenticated(user.id, True)
         await update.message.reply_text(
             f"✅ *تم تسجيل الدخول بنجاح!*\n\nمرحباً *{user.first_name}*",
             parse_mode="Markdown",
@@ -383,13 +407,13 @@ async def password_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def logout_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    authenticated_users.discard(user.id)
+    set_authenticated(user.id, False)
     user_state.pop(user.id, None)
     await update.message.reply_text("👋 تم تسجيل الخروج.")
 
 async def menu_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    if user.id not in authenticated_users:
+    if not is_authenticated(user.id):
         await update.message.reply_text("🔐 أرسل /start أولاً.")
         return
     await update.message.reply_text(
@@ -400,14 +424,14 @@ async def menu_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def stats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    if user.id not in authenticated_users:
+    if not is_authenticated(user.id):
         await update.message.reply_text("🔐 أرسل /start أولاً.")
         return
     await send_stats(update.message, context)
 
 async def search_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    if user.id not in authenticated_users:
+    if not is_authenticated(user.id):
         await update.message.reply_text("🔐 أرسل /start أولاً.")
         return
     query = " ".join(context.args).strip()
@@ -421,7 +445,7 @@ async def search_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def request_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    if user.id not in authenticated_users:
+    if not is_authenticated(user.id):
         await update.message.reply_text("🔐 أرسل /start أولاً.")
         return
     if not context.args:
@@ -437,7 +461,7 @@ async def request_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def list_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    if user.id not in authenticated_users:
+    if not is_authenticated(user.id):
         await update.message.reply_text("🔐 أرسل /start أولاً.")
         return
     await send_request_page(update.message, context, 0)
@@ -457,7 +481,8 @@ async def send_stats(message, context):
         f"  🌟 خاص: *{stats['special']}*\n"
         f"  📢 عام: *{stats['general']}*\n"
         f"  📜 إحاطة: *{stats['briefing']}*\n"
-        f"  🚨 عاجل: *{stats['urgent']}*\n\n"
+        f"  🚨 عاجل: *{stats['urgent']}*\n"
+        f"  🎤 استجواب: *{stats['interrogation']}*\n\n"
         f"*حسب الحالة:*\n"
         f"  ✅ مكتملة: *{stats['completed']}*\n"
         f"  ⚙️ قيد التنفيذ: *{stats['execution']}*\n"
@@ -542,7 +567,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     text = update.message.text.strip()
 
-    if user.id not in authenticated_users:
+    if not is_authenticated(user.id):
         await update.message.reply_text("🔐 أرسل /start للوصول للنظام.")
         return
 
@@ -569,10 +594,11 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         state["step"] = "add_type"
         user_state[user.id] = state
         type_kbd = InlineKeyboardMarkup([
-            [InlineKeyboardButton("🌟 خاص",   callback_data="ntype:special"),
-             InlineKeyboardButton("📢 عام",   callback_data="ntype:general")],
-            [InlineKeyboardButton("📜 إحاطة", callback_data="ntype:briefing"),
-             InlineKeyboardButton("🚨 عاجل",  callback_data="ntype:urgent")],
+            [InlineKeyboardButton("🌟 خاص",    callback_data="ntype:special"),
+             InlineKeyboardButton("📢 عام",    callback_data="ntype:general")],
+            [InlineKeyboardButton("📜 إحاطة",  callback_data="ntype:briefing"),
+             InlineKeyboardButton("🚨 عاجل",   callback_data="ntype:urgent")],
+            [InlineKeyboardButton("🎤 استجواب", callback_data="ntype:interrogation")],
         ])
         await update.message.reply_text(
             "الخطوة 3/5: اختر *نوع* الطلب:",
@@ -692,7 +718,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ══════════════════════════════════════════════
 async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
-    if user.id not in authenticated_users:
+    if not is_authenticated(user.id):
         return
 
     state = user_state.get(user.id, {})
@@ -787,7 +813,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     data  = query.data
     await query.answer()
 
-    if user.id not in authenticated_users:
+    if not is_authenticated(user.id):
         await query.message.reply_text("🔐 أرسل /start لتسجيل الدخول.")
         return
 
