@@ -1481,27 +1481,40 @@ async def post_init(application: Application):
 
 def kill_other_instances():
     """
-    يحذف الـ webhook ويرسل getUpdates بـ timeout=0 لإنهاء أي نسخة أخرى شغالة،
-    ثم ينتظر ثانيتين للتأكد من انتهائها.
+    يقتل أي نسخة أخرى شغّالة من البوت بشكل موثوق:
+    1) حذف webhook
+    2) ضرب getUpdates مرتين لإنهاء أي polling آخر
+    3) انتظار كافٍ حتى تموت النسخة القديمة
     """
     import urllib.request
-    import urllib.error
     base = f"https://api.telegram.org/bot{BOT_TOKEN}"
-    try:
-        # 1) حذف أي webhook قائم
-        urllib.request.urlopen(f"{base}/deleteWebhook?drop_pending_updates=false", timeout=10)
-        logger.info("🔪 deleteWebhook done")
-    except Exception as e:
-        logger.warning(f"deleteWebhook error: {e}")
-    try:
-        # 2) استدعاء getUpdates بـ timeout=0 يُنهي أي polling آخر (يسبب Conflict له)
-        urllib.request.urlopen(f"{base}/getUpdates?offset=-1&timeout=0&limit=1", timeout=10)
-        logger.info("🔪 getUpdates kick done")
-    except Exception as e:
-        logger.warning(f"getUpdates kick error: {e}")
-    # 3) انتظر 3 ثوانٍ حتى تنتهي النسخة الأخرى
-    logger.info("⏳ Waiting 3s for other instances to die...")
-    time.sleep(3)
+
+    # 1) حذف webhook
+    for attempt in range(3):
+        try:
+            urllib.request.urlopen(
+                f"{base}/deleteWebhook?drop_pending_updates=false", timeout=10
+            )
+            logger.info("🔪 deleteWebhook done")
+            break
+        except Exception as e:
+            logger.warning(f"deleteWebhook attempt {attempt+1}: {e}")
+            time.sleep(1)
+
+    # 2) استدعاء getUpdates مرتين لضمان إنهاء أي polling آخر
+    for i in range(2):
+        try:
+            urllib.request.urlopen(
+                f"{base}/getUpdates?offset=-1&timeout=0&limit=1", timeout=10
+            )
+            logger.info(f"🔪 getUpdates kick #{i+1} done")
+        except Exception as e:
+            logger.warning(f"getUpdates kick #{i+1}: {e}")
+        time.sleep(2)
+
+    # 3) انتظار إضافي لضمان انتهاء النسخة القديمة تماماً
+    logger.info("⏳ Waiting 8s for old instances to fully terminate...")
+    time.sleep(8)
     logger.info("✅ Ready to start polling")
 
 
@@ -1532,7 +1545,7 @@ def main():
     logger.info("🚀 Bot started!")
     app.run_polling(
         allowed_updates=Update.ALL_TYPES,
-        drop_pending_updates=False,
+        drop_pending_updates=True,   # ✅ تجاهل الرسائل القديمة المتراكمة عند كل إعادة تشغيل
     )
 
 if __name__ == "__main__":
