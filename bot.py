@@ -46,7 +46,7 @@ ARCHIVE_PATH   = "archive"  # مسار قسم المستندات
 STORAGE_BUCKET = os.getenv("FIREBASE_STORAGE_BUCKET", "")
 
 # ✅ معرف القناة
-CHANNEL_ID     = "-1003882612870" # معرف القناة
+CHANNEL_ID     = "-1003882612870" 
 
 # ─────────────────────────────────────────
 # حالات المحادثة
