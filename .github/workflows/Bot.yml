@@ -1,50 +1,32 @@
-name: 🤖 Telegram Bot
+name: Run Telegram Bot
 
 on:
   schedule:
-    - cron: '*/50 * * * *'   # كل 50 دقيقة
-  workflow_dispatch:
+    - cron: '*/50 * * * *'   # يشتغل كل 50 دقيقة تلقائياً
+  workflow_dispatch:           # تشغيل يدوي من GitHub لو أردت
 
 jobs:
   run-bot:
-    name: Run Telegram Bot
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 50        # يشتغل 50 دقيقة ثم يعيد التشغيل
 
     steps:
-      - name: ⬇️ Checkout code
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: 🐍 Setup Python 3.11
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
-      - name: 📦 Install dependencies
+      - name: Install dependencies
         run: pip install -r requirements.txt
 
-      # ─── استرجاع ملف الحالة المحفوظ (تسجيل الدخول + حالة المحادثة) ───
-      - name: 📂 Restore bot state
-        uses: actions/cache/restore@v4
-        with:
-          path: bot_data.pkl
-          key: bot-state-${{ runner.os }}
-          restore-keys: bot-state-
-
-      - name: 🤖 Run bot (50 minutes)
+      - name: Run bot
         env:
-          BOT_TOKEN:                   ${{ secrets.BOT_TOKEN }}
-          BOT_PASSWORD:                ${{ secrets.BOT_PASSWORD }}
-          FIREBASE_URL:                ${{ secrets.FIREBASE_URL }}
-          FIREBASE_CREDENTIALS_JSON:   ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
-        run: |
-          timeout 2950 python bot.py || true
-
-      # ─── حفظ ملف الحالة بعد انتهاء التشغيل دائماً ────────────────
-      - name: 💾 Save bot state
-        if: always()
-        uses: actions/cache/save@v4
-        with:
-          path: bot_data.pkl
-          key: bot-state-${{ runner.os }}-${{ github.run_id }}
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          FIREBASE_CREDENTIALS_JSON: ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
+          FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
+          BOT_PASSWORD: ${{ secrets.BOT_PASSWORD }}
+          ARCHIVE_CHANNEL_ID: ${{ secrets.ARCHIVE_CHANNEL_ID }}
+        run: python bot.py
