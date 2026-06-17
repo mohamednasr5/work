@@ -46,7 +46,7 @@ ARCHIVE_PATH   = "archive"  # مسار قسم المستندات
 STORAGE_BUCKET = os.getenv("FIREBASE_STORAGE_BUCKET", "")
 
 # ✅ معرف القناة
-CHANNEL_ID     = os.getenv("ARCHIVE_CHANNEL_ID", "-1003882612870")  # معرف القناة
+CHANNEL_ID     = "-1003882612870"معرف القناة
 
 # ─────────────────────────────────────────
 # حالات المحادثة
@@ -545,85 +545,20 @@ async def handle_upload_file(update, ctx) -> int:
             "❌ نوع الملف غير مدعوم.\n\nيرجى إرسال: PDF، صورة، فيديو، أو صوت\n\nأو اكتب /cancel للإلغاء")
         return UPLOAD_FILE
     
-    # إنشاء معلومات المستند الأساسية
+    # إنشاء معلومات المستند
     doc_info = {
         "file_id": file_id,
         "file_name": file_name,
         "file_type": file_type,
         "caption": update.message.caption or "",
         "uploadedAt": datetime.now().isoformat(),
-        "channel_message_id": None,  # سيتم تحديثه بعد إرسال الملف للقناة
     }
     
     req_key = ctx.user_data.get("upload_req_key")
     req_id = ctx.user_data.get("upload_req_id")
     req = get_req(req_key)
     
-    # ─── 1. إرسال الملف للقناة أولاً لحفظ message_id الثابت ───
-    channel_sent = False
-    channel_message_id = None
-    if CHANNEL_ID:
-        try:
-            header_text = (
-                f"📌 *مستند جديد*\n\n"
-                f"📎 *الملف:* {file_name}\n"
-                f"🔤 *النوع:* {file_type}\n"
-                f"📋 *الطلب:* #{req_id}\n"
-                f"📝 *العنوان:* {req.get('title', '—')}\n"
-                f"🏛️ *الجهة:* {req.get('authority', '—')}\n"
-                f"👤 *تم الرفع بواسطة:* {update.effective_user.first_name}\n"
-                f"⏰ *التاريخ:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-            )
-            
-            sent_msg = None
-            if file_type == "photo":
-                sent_msg = await ctx.bot.send_photo(
-                    chat_id=CHANNEL_ID,
-                    photo=file_id,
-                    caption=header_text,
-                    parse_mode=ParseMode.MARKDOWN
-                )
-            elif file_type == "document":
-                sent_msg = await ctx.bot.send_document(
-                    chat_id=CHANNEL_ID,
-                    document=file_id,
-                    caption=header_text,
-                    parse_mode=ParseMode.MARKDOWN
-                )
-            elif file_type == "video":
-                sent_msg = await ctx.bot.send_video(
-                    chat_id=CHANNEL_ID,
-                    video=file_id,
-                    caption=header_text,
-                    parse_mode=ParseMode.MARKDOWN
-                )
-            elif file_type == "audio":
-                sent_msg = await ctx.bot.send_audio(
-                    chat_id=CHANNEL_ID,
-                    audio=file_id,
-                    caption=header_text,
-                    parse_mode=ParseMode.MARKDOWN
-                )
-            
-            if sent_msg:
-                # ✅ حفظ message_id الثابت من القناة — هذا لا ينتهي مثل file_id
-                channel_message_id = sent_msg.message_id
-                # تحديث file_id بالـ file_id الجديد من رسالة القناة (أكثر ثباتاً)
-                if file_type == "photo" and sent_msg.photo:
-                    doc_info["file_id"] = sent_msg.photo[-1].file_id
-                elif file_type == "document" and sent_msg.document:
-                    doc_info["file_id"] = sent_msg.document.file_id
-                elif file_type == "video" and sent_msg.video:
-                    doc_info["file_id"] = sent_msg.video.file_id
-                elif file_type == "audio" and sent_msg.audio:
-                    doc_info["file_id"] = sent_msg.audio.file_id
-                doc_info["channel_message_id"] = channel_message_id
-                logger.info(f"✅ تم إرسال المستند '{file_name}' للقناة - message_id: {channel_message_id}")
-                channel_sent = True
-        except Exception as e:
-            logger.error(f"❌ فشل إرسال الملف للقناة: {e}")
-    
-    # ─── 2. حفظ المستند في قاعدة البيانات بعد الحصول على channel_message_id ───
+    # إضافة المستند لقاعدة البيانات (في parliament-requests)
     if not add_document_to_req(req_key, doc_info):
         await update.message.reply_text(
             "❌ فشل رفع المستند. حاول مرة أخرى.",
@@ -637,6 +572,55 @@ async def handle_upload_file(update, ctx) -> int:
         add_document_to_archive(req_id, doc_info)
     except Exception as e:
         logger.warning(f"⚠️ فشل حفظ المستند في archive: {e}")
+    
+    # إرسال المستند للقناة
+    channel_sent = False
+    if CHANNEL_ID:
+        try:
+            header_text = (
+                f"📌 *مستند جديد*\n\n"
+                f"📎 *الملف:* {file_name}\n"
+                f"🔤 *النوع:* {file_type}\n"
+                f"📋 *الطلب:* #{req_id}\n"
+                f"📝 *العنوان:* {req.get('title', '—')}\n"
+                f"🏛️ *الجهة:* {req.get('authority', '—')}\n"
+                f"👤 *تم الرفع بواسطة:* {update.effective_user.first_name}\n"
+                f"⏰ *التاريخ:* {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            )
+            
+            # إرسال الملف للقناة
+            if file_type == "photo":
+                await ctx.bot.send_photo(
+                    chat_id=CHANNEL_ID,
+                    photo=file_id,
+                    caption=header_text,
+                    parse_mode=ParseMode.MARKDOWN
+                )
+            elif file_type == "document":
+                await ctx.bot.send_document(
+                    chat_id=CHANNEL_ID,
+                    document=file_id,
+                    caption=header_text,
+                    parse_mode=ParseMode.MARKDOWN
+                )
+            elif file_type == "video":
+                await ctx.bot.send_video(
+                    chat_id=CHANNEL_ID,
+                    video=file_id,
+                    caption=header_text,
+                    parse_mode=ParseMode.MARKDOWN
+                )
+            elif file_type == "audio":
+                await ctx.bot.send_audio(
+                    chat_id=CHANNEL_ID,
+                    audio=file_id,
+                    caption=header_text,
+                    parse_mode=ParseMode.MARKDOWN
+                )
+            logger.info(f"✅ تم إرسال المستند '{file_name}' للقناة")
+            channel_sent = True
+        except Exception as e:
+            logger.error(f"❌ فشل إرسال الملف للقناة: {e}")
     
     # إرسال رسالة النجاح المناسبة
     if channel_sent:
@@ -774,7 +758,6 @@ async def send_docs_to_channel(update, ctx, req_id: str, req_key: str):
             file_type = doc.get("file_type", "document")
             caption = doc.get("caption", "")
             uploaded_at = doc.get("uploadedAt", "")
-            channel_message_id = doc.get("channel_message_id")
             
             # صياغة التسمية التوضيحية
             doc_caption = (
@@ -785,14 +768,7 @@ async def send_docs_to_channel(update, ctx, req_id: str, req_key: str):
             )
             
             try:
-                # ✅ استخدام forward_message إذا كان message_id محفوظاً
-                if channel_message_id:
-                    await ctx.bot.forward_message(
-                        chat_id=CHANNEL_ID,
-                        from_chat_id=CHANNEL_ID,
-                        message_id=channel_message_id
-                    )
-                elif file_type == "photo":
+                if file_type == "photo":
                     await ctx.bot.send_photo(
                         chat_id=CHANNEL_ID,
                         photo=file_id,
@@ -982,61 +958,46 @@ async def main_cb(update, ctx) -> int:
         if doc_index < len(docs) - 1:
             nav_buttons.append(InlineKeyboardButton("التالي ➡️", callback_data=f"open_doc:{key}:{doc_index+1}"))
         
-        back_kb = InlineKeyboardMarkup([
-            nav_buttons,
-            [InlineKeyboardButton("🔙 عودة للمستندات", callback_data=f"view_archive:{key}")]
-        ])
-        
         try:
-            channel_message_id = doc.get("channel_message_id")
-            
-            # ✅ الطريقة الأفضل: إعادة توجيه الرسالة من القناة (لا تعتمد على file_id)
-            if channel_message_id and CHANNEL_ID:
-                try:
-                    await ctx.bot.forward_message(
-                        chat_id=q.message.chat_id,
-                        from_chat_id=CHANNEL_ID,
-                        message_id=channel_message_id
-                    )
-                    # إرسال أزرار التنقل في رسالة منفصلة
-                    await q.message.reply_text(
-                        doc_caption,
-                        parse_mode=ParseMode.MARKDOWN,
-                        reply_markup=back_kb
-                    )
-                    await q.answer()
-                    return MAIN_MENU
-                except Exception as fwd_err:
-                    logger.warning(f"⚠️ فشل forward_message، سيتم المحاولة بـ file_id: {fwd_err}")
-            
-            # احتياطي: استخدام file_id مباشرة
             if file_type == "photo":
                 await q.message.reply_photo(
                     photo=file_id,
                     caption=doc_caption,
                     parse_mode=ParseMode.MARKDOWN,
-                    reply_markup=back_kb
+                    reply_markup=InlineKeyboardMarkup([
+                        nav_buttons,
+                        [InlineKeyboardButton("🔙 عودة للمستندات", callback_data=f"view_archive:{key}")]
+                    ])
                 )
             elif file_type == "document":
                 await q.message.reply_document(
                     document=file_id,
                     caption=doc_caption,
                     parse_mode=ParseMode.MARKDOWN,
-                    reply_markup=back_kb
+                    reply_markup=InlineKeyboardMarkup([
+                        nav_buttons,
+                        [InlineKeyboardButton("🔙 عودة للمستندات", callback_data=f"view_archive:{key}")]
+                    ])
                 )
             elif file_type == "video":
                 await q.message.reply_video(
                     video=file_id,
                     caption=doc_caption,
                     parse_mode=ParseMode.MARKDOWN,
-                    reply_markup=back_kb
+                    reply_markup=InlineKeyboardMarkup([
+                        nav_buttons,
+                        [InlineKeyboardButton("🔙 عودة للمستندات", callback_data=f"view_archive:{key}")]
+                    ])
                 )
             elif file_type == "audio":
                 await q.message.reply_audio(
                     audio=file_id,
                     caption=doc_caption,
                     parse_mode=ParseMode.MARKDOWN,
-                    reply_markup=back_kb
+                    reply_markup=InlineKeyboardMarkup([
+                        nav_buttons,
+                        [InlineKeyboardButton("🔙 عودة للمستندات", callback_data=f"view_archive:{key}")]
+                    ])
                 )
             else:
                 await q.message.reply_text(
@@ -1050,7 +1011,7 @@ async def main_cb(update, ctx) -> int:
             await q.answer()
         except Exception as e:
             logger.error(f"Error opening document: {e}")
-            await q.answer("❌ فشل فتح المستند — قد يكون الملف قديماً، يرجى إعادة رفعه", show_alert=True)
+            await q.answer("❌ فشل فتح المستند", show_alert=True)
         
         return MAIN_MENU
     
