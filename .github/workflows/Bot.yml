@@ -1,24 +1,19 @@
-name: Run Telegram Bot
+name: Telegram Bot
 
 on:
-  schedule:
-    - cron: '*/50 * * * *'   # يشتغل كل 50 دقيقة تلقائياً
-  workflow_dispatch:           # تشغيل يدوي من GitHub لو أردت
+  push:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-    timeout-minutes: 50        # يشتغل 50 دقيقة ثم يعيد التشغيل
-
-    # تم إضافة هذا القسم لحل مشكلة إصدار Node.js
-    env:
-      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
@@ -26,11 +21,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run bot
+      - name: Run Telegram Bot
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          FIREBASE_CREDENTIALS_JSON: ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
-          FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
           BOT_PASSWORD: ${{ secrets.BOT_PASSWORD }}
-          ARCHIVE_CHANNEL_ID: ${{ secrets.ARCHIVE_CHANNEL_ID }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
+          FIREBASE_PATH: ${{ secrets.FIREBASE_PATH }}
+          FIREBASE_CREDENTIALS_JSON: ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
         run: python bot.py
