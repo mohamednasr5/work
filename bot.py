@@ -567,7 +567,16 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     text = update.message.text.strip()
 
+    # ✅ قبول الباسورد كنص مباشر (بدون /password)
     if not is_authenticated(user.id):
+        if text == BOT_PASSWORD:
+            set_authenticated(user.id, True)
+            await update.message.reply_text(
+                f"✅ *تم تسجيل الدخول بنجاح!*\n\nمرحباً *{user.first_name}*",
+                parse_mode="Markdown",
+                reply_markup=main_menu_keyboard()
+            )
+            return
         await update.message.reply_text("🔐 أرسل /start للوصول للنظام.")
         return
 
