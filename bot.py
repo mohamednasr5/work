@@ -1,1024 +1,1177 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-بوت تليجرام - إدارة الطلبات البرلمانية
-Parliamentary Requests Management Bot
-برمجة: Claude AI - بناءً على نظام مهندس محمد حماد
+بوت تيليجرام - نظام إدارة الطلبات البرلمانية
+يتحكم كاملاً في البرنامج + رفع الملفات على قناة تيليجرام
 """
 
 import os
-import json
 import logging
+import json
 import asyncio
+import io
 from datetime import datetime
-from io import BytesIO
-
-import firebase_admin
-from firebase_admin import credentials, db
-
 from telegram import (
     Update, InlineKeyboardButton, InlineKeyboardMarkup,
-    InputFile, ReplyKeyboardMarkup, KeyboardButton
+    InputMediaPhoto, BotCommand
 )
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, CallbackQueryHandler,
     ConversationHandler, filters, ContextTypes
 )
-from telegram.constants import ParseMode
+import firebase_admin
+from firebase_admin import credentials, db as firebase_db
+import requests as req_lib
 
-# ─────────────────────────────────────────
-# الإعداد والتهيئة
-# ─────────────────────────────────────────
+# ══════════════════════════════════════════════
+#  ⚙️  الإعدادات - عدّلها من GitHub Secrets
+# ══════════════════════════════════════════════
+BOT_TOKEN        = os.environ.get("BOT_TOKEN", "YOUR_BOT_TOKEN")
+BOT_PASSWORD     = os.environ.get("BOT_PASSWORD", "521988")
+TELEGRAM_CHANNEL_ID = os.environ.get("TELEGRAM_CHANNEL_ID", "@your_channel")
+FIREBASE_URL     = os.environ.get("FIREBASE_URL", "https://hedor-bea3c-default-rtdb.firebaseio.com")
+FIREBASE_PATH    = os.environ.get("FIREBASE_PATH", "parliament-requests")
+
+# Firebase credentials from secret
+FIREBASE_CREDS_JSON = os.environ.get("FIREBASE_CREDENTIALS_JSON", "{}")
 
 logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-    level=logging.INFO
+    level=logging.INFO,
+    handlers=[
+        logging.FileHandler("bot.log", encoding="utf-8"),
+        logging.StreamHandler()
+    ]
 )
 logger = logging.getLogger(__name__)
 
-BOT_TOKEN    = os.environ["BOT_TOKEN"]
-CHANNEL_ID   = os.environ["TELEGRAM_CHANNEL_ID"]   # مثال: @mychannel أو -100xxxxxxx
-FIREBASE_URL = os.environ["FIREBASE_URL"]           # https://hedor-bea3c-default-rtdb.firebaseio.com
-FIREBASE_PATH = os.environ.get("FIREBASE_PATH", "parliament-requests")
-
-# ─── تهيئة Firebase ───
-cred_json = os.environ.get("FIREBASE_CREDENTIALS_JSON")
-if cred_json:
-    cred_dict = json.loads(cred_json)
-    cred = credentials.Certificate(cred_dict)
-    firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_URL})
-else:
-    firebase_admin.initialize_app(options={"databaseURL": FIREBASE_URL})
-
-def get_db_ref():
-    return db.reference(FIREBASE_PATH)
-
-# ─────────────────────────────────────────
-# ثوابت الحالات (ConversationHandler)
-# ─────────────────────────────────────────
-(
-    MAIN_MENU,
-    ADD_TITLE, ADD_TYPE, ADD_DATE, ADD_AUTHORITY,
-    ADD_DETAILS, ADD_DOCS, ADD_CONFIRM,
-    SEARCH_QUERY,
-    EDIT_SELECT, EDIT_FIELD, EDIT_VALUE,
-    DEL_CONFIRM,
-    UPLOAD_REQ_ID, UPLOAD_FILE, UPLOAD_CONFIRM,
-    REPLY_REQ_ID, REPLY_TEXT,
-) = range(18)
-
-# ─────────────────────────────────────────
-# خرائط الترجمة
-# ─────────────────────────────────────────
-TYPE_MAP = {
-    "طلب إحاطة":   "briefing",
-    "طلب عام":     "general",
-    "طلب عاجل":    "urgent",
-    "طلب خاص":    "special",
-}
-TYPE_MAP_REV = {v: k for k, v in TYPE_MAP.items()}
-
-STATUS_MAP = {
-    "execution": "⏳ قيد التنفيذ",
-    "completed": "✅ مكتمل",
-    "replied":   "💬 تم الرد",
-}
-STATUS_EMOJI = {
-    "execution": "⏳",
-    "completed": "✅",
-    "replied":   "💬",
-}
-TYPE_EMOJI = {
-    "briefing": "📋",
-    "general":  "📄",
-    "urgent":   "🚨",
-    "special":  "⭐",
-}
-
-# ─────────────────────────────────────────
-# أدوات Firebase
-# ─────────────────────────────────────────
-
-def fb_get_all() -> dict:
-    data = get_db_ref().get() or {}
-    return data  # {firebaseKey: {...}}
-
-def fb_get_one(key: str) -> dict | None:
-    return get_db_ref().child(key).get()
-
-def fb_add(data: dict) -> str:
-    ref = get_db_ref().push()
-    now = datetime.utcnow().isoformat()
-    data.update({"firebaseKey": ref.key, "createdAt": now, "updatedAt": now})
-    ref.set(data)
-    return ref.key
-
-def fb_update(key: str, data: dict):
-    data["updatedAt"] = datetime.utcnow().isoformat()
-    get_db_ref().child(key).update(data)
-
-def fb_delete(key: str):
-    get_db_ref().child(key).delete()
-
-def next_req_id() -> str:
-    data = fb_get_all()
-    if not data:
-        return "1"
-    ids = []
-    for v in data.values():
+# ══════════════════════════════════════════════
+#  🔥 تهيئة Firebase
+# ══════════════════════════════════════════════
+def init_firebase():
+    if not firebase_admin._apps:
         try:
-            ids.append(int(v.get("reqId", 0)))
-        except (ValueError, TypeError):
-            pass
-    return str(max(ids) + 1) if ids else "1"
+            creds_dict = json.loads(FIREBASE_CREDS_JSON)
+            cred = credentials.Certificate(creds_dict)
+            firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_URL})
+            logger.info("✅ Firebase initialized successfully")
+        except Exception as e:
+            logger.error(f"❌ Firebase init error: {e}")
 
-def search_requests(query: str) -> list:
+def get_all_requests():
+    try:
+        ref = firebase_db.reference(FIREBASE_PATH)
+        data = ref.get()
+        if not data:
+            return []
+        requests = []
+        for key, val in data.items():
+            if isinstance(val, dict):
+                val["firebaseKey"] = key
+                requests.append(val)
+        requests.sort(key=lambda x: int(x.get("reqId", 0) or 0), reverse=True)
+        return requests
+    except Exception as e:
+        logger.error(f"❌ Error fetching requests: {e}")
+        return []
+
+def get_request_by_id(req_id):
+    requests = get_all_requests()
+    for r in requests:
+        if str(r.get("reqId", "")) == str(req_id):
+            return r
+    return None
+
+def search_requests(query, filter_type="all", filter_status="all"):
+    requests = get_all_requests()
     query = query.strip().lower()
     results = []
-    for key, req in fb_get_all().items():
-        req["firebaseKey"] = key
-        if (
-            query in req.get("title", "").lower()
-            or query in req.get("details", "").lower()
-            or query in req.get("reqId", "").lower()
-            or query in req.get("authority", "").lower()
-        ):
-            results.append(req)
+    for r in requests:
+        title     = str(r.get("title", "")).lower()
+        authority = str(r.get("authority", "")).lower()
+        req_id    = str(r.get("reqId", "")).lower()
+        details   = str(r.get("details", "")).lower()
+
+        match_text = (not query or
+                      query in title or
+                      query in authority or
+                      query in req_id or
+                      query in details)
+        match_type   = (filter_type == "all" or r.get("requestType") == filter_type)
+        match_status = (filter_status == "all" or r.get("status") == filter_status)
+
+        if match_text and match_type and match_status:
+            results.append(r)
     return results
 
-# ─────────────────────────────────────────
-# تنسيق الرسائل
-# ─────────────────────────────────────────
+def add_request(data: dict):
+    try:
+        ref = firebase_db.reference(FIREBASE_PATH)
+        new_ref = ref.push(data)
+        firebase_db.reference(f"{FIREBASE_PATH}/{new_ref.key}/firebaseKey").set(new_ref.key)
+        return new_ref.key
+    except Exception as e:
+        logger.error(f"❌ Error adding request: {e}")
+        return None
 
-def format_request_card(req: dict, short=False) -> str:
-    t_emoji = TYPE_EMOJI.get(req.get("requestType", ""), "📄")
-    s_emoji = STATUS_EMOJI.get(req.get("status", ""), "⏳")
-    t_label = TYPE_MAP_REV.get(req.get("requestType", ""), req.get("requestType", ""))
-    s_label = STATUS_MAP.get(req.get("status", ""), req.get("status", ""))
-    docs_icon = "📎" if req.get("hasDocuments") else ""
+def update_request(firebase_key: str, data: dict):
+    try:
+        ref = firebase_db.reference(f"{FIREBASE_PATH}/{firebase_key}")
+        ref.update(data)
+        return True
+    except Exception as e:
+        logger.error(f"❌ Error updating request: {e}")
+        return False
 
-    card = (
-        f"{t_emoji} *{req.get('title', 'بدون عنوان')}* {docs_icon}\n"
-        f"🔢 رقم الطلب: `{req.get('reqId', '—')}`\n"
-        f"📅 التاريخ: {req.get('reqDate', '—')}\n"
-        f"🏛 الجهة: {req.get('authority', '—')}\n"
-        f"🗂 النوع: {t_label}\n"
-        f"📌 الحالة: {s_label}\n"
-    )
-    if not short:
-        details = req.get("details", "")
-        if details:
-            preview = details[:400] + ("…" if len(details) > 400 else "")
-            card += f"\n📝 *التفاصيل:*\n{preview}\n"
-        replies = req.get("repliesList", [])
-        if replies:
-            card += f"\n💬 *الردود ({len(replies)}):*\n"
-            for i, r in enumerate(replies[-2:], 1):
-                card += f"  {i}. {r[:200]}{'…' if len(r)>200 else ''}\n"
-    return card
+def delete_request(firebase_key: str):
+    try:
+        ref = firebase_db.reference(f"{FIREBASE_PATH}/{firebase_key}")
+        ref.delete()
+        return True
+    except Exception as e:
+        logger.error(f"❌ Error deleting request: {e}")
+        return False
 
-def format_channel_post(req: dict) -> str:
-    t_emoji = TYPE_EMOJI.get(req.get("requestType", ""), "📄")
-    t_label = TYPE_MAP_REV.get(req.get("requestType", ""), req.get("requestType", ""))
-    s_label = STATUS_MAP.get(req.get("status", ""), req.get("status", ""))
+def get_stats():
+    requests = get_all_requests()
+    stats = {
+        "total":     len(requests),
+        "special":   sum(1 for r in requests if r.get("requestType") == "special"),
+        "general":   sum(1 for r in requests if r.get("requestType") == "general"),
+        "briefing":  sum(1 for r in requests if r.get("requestType") == "briefing"),
+        "urgent":    sum(1 for r in requests if r.get("requestType") == "urgent"),
+        "completed": sum(1 for r in requests if r.get("status") == "completed"),
+        "execution": sum(1 for r in requests if r.get("status") == "execution"),
+        "review":    sum(1 for r in requests if r.get("status") == "review"),
+        "rejected":  sum(1 for r in requests if r.get("status") == "rejected"),
+        "with_docs": sum(1 for r in requests if r.get("hasDocuments") or r.get("documents")),
+    }
+    return stats
 
-    return (
-        f"{'='*35}\n"
-        f"{t_emoji} *{req.get('title', '')}*\n"
-        f"{'='*35}\n\n"
-        f"🔢 *رقم الطلب:* {req.get('reqId', '—')}\n"
-        f"📅 *التاريخ:* {req.get('reqDate', '—')}\n"
-        f"🏛 *الجهة المختصة:* {req.get('authority', '—')}\n"
-        f"🗂 *نوع الطلب:* {t_label}\n"
-        f"📌 *الحالة:* {s_label}\n\n"
-        f"📝 *تفاصيل الطلب:*\n{req.get('details', '—')}\n\n"
-        f"#طلب_{req.get('reqId','')}"
-    )
-
-# ─────────────────────────────────────────
-# لوحة المفاتيح الرئيسية
-# ─────────────────────────────────────────
-
-def main_keyboard():
-    return ReplyKeyboardMarkup([
-        [KeyboardButton("➕ إضافة طلب"),    KeyboardButton("🔍 بحث عن طلب")],
-        [KeyboardButton("📋 عرض الطلبات"),  KeyboardButton("📤 رفع ملف لطلب")],
-        [KeyboardButton("💬 إضافة رد"),      KeyboardButton("📊 الإحصائيات")],
-        [KeyboardButton("📡 نشر على القناة"), KeyboardButton("🗑 حذف طلب")],
-    ], resize_keyboard=True)
-
-# ─────────────────────────────────────────
-# /start
-# ─────────────────────────────────────────
-
-async def start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    ctx.user_data.clear()
-    await update.message.reply_text(
-        "🏛 *مرحباً بك في بوت إدارة الطلبات البرلمانية*\n\n"
-        "اختر من القائمة أدناه:",
-        reply_markup=main_keyboard(),
-        parse_mode=ParseMode.MARKDOWN,
-    )
-    return MAIN_MENU
-
-# ─────────────────────────────────────────
-# الإحصائيات
-# ─────────────────────────────────────────
-
-async def stats(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    data = fb_get_all()
-    total = len(data)
-    by_status = {}
-    by_type = {}
-    with_docs = 0
-    for v in data.values():
-        st = v.get("status", "unknown")
-        tp = v.get("requestType", "unknown")
-        by_status[st] = by_status.get(st, 0) + 1
-        by_type[tp] = by_type.get(tp, 0) + 1
-        if v.get("hasDocuments"):
-            with_docs += 1
-
-    msg = f"📊 *إحصائيات النظام*\n\n🔢 إجمالي الطلبات: *{total}*\n📎 مع ملفات: *{with_docs}*\n\n"
-    msg += "*حسب الحالة:*\n"
-    for st, cnt in by_status.items():
-        msg += f"  {STATUS_MAP.get(st, st)}: {cnt}\n"
-    msg += "\n*حسب النوع:*\n"
-    for tp, cnt in by_type.items():
-        msg += f"  {TYPE_EMOJI.get(tp,'📄')} {TYPE_MAP_REV.get(tp, tp)}: {cnt}\n"
-
-    await update.message.reply_text(msg, parse_mode=ParseMode.MARKDOWN, reply_markup=main_keyboard())
-    return MAIN_MENU
-
-# ─────────────────────────────────────────
-# عرض الطلبات
-# ─────────────────────────────────────────
-
-async def list_requests(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    data = fb_get_all()
-    if not data:
-        await update.message.reply_text("لا توجد طلبات حالياً.", reply_markup=main_keyboard())
-        return MAIN_MENU
-
-    # أحدث 10 طلبات
-    sorted_reqs = sorted(data.values(), key=lambda x: x.get("reqDate",""), reverse=True)[:10]
-    buttons = []
-    for req in sorted_reqs:
-        key = req.get("firebaseKey", "")
-        label = f"{STATUS_EMOJI.get(req.get('status',''), '⏳')} #{req.get('reqId','?')} {req.get('title','')[:30]}"
-        buttons.append([InlineKeyboardButton(label, callback_data=f"view:{key}")])
-
-    await update.message.reply_text(
-        f"📋 *أحدث {len(sorted_reqs)} طلبات:*",
-        reply_markup=InlineKeyboardMarkup(buttons),
-        parse_mode=ParseMode.MARKDOWN,
-    )
-    return MAIN_MENU
-
-# ─────────────────────────────────────────
-# عرض طلب واحد (callback)
-# ─────────────────────────────────────────
-
-async def view_request_cb(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    key = query.data.split(":", 1)[1]
-    req = fb_get_one(key)
-    if not req:
-        await query.edit_message_text("❌ الطلب غير موجود.")
-        return MAIN_MENU
-
-    req["firebaseKey"] = key
-    card = format_request_card(req)
-
-    actions = InlineKeyboardMarkup([
-        [
-            InlineKeyboardButton("✏️ تعديل",  callback_data=f"edit:{key}"),
-            InlineKeyboardButton("🗑 حذف",    callback_data=f"del:{key}"),
-        ],
-        [
-            InlineKeyboardButton("📤 نشر في القناة", callback_data=f"publish:{key}"),
-            InlineKeyboardButton("💬 إضافة رد",      callback_data=f"reply:{key}"),
-        ],
-        [InlineKeyboardButton("🔙 رجوع", callback_data="back:main")],
-    ])
-
-    # إذا كان هناك مستندات، أرسلها
-    docs = req.get("documents", [])
-    if docs:
-        await query.message.reply_text(f"📎 *المستندات المرفقة ({len(docs)}):*", parse_mode=ParseMode.MARKDOWN)
-        for doc in docs:
-            fid = doc.get("file_id")
-            ftype = doc.get("file_type", "photo")
-            caption = f"📁 {doc.get('file_name','ملف')} | {doc.get('uploadedAt','')[:10]}"
-            try:
-                if ftype == "photo":
-                    await query.message.reply_photo(fid, caption=caption)
-                elif ftype == "document":
-                    await query.message.reply_document(fid, caption=caption)
-                elif ftype == "video":
-                    await query.message.reply_video(fid, caption=caption)
-            except Exception as e:
-                await query.message.reply_text(f"⚠️ تعذر عرض الملف: {doc.get('file_name')}\n`{e}`", parse_mode=ParseMode.MARKDOWN)
-
-    await query.edit_message_text(card, reply_markup=actions, parse_mode=ParseMode.MARKDOWN)
-    return MAIN_MENU
-
-# ─────────────────────────────────────────
-# البحث
-# ─────────────────────────────────────────
-
-async def search_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🔍 أدخل كلمة البحث (عنوان / رقم الطلب / الجهة / الكلمات المفتاحية):",
-        reply_markup=ReplyKeyboardMarkup([[KeyboardButton("🔙 رجوع")]], resize_keyboard=True),
-    )
-    return SEARCH_QUERY
-
-async def search_execute(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    query_text = update.message.text.strip()
-    if query_text == "🔙 رجوع":
-        await update.message.reply_text("تم الرجوع.", reply_markup=main_keyboard())
-        return MAIN_MENU
-
-    results = search_requests(query_text)
-    if not results:
-        await update.message.reply_text("❌ لا توجد نتائج. حاول بكلمة أخرى.", reply_markup=main_keyboard())
-        return MAIN_MENU
-
-    buttons = []
-    for req in results[:15]:
-        key = req.get("firebaseKey", "")
-        label = f"{STATUS_EMOJI.get(req.get('status',''), '⏳')} #{req.get('reqId','?')} {req.get('title','')[:35]}"
-        buttons.append([InlineKeyboardButton(label, callback_data=f"view:{key}")])
-
-    await update.message.reply_text(
-        f"🔍 نتائج البحث عن: *{query_text}*\nوُجد: {len(results)} طلب",
-        reply_markup=InlineKeyboardMarkup(buttons),
-        parse_mode=ParseMode.MARKDOWN,
-    )
-    return MAIN_MENU
-
-# ─────────────────────────────────────────
-# إضافة طلب جديد
-# ─────────────────────────────────────────
-
-async def add_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    ctx.user_data["new_req"] = {}
-    await update.message.reply_text(
-        "➕ *إضافة طلب جديد*\n\nأدخل *عنوان الطلب:*",
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=ReplyKeyboardMarkup([[KeyboardButton("❌ إلغاء")]], resize_keyboard=True),
-    )
-    return ADD_TITLE
-
-async def add_title(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    if update.message.text == "❌ إلغاء":
-        return await cancel(update, ctx)
-    ctx.user_data["new_req"]["title"] = update.message.text.strip()
-    types_kb = ReplyKeyboardMarkup(
-        [[KeyboardButton(t)] for t in TYPE_MAP] + [[KeyboardButton("❌ إلغاء")]],
-        resize_keyboard=True,
-    )
-    await update.message.reply_text("🗂 *نوع الطلب:*", parse_mode=ParseMode.MARKDOWN, reply_markup=types_kb)
-    return ADD_TYPE
-
-async def add_type(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    if update.message.text == "❌ إلغاء":
-        return await cancel(update, ctx)
-    t = TYPE_MAP.get(update.message.text)
-    if not t:
-        await update.message.reply_text("اختر من القائمة.")
-        return ADD_TYPE
-    ctx.user_data["new_req"]["requestType"] = t
-    await update.message.reply_text(
-        "📅 *تاريخ الطلب* (مثال: 2026-06-17):",
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=ReplyKeyboardMarkup(
-            [[KeyboardButton(datetime.now().strftime("%Y-%m-%d"))], [KeyboardButton("❌ إلغاء")]],
-            resize_keyboard=True,
-        ),
-    )
-    return ADD_DATE
-
-async def add_date(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    if update.message.text == "❌ إلغاء":
-        return await cancel(update, ctx)
-    ctx.user_data["new_req"]["reqDate"] = update.message.text.strip()
-    await update.message.reply_text(
-        "🏛 *الجهة المختصة:*",
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=ReplyKeyboardMarkup([[KeyboardButton("❌ إلغاء")]], resize_keyboard=True),
-    )
-    return ADD_AUTHORITY
-
-async def add_authority(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    if update.message.text == "❌ إلغاء":
-        return await cancel(update, ctx)
-    ctx.user_data["new_req"]["authority"] = update.message.text.strip()
-    await update.message.reply_text(
-        "📝 *تفاصيل الطلب:*",
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=ReplyKeyboardMarkup([[KeyboardButton("❌ إلغاء")]], resize_keyboard=True),
-    )
-    return ADD_DETAILS
-
-async def add_details(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    if update.message.text == "❌ إلغاء":
-        return await cancel(update, ctx)
-    ctx.user_data["new_req"]["details"] = update.message.text.strip()
-    ctx.user_data["new_req"]["documents"] = []
-    ctx.user_data["new_req"]["hasDocuments"] = False
-
-    await update.message.reply_text(
-        "📎 هل تريد إرفاق مستندات؟\nأرسل الصور/الملفات الآن أو اضغط *انتهيت*:",
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=ReplyKeyboardMarkup(
-            [[KeyboardButton("✅ انتهيت - حفظ الطلب")], [KeyboardButton("❌ إلغاء")]],
-            resize_keyboard=True,
-        ),
-    )
-    return ADD_DOCS
-
-async def add_docs_receive(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """استقبال ملفات المستندات أثناء إنشاء الطلب"""
-    msg = update.message
-    doc_entry = None
-
-    if msg.photo:
-        photo = msg.photo[-1]
-        doc_entry = {
-            "file_id": photo.file_id,
-            "file_type": "photo",
-            "file_name": f"صورة_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            "caption": msg.caption or "",
+def save_file_to_firebase(req_id: str, file_id: str, filename: str,
+                           filetype: str, caption: str = ""):
+    try:
+        ref = firebase_db.reference(f"archive/{req_id}")
+        ref.push({
+            "fileid":     file_id,
+            "filename":   filename,
+            "filetype":   filetype,
+            "caption":    caption,
             "uploadedAt": datetime.utcnow().isoformat(),
-        }
-    elif msg.document:
-        doc_entry = {
-            "file_id": msg.document.file_id,
-            "file_type": "document",
-            "file_name": msg.document.file_name or "ملف",
-            "caption": msg.caption or "",
-            "uploadedAt": datetime.utcnow().isoformat(),
-        }
-    elif msg.video:
-        doc_entry = {
-            "file_id": msg.video.file_id,
-            "file_type": "video",
-            "file_name": f"فيديو_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            "caption": msg.caption or "",
-            "uploadedAt": datetime.utcnow().isoformat(),
-        }
+        })
+        return True
+    except Exception as e:
+        logger.error(f"❌ Error saving file metadata: {e}")
+        return False
 
-    if doc_entry:
-        ctx.user_data["new_req"]["documents"].append(doc_entry)
-        ctx.user_data["new_req"]["hasDocuments"] = True
-        count = len(ctx.user_data["new_req"]["documents"])
-        await msg.reply_text(
-            f"✅ تم إرفاق الملف ({count} ملف حتى الآن). أرسل المزيد أو اضغط *انتهيت*:",
-            parse_mode=ParseMode.MARKDOWN,
+def get_request_files(req_id: str):
+    try:
+        ref  = firebase_db.reference(f"archive/{req_id}")
+        data = ref.get()
+        if not data:
+            return []
+        return list(data.values())
+    except Exception as e:
+        logger.error(f"❌ Error fetching files: {e}")
+        return []
+
+# ══════════════════════════════════════════════
+#  🔤 الخرائط (عربي)
+# ══════════════════════════════════════════════
+TYPE_MAP = {
+    "special":  "🌟 خاص",
+    "general":  "📢 عام",
+    "briefing": "📜 إحاطة",
+    "urgent":   "🚨 عاجل",
+}
+STATUS_MAP = {
+    "execution": "⚙️ قيد التنفيذ",
+    "review":    "🔍 قيد المراجعة",
+    "replied":   "✉️ تم الرد",
+    "completed": "✅ مكتمل",
+    "rejected":  "❌ مرفوض",
+}
+STATUS_EMOJI = {
+    "execution": "⚙️", "review": "🔍", "replied": "✉️",
+    "completed": "✅", "rejected": "❌",
+}
+
+def format_request(r: dict, compact=False) -> str:
+    req_type   = TYPE_MAP.get(r.get("requestType", ""), r.get("requestType", "—"))
+    req_status = STATUS_MAP.get(r.get("status", ""),    r.get("status", "—"))
+
+    if compact:
+        return (
+            f"📋 *#{r.get('reqId', '?')}* — {r.get('title', 'بدون عنوان')[:50]}\n"
+            f"   🏛 {r.get('authority', '—')[:40]} | {req_type} | {req_status}"
         )
-    return ADD_DOCS
 
-async def add_confirm(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    if update.message.text == "❌ إلغاء":
-        return await cancel(update, ctx)
+    text = (
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"📋 *الطلب رقم:* `{r.get('reqId', '?')}`\n"
+        f"📅 *التاريخ:* {r.get('reqDate', '—')}\n"
+        f"📌 *النوع:* {req_type}\n"
+        f"📊 *الحالة:* {req_status}\n"
+        f"🏛 *الجهة:* {r.get('authority', '—')}\n"
+        f"━━━━━━━━━━━━━━━━━━━━\n"
+        f"📝 *العنوان:*\n{r.get('title', 'بدون عنوان')}\n\n"
+    )
 
-    req = ctx.user_data.get("new_req", {})
-    req["reqId"] = next_req_id()
-    req["status"] = "execution"
+    if r.get("details"):
+        details = r["details"][:600]
+        if len(r["details"]) > 600:
+            details += "..."
+        text += f"📄 *التفاصيل:*\n{details}\n\n"
 
-    # معاينة
-    card = format_request_card(req)
+    if r.get("repliesList"):
+        replies = r["repliesList"]
+        if isinstance(replies, list):
+            text += f"💬 *الردود ({len(replies)}):*\n"
+            for rep in replies[:3]:
+                text += f"  • {str(rep)[:100]}\n"
+            if len(replies) > 3:
+                text += f"  _(وأيضاً {len(replies)-3} ردود أخرى)_\n"
+            text += "\n"
+
+    if r.get("hasDocuments") or r.get("documents"):
+        docs = r.get("documents", {})
+        count = len(docs) if isinstance(docs, dict) else 0
+        text += f"📎 *الملفات:* {count if count else 'يوجد'} ملف مرفق\n"
+
+    return text
+
+# ══════════════════════════════════════════════
+#  🔐 إدارة الجلسات
+# ══════════════════════════════════════════════
+authenticated_users = set()
+user_state = {}
+pending_uploads = {}
+
+# ══════════════════════════════════════════════
+#  ⌨️ لوحات المفاتيح
+# ══════════════════════════════════════════════
+def main_menu_keyboard():
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("📋 قائمة الطلبات", callback_data="list_requests"),
+            InlineKeyboardButton("🔍 بحث",           callback_data="search_mode"),
+        ],
+        [
+            InlineKeyboardButton("➕ إضافة طلب",     callback_data="add_request"),
+            InlineKeyboardButton("📊 إحصائيات",      callback_data="stats"),
+        ],
+        [
+            InlineKeyboardButton("📁 رفع ملف",       callback_data="upload_file"),
+            InlineKeyboardButton("🔎 فلترة",          callback_data="filter_menu"),
+        ],
+        [
+            InlineKeyboardButton("📢 نشر على القناة", callback_data="publish_channel"),
+            InlineKeyboardButton("⚙️ إعدادات",       callback_data="settings"),
+        ],
+    ])
+
+def request_actions_keyboard(firebase_key: str, req_id: str):
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("✏️ تعديل الحالة",  callback_data=f"edit_status:{firebase_key}"),
+            InlineKeyboardButton("📁 ملفات الطلب",   callback_data=f"view_files:{req_id}:{firebase_key}"),
+        ],
+        [
+            InlineKeyboardButton("📤 رفع ملف للطلب", callback_data=f"upload_for:{req_id}:{firebase_key}"),
+            InlineKeyboardButton("📢 نشر في القناة", callback_data=f"publish:{firebase_key}"),
+        ],
+        [
+            InlineKeyboardButton("🗑 حذف الطلب",    callback_data=f"delete_req:{firebase_key}"),
+            InlineKeyboardButton("🔙 القائمة",       callback_data="back_main"),
+        ],
+    ])
+
+def status_keyboard(firebase_key: str):
+    statuses = [
+        ("⚙️ قيد التنفيذ", "execution"),
+        ("🔍 قيد المراجعة", "review"),
+        ("✉️ تم الرد",      "replied"),
+        ("✅ مكتمل",        "completed"),
+        ("❌ مرفوض",        "rejected"),
+    ]
+    buttons = [
+        [InlineKeyboardButton(label, callback_data=f"set_status:{firebase_key}:{val}")]
+        for label, val in statuses
+    ]
+    buttons.append([InlineKeyboardButton("🔙 رجوع", callback_data="back_main")])
+    return InlineKeyboardMarkup(buttons)
+
+def filter_type_keyboard():
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("🌟 خاص",   callback_data="filter_type:special"),
+            InlineKeyboardButton("📢 عام",   callback_data="filter_type:general"),
+        ],
+        [
+            InlineKeyboardButton("📜 إحاطة", callback_data="filter_type:briefing"),
+            InlineKeyboardButton("🚨 عاجل",  callback_data="filter_type:urgent"),
+        ],
+        [InlineKeyboardButton("📋 الكل",     callback_data="filter_type:all")],
+        [InlineKeyboardButton("🔙 رجوع",     callback_data="back_main")],
+    ])
+
+def filter_status_keyboard():
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("⚙️ تنفيذ",   callback_data="filter_status:execution"),
+            InlineKeyboardButton("🔍 مراجعة",  callback_data="filter_status:review"),
+        ],
+        [
+            InlineKeyboardButton("✅ مكتمل",   callback_data="filter_status:completed"),
+            InlineKeyboardButton("❌ مرفوض",   callback_data="filter_status:rejected"),
+        ],
+        [InlineKeyboardButton("📋 الكل",       callback_data="filter_status:all")],
+        [InlineKeyboardButton("🔙 رجوع",       callback_data="back_main")],
+    ])
+
+def pagination_keyboard(page: int, total_pages: int,
+                        prefix: str = "page", extra_data: str = ""):
+    buttons = []
+    nav = []
+    if page > 0:
+        nav.append(InlineKeyboardButton("⬅️ السابق",
+                   callback_data=f"{prefix}:{page-1}:{extra_data}"))
+    nav.append(InlineKeyboardButton(f"📄 {page+1}/{total_pages}",
+               callback_data="noop"))
+    if page < total_pages - 1:
+        nav.append(InlineKeyboardButton("➡️ التالي",
+                   callback_data=f"{prefix}:{page+1}:{extra_data}"))
+    if nav:
+        buttons.append(nav)
+    buttons.append([InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_main")])
+    return InlineKeyboardMarkup(buttons)
+
+# ══════════════════════════════════════════════
+#  🤖 معالجات الأوامر
+# ══════════════════════════════════════════════
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user.id in authenticated_users:
+        await update.message.reply_text(
+            f"مرحباً *{user.first_name}* 👋\nأنت مسجّل الدخول بالفعل ✅",
+            parse_mode="Markdown",
+            reply_markup=main_menu_keyboard()
+        )
+        return
     await update.message.reply_text(
-        f"📋 *معاينة الطلب:*\n\n{card}\n\nهل تريد الحفظ؟",
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("✅ حفظ",    callback_data="confirm_add:yes"),
-                InlineKeyboardButton("❌ إلغاء",   callback_data="confirm_add:no"),
-            ]
-        ]),
+        "🔐 *مرحباً بك في بوت إدارة الطلبات البرلمانية*\n\n"
+        "يرجى إدخال كلمة المرور للوصول:\n"
+        "_أرسل /password ثم كلمة المرور_",
+        parse_mode="Markdown"
     )
-    return ADD_CONFIRM
 
-async def add_confirmed_cb(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    if query.data == "confirm_add:no":
-        await query.edit_message_text("❌ تم إلغاء إضافة الطلب.")
-        ctx.user_data.clear()
-        await query.message.reply_text("القائمة الرئيسية:", reply_markup=main_keyboard())
-        return MAIN_MENU
+async def password_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    args = context.args
+    if not args:
+        await update.message.reply_text("❓ أرسل: /password كلمة_المرور")
+        return
+    if args[0] == BOT_PASSWORD:
+        authenticated_users.add(user.id)
+        await update.message.reply_text(
+            f"✅ *تم تسجيل الدخول بنجاح!*\n\nمرحباً *{user.first_name}*",
+            parse_mode="Markdown",
+            reply_markup=main_menu_keyboard()
+        )
+    else:
+        await update.message.reply_text("❌ كلمة المرور غير صحيحة.")
 
-    req = ctx.user_data.get("new_req", {})
-    key = fb_add(req)
-    await query.edit_message_text(
-        f"✅ *تم حفظ الطلب بنجاح!*\nرقم الطلب: `{req['reqId']}`\nFirebase Key: `{key}`",
-        parse_mode=ParseMode.MARKDOWN,
-    )
-    ctx.user_data.clear()
-    await query.message.reply_text("القائمة الرئيسية:", reply_markup=main_keyboard())
-    return MAIN_MENU
+async def logout_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    authenticated_users.discard(user.id)
+    user_state.pop(user.id, None)
+    await update.message.reply_text("👋 تم تسجيل الخروج.")
 
-# ─────────────────────────────────────────
-# رفع ملف لطلب موجود
-# ─────────────────────────────────────────
-
-async def upload_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    ctx.user_data["upload"] = {}
+async def menu_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user.id not in authenticated_users:
+        await update.message.reply_text("🔐 أرسل /start أولاً.")
+        return
     await update.message.reply_text(
-        "📤 *رفع ملف لطلب موجود*\n\nأدخل رقم الطلب:",
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=ReplyKeyboardMarkup([[KeyboardButton("❌ إلغاء")]], resize_keyboard=True),
+        "📱 *القائمة الرئيسية*",
+        parse_mode="Markdown",
+        reply_markup=main_menu_keyboard()
     )
-    return UPLOAD_REQ_ID
 
-async def upload_req_id(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    if update.message.text == "❌ إلغاء":
-        return await cancel(update, ctx)
-    req_id = update.message.text.strip()
-    # البحث عن الطلب
-    found = None
-    found_key = None
-    for key, v in fb_get_all().items():
-        if str(v.get("reqId", "")) == req_id:
-            found = v
-            found_key = key
-            break
-    if not found:
-        await update.message.reply_text(f"❌ لم يُعثر على طلب رقم {req_id}. حاول مرة أخرى:")
-        return UPLOAD_REQ_ID
+async def stats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user.id not in authenticated_users:
+        await update.message.reply_text("🔐 أرسل /start أولاً.")
+        return
+    await send_stats(update.message, context)
 
-    ctx.user_data["upload"]["key"] = found_key
-    ctx.user_data["upload"]["req"] = found
-    await update.message.reply_text(
-        f"✅ وُجد الطلب: *{found.get('title','')[:50]}*\n\nأرسل الملف/الصورة الآن:",
-        parse_mode=ParseMode.MARKDOWN,
+async def search_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user.id not in authenticated_users:
+        await update.message.reply_text("🔐 أرسل /start أولاً.")
+        return
+    query = " ".join(context.args).strip()
+    if not query:
+        await update.message.reply_text(
+            "🔍 أرسل: `/search نص البحث`\nمثال: `/search قانون العمل`",
+            parse_mode="Markdown"
+        )
+        return
+    await do_search(update.message, context, query)
+
+async def request_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user.id not in authenticated_users:
+        await update.message.reply_text("🔐 أرسل /start أولاً.")
+        return
+    if not context.args:
+        await update.message.reply_text("❓ أرسل: /request رقم_الطلب")
+        return
+    req = get_request_by_id(context.args[0])
+    if not req:
+        await update.message.reply_text(f"❌ لم يُعثر على الطلب رقم {context.args[0]}")
+        return
+    text = format_request(req)
+    kbd  = request_actions_keyboard(req["firebaseKey"], str(req.get("reqId")))
+    await update.message.reply_text(text, parse_mode="Markdown", reply_markup=kbd)
+
+async def list_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user.id not in authenticated_users:
+        await update.message.reply_text("🔐 أرسل /start أولاً.")
+        return
+    await send_request_page(update.message, context, 0)
+
+# ══════════════════════════════════════════════
+#  🛠  دوال مساعدة للعرض
+# ══════════════════════════════════════════════
+PAGE_SIZE = 8
+
+async def send_stats(message, context):
+    stats = get_stats()
+    text = (
+        "📊 *إحصائيات النظام*\n"
+        "━━━━━━━━━━━━━━━━━━━━\n"
+        f"📋 إجمالي الطلبات: *{stats['total']}*\n\n"
+        f"*حسب النوع:*\n"
+        f"  🌟 خاص: *{stats['special']}*\n"
+        f"  📢 عام: *{stats['general']}*\n"
+        f"  📜 إحاطة: *{stats['briefing']}*\n"
+        f"  🚨 عاجل: *{stats['urgent']}*\n\n"
+        f"*حسب الحالة:*\n"
+        f"  ✅ مكتملة: *{stats['completed']}*\n"
+        f"  ⚙️ قيد التنفيذ: *{stats['execution']}*\n"
+        f"  🔍 قيد المراجعة: *{stats['review']}*\n"
+        f"  ❌ مرفوضة: *{stats['rejected']}*\n"
+        f"  📎 طلبات بملفات: *{stats['with_docs']}*\n"
+        "━━━━━━━━━━━━━━━━━━━━"
     )
-    return UPLOAD_FILE
+    kbd = InlineKeyboardMarkup([[
+        InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_main")
+    ]])
+    await message.reply_text(text, parse_mode="Markdown", reply_markup=kbd)
 
-async def upload_file_receive(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    msg = update.message
-    doc_entry = None
+async def send_request_page(message, context, page: int,
+                             filter_type="all", filter_status="all", query=""):
+    requests = search_requests(query, filter_type, filter_status)
+    if not requests:
+        await message.reply_text(
+            "📭 لا توجد طلبات.",
+            reply_markup=main_menu_keyboard()
+        )
+        return
+
+    total_pages = (len(requests) + PAGE_SIZE - 1) // PAGE_SIZE
+    page = max(0, min(page, total_pages - 1))
+    start_idx = page * PAGE_SIZE
+    page_reqs = requests[start_idx: start_idx + PAGE_SIZE]
+
+    title_line = f"📋 *قائمة الطلبات* ({len(requests)} طلب)"
+    if query:
+        title_line += f"\n🔍 نتائج: _{query}_"
+    text = f"{title_line}\n━━━━━━━━━━━━━━━━━━━━\n\n"
+
+    buttons = []
+    for r in page_reqs:
+        st_emoji = STATUS_EMOJI.get(r.get("status", ""), "")
+        btn_text = f"#{r.get('reqId','?')} {st_emoji} {str(r.get('title',''))[:35]}"
+        buttons.append([InlineKeyboardButton(
+            btn_text,
+            callback_data=f"view_req:{r['firebaseKey']}"
+        )])
+        text += f"{format_request(r, compact=True)}\n\n"
+
+    extra   = f"{filter_type}|{filter_status}|{query}"
+    nav_kbd = pagination_keyboard(page, total_pages, "list_page", extra)
+    full_kbd = InlineKeyboardMarkup(buttons + nav_kbd.inline_keyboard)
+    await message.reply_text(text, parse_mode="Markdown", reply_markup=full_kbd)
+
+async def do_search(message, context, query: str):
+    results = search_requests(query)
+    if not results:
+        await message.reply_text(
+            f"🔍 لا نتائج لـ: *{query}*",
+            parse_mode="Markdown",
+            reply_markup=main_menu_keyboard()
+        )
+        return
+
+    text  = f"🔍 *نتائج:* _{query}_\n*{len(results)} نتيجة*\n━━━━━━━━━━━━━━━━━━━━\n\n"
+    buttons = []
+    for r in results[:15]:
+        st = STATUS_EMOJI.get(r.get("status", ""), "")
+        btn_text = f"#{r.get('reqId','?')} {st} {str(r.get('title',''))[:35]}"
+        buttons.append([InlineKeyboardButton(
+            btn_text, callback_data=f"view_req:{r['firebaseKey']}"
+        )])
+        text += f"{format_request(r, compact=True)}\n\n"
+
+    if len(results) > 15:
+        text += f"\n_... و {len(results)-15} نتائج أخرى. خصّص البحث._"
+
+    buttons.append([InlineKeyboardButton("🔙 القائمة", callback_data="back_main")])
+    await message.reply_text(
+        text, parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(buttons)
+    )
+
+# ══════════════════════════════════════════════
+#  📝 معالج النصوص
+# ══════════════════════════════════════════════
+async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    text = update.message.text.strip()
+
+    if user.id not in authenticated_users:
+        await update.message.reply_text("🔐 أرسل /start للوصول للنظام.")
+        return
+
+    state = user_state.get(user.id, {})
+    step  = state.get("step", "")
+
+    if step == "search_input":
+        user_state.pop(user.id, None)
+        await do_search(update.message, context, text)
+        return
+
+    if step == "add_title":
+        state["data"]["title"] = text
+        state["step"] = "add_date"
+        user_state[user.id] = state
+        await update.message.reply_text(
+            f"✅ العنوان: _{text}_\n\nالخطوة 2/5: أرسل *تاريخ* الطلب (مثل: 2026-06-17):",
+            parse_mode="Markdown"
+        )
+        return
+
+    if step == "add_date":
+        state["data"]["reqDate"] = text
+        state["step"] = "add_type"
+        user_state[user.id] = state
+        type_kbd = InlineKeyboardMarkup([
+            [InlineKeyboardButton("🌟 خاص",   callback_data="ntype:special"),
+             InlineKeyboardButton("📢 عام",   callback_data="ntype:general")],
+            [InlineKeyboardButton("📜 إحاطة", callback_data="ntype:briefing"),
+             InlineKeyboardButton("🚨 عاجل",  callback_data="ntype:urgent")],
+        ])
+        await update.message.reply_text(
+            "الخطوة 3/5: اختر *نوع* الطلب:",
+            parse_mode="Markdown", reply_markup=type_kbd
+        )
+        return
+
+    if step == "add_authority":
+        state["data"]["authority"] = text
+        state["step"] = "add_details"
+        user_state[user.id] = state
+        await update.message.reply_text(
+            f"✅ الجهة: _{text}_\n\nالخطوة 5/5: أرسل *تفاصيل* الطلب:",
+            parse_mode="Markdown"
+        )
+        return
+
+    if step == "add_details":
+        state["data"]["details"]      = text
+        state["data"]["status"]       = "execution"
+        state["data"]["hasDocuments"] = False
+        all_reqs = get_all_requests()
+        max_id   = max((int(r.get("reqId") or 0) for r in all_reqs), default=0)
+        state["data"]["reqId"] = str(max_id + 1)
+        user_state.pop(user.id, None)
+
+        confirm_text = (
+            "📋 *مراجعة الطلب الجديد*\n━━━━━━━━━━━━━━━━━━━━\n"
+            f"🔢 رقم: `{state['data']['reqId']}`\n"
+            f"📝 العنوان: {state['data']['title']}\n"
+            f"📅 التاريخ: {state['data']['reqDate']}\n"
+            f"📌 النوع: {TYPE_MAP.get(state['data'].get('requestType',''),'')}\n"
+            f"🏛 الجهة: {state['data']['authority']}\n\n"
+            f"📄 التفاصيل:\n{text[:200]}\n\nهل تريد *حفظ* هذا الطلب؟"
+        )
+        context.user_data["pending_new_req"] = state["data"]
+        await update.message.reply_text(
+            confirm_text, parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("✅ حفظ",   callback_data="confirm_add"),
+                 InlineKeyboardButton("❌ إلغاء", callback_data="back_main")],
+            ])
+        )
+        return
+
+    if step == "upload_caption":
+        req_id   = state.get("upload_req_id", "")
+        fire_key = state.get("upload_fire_key", "")
+        user_state[user.id] = {
+            "step": "awaiting_file",
+            "upload_req_id": req_id,
+            "upload_fire_key": fire_key,
+            "caption": text if text != "0" else ""
+        }
+        await update.message.reply_text(
+            "📎 الآن أرسل الملف (صورة، فيديو، مستند):",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("❌ إلغاء", callback_data="back_main")
+            ]])
+        )
+        return
+
+    if step == "upload_req_id_input":
+        req = get_request_by_id(text)
+        if not req:
+            await update.message.reply_text(f"❌ لم يُعثر على الطلب رقم {text}")
+            user_state.pop(user.id, None)
+            return
+        req_id   = str(req.get("reqId"))
+        fire_key = req.get("firebaseKey", "")
+        user_state[user.id] = {
+            "step": "upload_caption",
+            "upload_req_id": req_id,
+            "upload_fire_key": fire_key,
+        }
+        await update.message.reply_text(
+            f"📤 *رفع ملف للطلب* `#{req_id}`\n_{req.get('title','')[:60]}_\n\nأرسل وصفاً أو `0` للتخطي:",
+            parse_mode="Markdown"
+        )
+        return
+
+    if step == "publish_req_id":
+        req = get_request_by_id(text)
+        user_state.pop(user.id, None)
+        if not req:
+            await update.message.reply_text(f"❌ لم يُعثر على الطلب رقم {text}")
+            return
+        try:
+            channel_text = (
+                f"📋 *طلب رقم:* #{req.get('reqId')}\n"
+                f"📅 *التاريخ:* {req.get('reqDate','')}\n"
+                f"📌 *النوع:* {TYPE_MAP.get(req.get('requestType',''),'')}\n"
+                f"📊 *الحالة:* {STATUS_MAP.get(req.get('status',''),'')}\n"
+                f"🏛 *الجهة:* {req.get('authority','')}\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"📝 *{req.get('title','')}*\n\n{req.get('details','')[:800]}"
+            )
+            await context.bot.send_message(
+                chat_id=TELEGRAM_CHANNEL_ID,
+                text=channel_text,
+                parse_mode="Markdown"
+            )
+            await update.message.reply_text(
+                "✅ تم النشر على القناة بنجاح!",
+                reply_markup=main_menu_keyboard()
+            )
+        except Exception as e:
+            await update.message.reply_text(f"❌ فشل النشر: {str(e)[:100]}")
+        return
+
+    # بحث تلقائي بالنص
+    if len(text) >= 3 and not text.startswith("/"):
+        await do_search(update.message, context, text)
+
+# ══════════════════════════════════════════════
+#  📁 معالجة الملفات
+# ══════════════════════════════════════════════
+async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user = update.effective_user
+    if user.id not in authenticated_users:
+        return
+
+    state = user_state.get(user.id, {})
+    if state.get("step") != "awaiting_file":
+        await update.message.reply_text(
+            "📁 لرفع ملف على طلب، اختر الطلب أولاً ثم انقر '📤 رفع ملف للطلب'\n"
+            "أو استخدم القائمة ← 📁 رفع ملف",
+            reply_markup=main_menu_keyboard()
+        )
+        return
+
+    msg      = update.message
+    req_id   = state.get("upload_req_id", "")
+    fire_key = state.get("upload_fire_key", "")
+    caption  = state.get("caption", "") or msg.caption or ""
 
     if msg.photo:
-        photo = msg.photo[-1]
-        doc_entry = {
-            "file_id": photo.file_id,
-            "file_type": "photo",
-            "file_name": f"صورة_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            "caption": msg.caption or "",
-            "uploadedAt": datetime.utcnow().isoformat(),
-        }
+        file_obj = msg.photo[-1]
+        filetype = "photo"
+        filename = f"photo_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+        file_id  = file_obj.file_id
     elif msg.document:
-        doc_entry = {
-            "file_id": msg.document.file_id,
-            "file_type": "document",
-            "file_name": msg.document.file_name or "ملف",
-            "caption": msg.caption or "",
-            "uploadedAt": datetime.utcnow().isoformat(),
-        }
+        file_obj = msg.document
+        filetype = "document"
+        filename = file_obj.file_name or f"doc_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+        file_id  = file_obj.file_id
     elif msg.video:
-        doc_entry = {
-            "file_id": msg.video.file_id,
-            "file_type": "video",
-            "file_name": f"فيديو_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            "caption": msg.caption or "",
-            "uploadedAt": datetime.utcnow().isoformat(),
-        }
+        file_obj = msg.video
+        filetype = "video"
+        filename = f"video_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+        file_id  = file_obj.file_id
+    elif msg.audio:
+        file_obj = msg.audio
+        filetype = "audio"
+        filename = file_obj.file_name or f"audio_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+        file_id  = file_obj.file_id
+    elif msg.voice:
+        file_obj = msg.voice
+        filetype = "audio"
+        filename = f"voice_{datetime.utcnow().strftime('%Y%m%d%H%M%S')}"
+        file_id  = file_obj.file_id
+    else:
+        await msg.reply_text("❌ نوع الملف غير مدعوم.")
+        return
 
-    if not doc_entry:
-        await msg.reply_text("⚠️ أرسل صورة أو ملف أو فيديو.")
-        return UPLOAD_FILE
+    saved = save_file_to_firebase(req_id, file_id, filename, filetype, caption)
+    if fire_key and saved:
+        update_request(fire_key, {"hasDocuments": True})
 
-    ctx.user_data["upload"]["doc"] = doc_entry
+    channel_sent = False
+    try:
+        req = get_request_by_id(req_id)
+        ch_cap = (
+            f"📋 طلب #{req_id}\n"
+            f"📝 {req.get('title','') if req else ''}\n"
+            f"🏛 {req.get('authority','') if req else ''}"
+        )
+        if caption:
+            ch_cap += f"\n💬 {caption}"
 
-    req = ctx.user_data["upload"]["req"]
+        if filetype == "photo":
+            await context.bot.send_photo(TELEGRAM_CHANNEL_ID, file_id, caption=ch_cap)
+        elif filetype == "document":
+            await context.bot.send_document(TELEGRAM_CHANNEL_ID, file_id, caption=ch_cap)
+        elif filetype == "video":
+            await context.bot.send_video(TELEGRAM_CHANNEL_ID, file_id, caption=ch_cap)
+        channel_sent = True
+    except Exception as e:
+        logger.error(f"Channel send error: {e}")
+
+    user_state.pop(user.id, None)
+
     await msg.reply_text(
-        f"📎 تأكيد رفع الملف *{doc_entry['file_name']}*\nإلى الطلب: *{req.get('title','')[:50]}*",
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("✅ رفع", callback_data="confirm_upload:yes"),
-                InlineKeyboardButton("❌ إلغاء", callback_data="confirm_upload:no"),
-            ]
-        ]),
+        f"{'✅' if saved else '⚠️'} *تم رفع الملف* `{filename}`\n\n"
+        f"  🗂 الطلب: `#{req_id}`\n"
+        f"  📦 النوع: {filetype}\n"
+        f"  📢 القناة: {'✅ تم النشر' if channel_sent else '⚠️ لم يُنشر'}\n"
+        f"  💾 Firebase: {'✅ محفوظ' if saved else '❌ فشل'}",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup([[
+            InlineKeyboardButton("📁 ملفات الطلب", callback_data=f"view_files:{req_id}:{fire_key}"),
+            InlineKeyboardButton("🔙 القائمة",     callback_data="back_main"),
+        ]])
     )
-    return UPLOAD_CONFIRM
 
-async def upload_confirmed_cb(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
+# ══════════════════════════════════════════════
+#  🔘 معالجات الأزرار
+# ══════════════════════════════════════════════
+async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
+    user  = query.from_user
+    data  = query.data
     await query.answer()
-    if query.data == "confirm_upload:no":
-        await query.edit_message_text("❌ تم إلغاء الرفع.")
-        ctx.user_data.clear()
-        await query.message.reply_text("القائمة:", reply_markup=main_keyboard())
-        return MAIN_MENU
 
-    upload = ctx.user_data.get("upload", {})
-    key = upload["key"]
-    doc_entry = upload["doc"]
+    if user.id not in authenticated_users:
+        await query.message.reply_text("🔐 أرسل /start لتسجيل الدخول.")
+        return
 
-    # جلب الطلب الحالي وإضافة الملف
-    req = fb_get_one(key) or {}
-    docs = req.get("documents", []) or []
-    docs.append(doc_entry)
-    fb_update(key, {"documents": docs, "hasDocuments": True})
+    if data == "back_main":
+        user_state.pop(user.id, None)
+        await query.message.edit_text(
+            "📱 *القائمة الرئيسية*",
+            parse_mode="Markdown",
+            reply_markup=main_menu_keyboard()
+        )
+        return
 
-    # نشر الملف على القناة مع معلومات الطلب
-    req_data = upload["req"]
-    caption = (
-        f"📎 *ملف جديد مرفق*\n"
-        f"طلب رقم: {req_data.get('reqId')}\n"
-        f"{req_data.get('title','')}\n"
-        f"#ملف_طلب_{req_data.get('reqId','')}"
-    )
-    try:
-        fid = doc_entry["file_id"]
-        ftype = doc_entry["file_type"]
-        if ftype == "photo":
-            await query.get_bot().send_photo(CHANNEL_ID, fid, caption=caption, parse_mode=ParseMode.MARKDOWN)
-        elif ftype == "document":
-            await query.get_bot().send_document(CHANNEL_ID, fid, caption=caption, parse_mode=ParseMode.MARKDOWN)
-        elif ftype == "video":
-            await query.get_bot().send_video(CHANNEL_ID, fid, caption=caption, parse_mode=ParseMode.MARKDOWN)
-        channel_note = f" وتم نشره على القناة ✅"
-    except Exception as e:
-        channel_note = f"\n⚠️ لم يتم النشر على القناة: {e}"
+    if data == "noop":
+        return
 
-    await query.edit_message_text(f"✅ تم رفع الملف بنجاح!{channel_note}", parse_mode=ParseMode.MARKDOWN)
-    ctx.user_data.clear()
-    await query.message.reply_text("القائمة:", reply_markup=main_keyboard())
-    return MAIN_MENU
+    if data == "stats":
+        stats = get_stats()
+        text = (
+            "📊 *إحصائيات النظام*\n━━━━━━━━━━━━━━━━━━━━\n"
+            f"📋 الإجمالي: *{stats['total']}*\n\n"
+            f"🌟 خاص: *{stats['special']}*  📢 عام: *{stats['general']}*\n"
+            f"📜 إحاطة: *{stats['briefing']}*  🚨 عاجل: *{stats['urgent']}*\n\n"
+            f"✅ مكتمل: *{stats['completed']}*\n"
+            f"⚙️ تنفيذ: *{stats['execution']}*  🔍 مراجعة: *{stats['review']}*\n"
+            f"❌ مرفوض: *{stats['rejected']}*\n"
+            f"📎 بملفات: *{stats['with_docs']}*\n━━━━━━━━━━━━━━━━━━━━"
+        )
+        await query.message.edit_text(
+            text, parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 القائمة", callback_data="back_main")
+            ]])
+        )
+        return
 
-# ─────────────────────────────────────────
-# إضافة رد على طلب
-# ─────────────────────────────────────────
+    if data == "list_requests":
+        await query.message.delete()
+        await send_request_page(query.message, context, 0)
+        return
 
-async def reply_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    ctx.user_data["reply"] = {}
-    await update.message.reply_text(
-        "💬 *إضافة رد على طلب*\n\nأدخل رقم الطلب:",
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=ReplyKeyboardMarkup([[KeyboardButton("❌ إلغاء")]], resize_keyboard=True),
-    )
-    return REPLY_REQ_ID
+    if data.startswith("list_page:"):
+        parts    = data.split(":", 2)
+        page     = int(parts[1])
+        extra    = parts[2] if len(parts) > 2 else "all|all|"
+        ep       = extra.split("|", 2)
+        f_type   = ep[0] if len(ep) > 0 else "all"
+        f_status = ep[1] if len(ep) > 1 else "all"
+        q_text   = ep[2] if len(ep) > 2 else ""
+        await query.message.delete()
+        await send_request_page(query.message, context, page, f_type, f_status, q_text)
+        return
 
-async def reply_req_id(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    if update.message.text == "❌ إلغاء":
-        return await cancel(update, ctx)
-    req_id = update.message.text.strip()
-    found = None
-    found_key = None
-    for key, v in fb_get_all().items():
-        if str(v.get("reqId", "")) == req_id:
-            found = v
-            found_key = key
-            break
-    if not found:
-        await update.message.reply_text(f"❌ لم يُعثر على طلب {req_id}.")
-        return REPLY_REQ_ID
-    ctx.user_data["reply"]["key"] = found_key
-    ctx.user_data["reply"]["req"] = found
-    await update.message.reply_text(
-        f"✅ طلب: *{found.get('title','')[:50]}*\n\nأدخل نص الرد:",
-        parse_mode=ParseMode.MARKDOWN,
-    )
-    return REPLY_TEXT
+    if data.startswith("view_req:"):
+        fire_key = data.split(":", 1)[1]
+        requests = get_all_requests()
+        req = next((r for r in requests if r.get("firebaseKey") == fire_key), None)
+        if not req:
+            await query.message.edit_text("❌ لم يُعثر على الطلب.")
+            return
+        text = format_request(req)
+        kbd  = request_actions_keyboard(req["firebaseKey"], str(req.get("reqId")))
+        await query.message.edit_text(text, parse_mode="Markdown", reply_markup=kbd)
+        return
 
-async def reply_text_receive(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    if update.message.text == "❌ إلغاء":
-        return await cancel(update, ctx)
-    reply_data = ctx.user_data.get("reply", {})
-    key = reply_data["key"]
-    req = fb_get_one(key) or {}
-    replies = req.get("repliesList", []) or []
-    replies.append(update.message.text.strip())
-    fb_update(key, {"repliesList": replies, "status": "replied"})
-    await update.message.reply_text(
-        f"✅ تم إضافة الرد وتحديث حالة الطلب إلى 'تم الرد'.",
-        reply_markup=main_keyboard(),
-    )
-    ctx.user_data.clear()
-    return MAIN_MENU
+    if data.startswith("edit_status:"):
+        fire_key = data.split(":", 1)[1]
+        await query.message.edit_text(
+            "📊 *اختر الحالة الجديدة:*",
+            parse_mode="Markdown",
+            reply_markup=status_keyboard(fire_key)
+        )
+        return
 
-# ─────────────────────────────────────────
-# نشر طلب على القناة
-# ─────────────────────────────────────────
+    if data.startswith("set_status:"):
+        _, fire_key, new_status = data.split(":")
+        ok  = update_request(fire_key, {"status": new_status})
+        txt = f"{'✅ تم تغيير الحالة إلى: ' + STATUS_MAP.get(new_status,'') if ok else '❌ فشل تغيير الحالة'}"
+        await query.message.edit_text(
+            txt, parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 القائمة", callback_data="back_main")
+            ]])
+        )
+        return
 
-async def publish_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "📡 *نشر طلب على القناة*\n\nأدخل رقم الطلب:",
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=ReplyKeyboardMarkup([[KeyboardButton("❌ إلغاء")]], resize_keyboard=True),
-    )
-    ctx.user_data["publish_step"] = True
-    return SEARCH_QUERY  # نعيد استخدام مرحلة الإدخال
+    if data.startswith("view_files:"):
+        parts    = data.split(":")
+        req_id   = parts[1]
+        fire_key = parts[2] if len(parts) > 2 else ""
+        files    = get_request_files(req_id)
+        if not files:
+            await query.message.edit_text(
+                f"📁 لا توجد ملفات للطلب `{req_id}`",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("📤 رفع ملف", callback_data=f"upload_for:{req_id}:{fire_key}"),
+                    InlineKeyboardButton("🔙 رجوع",    callback_data="back_main"),
+                ]])
+            )
+            return
+        icons = {"photo": "🖼", "document": "📄", "video": "🎬", "audio": "🔊"}
+        text  = f"📁 *ملفات الطلب #{req_id}* ({len(files)} ملف)\n━━━━━━━━━━━━━━━━━━━━\n\n"
+        for i, f in enumerate(files[:10], 1):
+            icon = icons.get(f.get("filetype",""), "📎")
+            text += f"{i}. {icon} `{f.get('filename','—')}`\n   📅 {f.get('uploadedAt','')[:10]}"
+            if f.get("caption"):
+                text += f"  💬 _{f['caption'][:40]}_"
+            text += "\n\n"
+        await query.message.edit_text(
+            text, parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("📤 رفع ملف جديد", callback_data=f"upload_for:{req_id}:{fire_key}"),
+                InlineKeyboardButton("🔙 رجوع",         callback_data="back_main"),
+            ]])
+        )
+        return
 
-async def publish_from_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    """نشر من زر الطلب المعروض"""
-    query = update.callback_query
-    await query.answer()
-    key = query.data.split(":", 1)[1]
-    req = fb_get_one(key)
-    if not req:
-        await query.edit_message_text("❌ الطلب غير موجود.")
-        return MAIN_MENU
-    req["firebaseKey"] = key
-    await _do_publish(query.get_bot(), req, query)
-    return MAIN_MENU
-
-async def _do_publish(bot, req: dict, origin=None):
-    """الدالة الفعلية للنشر على القناة"""
-    post = format_channel_post(req)
-    try:
-        msg = await bot.send_message(CHANNEL_ID, post, parse_mode=ParseMode.MARKDOWN)
-
-        # نشر الملفات المرفقة
-        docs = req.get("documents", []) or []
-        for doc in docs:
-            fid = doc.get("file_id")
-            ftype = doc.get("file_type", "photo")
-            caption = f"📁 {doc.get('file_name','ملف')} — طلب رقم {req.get('reqId','')}"
-            try:
-                if ftype == "photo":
-                    await bot.send_photo(CHANNEL_ID, fid, caption=caption)
-                elif ftype == "document":
-                    await bot.send_document(CHANNEL_ID, fid, caption=caption)
-                elif ftype == "video":
-                    await bot.send_video(CHANNEL_ID, fid, caption=caption)
-            except Exception:
-                pass
-
-        result_text = f"✅ تم النشر على القناة بنجاح!\nرابط: {msg.link if hasattr(msg,'link') else '—'}"
-    except Exception as e:
-        result_text = f"❌ فشل النشر: {e}"
-
-    if origin:
-        try:
-            await origin.edit_message_text(result_text)
-        except Exception:
-            await origin.message.reply_text(result_text)
-
-# ─────────────────────────────────────────
-# حذف طلب
-# ─────────────────────────────────────────
-
-async def delete_start(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    ctx.user_data["del"] = {}
-    await update.message.reply_text(
-        "🗑 *حذف طلب*\n\nأدخل رقم الطلب:",
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=ReplyKeyboardMarkup([[KeyboardButton("❌ إلغاء")]], resize_keyboard=True),
-    )
-    return DEL_CONFIRM
-
-async def delete_req_id(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    if update.message.text == "❌ إلغاء":
-        return await cancel(update, ctx)
-    req_id = update.message.text.strip()
-    found = None
-    found_key = None
-    for key, v in fb_get_all().items():
-        if str(v.get("reqId", "")) == req_id:
-            found = v
-            found_key = key
-            break
-    if not found:
-        await update.message.reply_text(f"❌ لم يُعثر على طلب {req_id}.")
-        return DEL_CONFIRM
-    ctx.user_data["del"] = {"key": found_key, "req": found}
-    await update.message.reply_text(
-        f"⚠️ هل أنت متأكد من حذف الطلب:\n*{found.get('title','')}*؟\n\n(لا يمكن التراجع)",
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("🗑 نعم، احذف", callback_data="confirm_del:yes"),
-                InlineKeyboardButton("❌ لا", callback_data="confirm_del:no"),
-            ]
-        ]),
-    )
-    return DEL_CONFIRM
-
-async def delete_confirmed_cb(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    if query.data == "confirm_del:no":
-        await query.edit_message_text("❌ تم إلغاء الحذف.")
-    else:
-        key = ctx.user_data.get("del", {}).get("key")
-        if key:
-            fb_delete(key)
-            await query.edit_message_text("✅ تم حذف الطلب بنجاح.")
-    ctx.user_data.clear()
-    await query.message.reply_text("القائمة:", reply_markup=main_keyboard())
-    return MAIN_MENU
-
-async def delete_from_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    key = query.data.split(":", 1)[1]
-    req = fb_get_one(key)
-    if not req:
-        await query.edit_message_text("❌ الطلب غير موجود.")
-        return MAIN_MENU
-    ctx.user_data["del"] = {"key": key, "req": req}
-    await query.edit_message_text(
-        f"⚠️ هل أنت متأكد من حذف الطلب:\n*{req.get('title','')}*؟",
-        parse_mode=ParseMode.MARKDOWN,
-        reply_markup=InlineKeyboardMarkup([
-            [
-                InlineKeyboardButton("🗑 نعم، احذف", callback_data="confirm_del:yes"),
-                InlineKeyboardButton("❌ لا",         callback_data="confirm_del:no"),
-            ]
-        ]),
-    )
-    return DEL_CONFIRM
-
-# ─────────────────────────────────────────
-# تعديل طلب
-# ─────────────────────────────────────────
-
-async def edit_from_callback(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    key = query.data.split(":", 1)[1]
-    req = fb_get_one(key)
-    if not req:
-        await query.edit_message_text("❌ الطلب غير موجود.")
-        return MAIN_MENU
-    ctx.user_data["edit"] = {"key": key, "req": req}
-    fields_kb = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📌 الحالة",     callback_data="edit_field:status")],
-        [InlineKeyboardButton("🏛 الجهة",      callback_data="edit_field:authority")],
-        [InlineKeyboardButton("📝 التفاصيل",   callback_data="edit_field:details")],
-        [InlineKeyboardButton("📅 التاريخ",    callback_data="edit_field:reqDate")],
-        [InlineKeyboardButton("📋 العنوان",    callback_data="edit_field:title")],
-        [InlineKeyboardButton("🔙 رجوع",       callback_data="back:main")],
-    ])
-    await query.edit_message_text(
-        f"✏️ *تعديل الطلب #{req.get('reqId','')}*\n\nاختر الحقل:",
-        reply_markup=fields_kb,
-        parse_mode=ParseMode.MARKDOWN,
-    )
-    return EDIT_FIELD
-
-async def edit_field_cb(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    field = query.data.split(":", 1)[1]
-    ctx.user_data["edit"]["field"] = field
-
-    if field == "status":
-        kb = InlineKeyboardMarkup([
-            [InlineKeyboardButton("⏳ قيد التنفيذ", callback_data="edit_val:execution")],
-            [InlineKeyboardButton("✅ مكتمل",        callback_data="edit_val:completed")],
-            [InlineKeyboardButton("💬 تم الرد",      callback_data="edit_val:replied")],
-        ])
-        await query.edit_message_text("اختر الحالة الجديدة:", reply_markup=kb)
-        return EDIT_VALUE
-    else:
-        label_map = {
-            "authority": "الجهة المختصة",
-            "details":   "التفاصيل",
-            "reqDate":   "التاريخ",
-            "title":     "العنوان",
+    if data.startswith("upload_for:"):
+        parts    = data.split(":")
+        req_id   = parts[1]
+        fire_key = parts[2] if len(parts) > 2 else ""
+        user_state[user.id] = {
+            "step": "upload_caption",
+            "upload_req_id": req_id,
+            "upload_fire_key": fire_key,
         }
-        await query.message.reply_text(f"أدخل قيمة {label_map.get(field, field)} الجديدة:")
-        return EDIT_VALUE
+        await query.message.edit_text(
+            f"📤 *رفع ملف للطلب* `#{req_id}`\n\nأرسل وصفاً أو `0` للتخطي:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("❌ إلغاء", callback_data="back_main")
+            ]])
+        )
+        return
 
-async def edit_value_text(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    edit = ctx.user_data.get("edit", {})
-    key = edit.get("key")
-    field = edit.get("field")
-    if not key or not field:
-        return MAIN_MENU
-    fb_update(key, {field: update.message.text.strip()})
-    await update.message.reply_text(f"✅ تم تحديث الحقل بنجاح.", reply_markup=main_keyboard())
-    ctx.user_data.clear()
-    return MAIN_MENU
+    if data.startswith("publish:"):
+        fire_key = data.split(":", 1)[1]
+        requests = get_all_requests()
+        req = next((r for r in requests if r.get("firebaseKey") == fire_key), None)
+        if not req:
+            await query.message.edit_text("❌ لم يُعثر على الطلب.")
+            return
+        try:
+            channel_text = (
+                f"📋 *طلب رقم:* #{req.get('reqId')}\n"
+                f"📅 *التاريخ:* {req.get('reqDate','')}\n"
+                f"📌 *النوع:* {TYPE_MAP.get(req.get('requestType',''),'')}\n"
+                f"📊 *الحالة:* {STATUS_MAP.get(req.get('status',''),'')}\n"
+                f"🏛 *الجهة:* {req.get('authority','')}\n"
+                f"━━━━━━━━━━━━━━━━━━━━\n"
+                f"📝 *{req.get('title','')}*\n\n{req.get('details','')[:800]}"
+            )
+            await context.bot.send_message(
+                chat_id=TELEGRAM_CHANNEL_ID,
+                text=channel_text,
+                parse_mode="Markdown"
+            )
+            files = get_request_files(str(req.get("reqId")))
+            for f in files[:5]:
+                try:
+                    ftype = f.get("filetype","")
+                    fid   = f.get("fileid","")
+                    cap   = f.get("caption", f"ملف الطلب #{req.get('reqId')}")
+                    if ftype == "photo":
+                        await context.bot.send_photo(TELEGRAM_CHANNEL_ID, fid, caption=cap)
+                    elif ftype == "document":
+                        await context.bot.send_document(TELEGRAM_CHANNEL_ID, fid, caption=cap)
+                    elif ftype == "video":
+                        await context.bot.send_video(TELEGRAM_CHANNEL_ID, fid, caption=cap)
+                except Exception as fe:
+                    logger.error(f"File send error: {fe}")
+            await query.message.edit_text(
+                f"✅ *تم النشر على القناة* `{TELEGRAM_CHANNEL_ID}`!",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 القائمة", callback_data="back_main")
+                ]])
+            )
+        except Exception as e:
+            await query.message.edit_text(
+                f"❌ فشل النشر: `{str(e)[:100]}`",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 القائمة", callback_data="back_main")
+                ]])
+            )
+        return
 
-async def edit_value_cb(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    edit = ctx.user_data.get("edit", {})
-    key = edit.get("key")
-    new_val = query.data.split(":", 1)[1]
-    fb_update(key, {"status": new_val})
-    await query.edit_message_text(f"✅ تم تحديث الحالة إلى: {STATUS_MAP.get(new_val, new_val)}")
-    await query.message.reply_text("القائمة:", reply_markup=main_keyboard())
-    ctx.user_data.clear()
-    return MAIN_MENU
+    if data == "publish_channel":
+        user_state[user.id] = {"step": "publish_req_id"}
+        await query.message.edit_text(
+            "📢 أرسل رقم الطلب الذي تريد نشره على القناة:",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("❌ إلغاء", callback_data="back_main")
+            ]])
+        )
+        return
 
-# ─────────────────────────────────────────
-# رجوع وإلغاء
-# ─────────────────────────────────────────
+    if data.startswith("delete_req:"):
+        fire_key = data.split(":", 1)[1]
+        await query.message.edit_text(
+            "⚠️ *تأكيد الحذف* — هل أنت متأكد؟",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🗑 نعم، احذف", callback_data=f"confirm_delete:{fire_key}"),
+                 InlineKeyboardButton("❌ لا",         callback_data="back_main")],
+            ])
+        )
+        return
 
-async def cancel(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    ctx.user_data.clear()
-    await update.message.reply_text("❌ تم الإلغاء.", reply_markup=main_keyboard())
-    return MAIN_MENU
+    if data.startswith("confirm_delete:"):
+        fire_key = data.split(":", 1)[1]
+        ok = delete_request(fire_key)
+        await query.message.edit_text(
+            "✅ تم الحذف بنجاح." if ok else "❌ فشل الحذف.",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 القائمة", callback_data="back_main")
+            ]])
+        )
+        return
 
-async def back_main_cb(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    query = update.callback_query
-    await query.answer()
-    await query.edit_message_text("تم الرجوع.")
-    await query.message.reply_text("القائمة الرئيسية:", reply_markup=main_keyboard())
-    return MAIN_MENU
+    if data == "add_request":
+        user_state[user.id] = {"step": "add_title", "data": {}}
+        await query.message.edit_text(
+            "➕ *إضافة طلب جديد*\n\nالخطوة 1/5: أرسل *عنوان* الطلب:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("❌ إلغاء", callback_data="cancel_add")
+            ]])
+        )
+        return
 
-# ─────────────────────────────────────────
-# المُوزِّع الرئيسي للنصوص في MAIN_MENU
-# ─────────────────────────────────────────
+    if data == "cancel_add":
+        user_state.pop(user.id, None)
+        await query.message.edit_text(
+            "❌ تم الإلغاء.",
+            reply_markup=main_menu_keyboard()
+        )
+        return
 
-async def main_menu_handler(update: Update, ctx: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text
-    if text == "➕ إضافة طلب":
-        return await add_start(update, ctx)
-    elif text == "🔍 بحث عن طلب":
-        return await search_start(update, ctx)
-    elif text == "📋 عرض الطلبات":
-        return await list_requests(update, ctx)
-    elif text == "📤 رفع ملف لطلب":
-        return await upload_start(update, ctx)
-    elif text == "💬 إضافة رد":
-        return await reply_start(update, ctx)
-    elif text == "📊 الإحصائيات":
-        return await stats(update, ctx)
-    elif text == "📡 نشر على القناة":
-        return await publish_start(update, ctx)
-    elif text == "🗑 حذف طلب":
-        return await delete_start(update, ctx)
-    else:
-        await update.message.reply_text("اختر من القائمة.", reply_markup=main_keyboard())
-        return MAIN_MENU
+    if data.startswith("ntype:"):
+        req_type = data.split(":", 1)[1]
+        state = user_state.get(user.id, {})
+        state["data"]["requestType"] = req_type
+        state["step"] = "add_authority"
+        user_state[user.id] = state
+        await query.message.edit_text(
+            f"✅ النوع: *{TYPE_MAP.get(req_type,req_type)}*\n\nالخطوة 4/5: أرسل *اسم الجهة*:",
+            parse_mode="Markdown"
+        )
+        return
 
-# ─────────────────────────────────────────
-# تجميع وتشغيل البوت
-# ─────────────────────────────────────────
+    if data == "confirm_add":
+        req_data = context.user_data.get("pending_new_req")
+        if not req_data:
+            await query.message.edit_text("❌ انتهت صلاحية البيانات. أعد المحاولة.")
+            return
+        fire_key = add_request(req_data)
+        if fire_key:
+            await query.message.edit_text(
+                f"✅ *تم إضافة الطلب!*\n🔢 الرقم: `{req_data.get('reqId')}`\n📝 {req_data.get('title','')[:80]}",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("📁 رفع ملف", callback_data=f"upload_for:{req_data.get('reqId')}:{fire_key}"),
+                    InlineKeyboardButton("🔙 القائمة", callback_data="back_main"),
+                ]])
+            )
+        else:
+            await query.message.edit_text("❌ فشل الحفظ في Firebase.")
+        context.user_data.pop("pending_new_req", None)
+        return
 
-def build_app():
-    app = Application.builder().token(BOT_TOKEN).build()
+    if data == "search_mode":
+        user_state[user.id] = {"step": "search_input"}
+        await query.message.edit_text(
+            "🔍 أرسل نص البحث (رقم، عنوان، جهة، تفاصيل):",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("❌ إلغاء", callback_data="back_main")
+            ]])
+        )
+        return
 
-    conv = ConversationHandler(
-        entry_points=[
-            CommandHandler("start", start),
-            MessageHandler(filters.TEXT & ~filters.COMMAND, main_menu_handler),
-        ],
-        states={
-            MAIN_MENU: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, main_menu_handler),
-                CallbackQueryHandler(view_request_cb,      pattern=r"^view:"),
-                CallbackQueryHandler(edit_from_callback,   pattern=r"^edit:"),
-                CallbackQueryHandler(delete_from_callback, pattern=r"^del:"),
-                CallbackQueryHandler(publish_from_callback,pattern=r"^publish:"),
-                CallbackQueryHandler(edit_from_callback,   pattern=r"^reply_from:"),
-                CallbackQueryHandler(back_main_cb,         pattern=r"^back:main"),
-            ],
-            ADD_TITLE:  [MessageHandler(filters.TEXT & ~filters.COMMAND, add_title)],
-            ADD_TYPE:   [MessageHandler(filters.TEXT & ~filters.COMMAND, add_type)],
-            ADD_DATE:   [MessageHandler(filters.TEXT & ~filters.COMMAND, add_date)],
-            ADD_AUTHORITY: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_authority)],
-            ADD_DETAILS: [MessageHandler(filters.TEXT & ~filters.COMMAND, add_details)],
-            ADD_DOCS: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, add_confirm),
-                MessageHandler(filters.PHOTO | filters.Document.ALL | filters.VIDEO, add_docs_receive),
-            ],
-            ADD_CONFIRM: [
-                CallbackQueryHandler(add_confirmed_cb, pattern=r"^confirm_add:"),
-            ],
-            SEARCH_QUERY: [MessageHandler(filters.TEXT & ~filters.COMMAND, search_execute)],
-            EDIT_FIELD: [
-                CallbackQueryHandler(edit_field_cb, pattern=r"^edit_field:"),
-                CallbackQueryHandler(back_main_cb,  pattern=r"^back:main"),
-            ],
-            EDIT_VALUE: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, edit_value_text),
-                CallbackQueryHandler(edit_value_cb, pattern=r"^edit_val:"),
-            ],
-            DEL_CONFIRM: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, delete_req_id),
-                CallbackQueryHandler(delete_confirmed_cb, pattern=r"^confirm_del:"),
-            ],
-            UPLOAD_REQ_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, upload_req_id)],
-            UPLOAD_FILE: [
-                MessageHandler(filters.PHOTO | filters.Document.ALL | filters.VIDEO, upload_file_receive),
-                MessageHandler(filters.TEXT & ~filters.COMMAND, lambda u, c: u.message.reply_text("أرسل ملفاً أو صورة.")),
-            ],
-            UPLOAD_CONFIRM: [
-                CallbackQueryHandler(upload_confirmed_cb, pattern=r"^confirm_upload:"),
-            ],
-            REPLY_REQ_ID: [MessageHandler(filters.TEXT & ~filters.COMMAND, reply_req_id)],
-            REPLY_TEXT:   [MessageHandler(filters.TEXT & ~filters.COMMAND, reply_text_receive)],
-        },
-        fallbacks=[CommandHandler("start", start)],
-        allow_reentry=True,
+    if data == "filter_menu":
+        await query.message.edit_text(
+            "🔎 *فلترة حسب:*",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("📌 النوع",  callback_data="show_filter_type"),
+                 InlineKeyboardButton("📊 الحالة", callback_data="show_filter_status")],
+                [InlineKeyboardButton("🔙 رجوع",   callback_data="back_main")],
+            ])
+        )
+        return
+
+    if data == "show_filter_type":
+        await query.message.edit_text(
+            "📌 *اختر النوع:*", parse_mode="Markdown",
+            reply_markup=filter_type_keyboard()
+        )
+        return
+
+    if data == "show_filter_status":
+        await query.message.edit_text(
+            "📊 *اختر الحالة:*", parse_mode="Markdown",
+            reply_markup=filter_status_keyboard()
+        )
+        return
+
+    if data.startswith("filter_type:"):
+        f_type = data.split(":", 1)[1]
+        await query.message.delete()
+        await send_request_page(query.message, context, 0, filter_type=f_type)
+        return
+
+    if data.startswith("filter_status:"):
+        f_status = data.split(":", 1)[1]
+        await query.message.delete()
+        await send_request_page(query.message, context, 0, filter_status=f_status)
+        return
+
+    if data == "upload_file":
+        user_state[user.id] = {"step": "upload_req_id_input"}
+        await query.message.edit_text(
+            "📁 أرسل رقم الطلب الذي تريد إرفاق ملف به:",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("❌ إلغاء", callback_data="back_main")
+            ]])
+        )
+        return
+
+    if data == "settings":
+        await query.message.edit_text(
+            f"⚙️ *إعدادات البوت*\n━━━━━━━━━━━━━━━━━━━━\n"
+            f"📢 القناة: `{TELEGRAM_CHANNEL_ID}`\n"
+            f"🔥 Firebase: `{FIREBASE_URL}`\n"
+            f"📂 المسار: `{FIREBASE_PATH}`\n\n"
+            f"_عدّل من GitHub Secrets_",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔙 القائمة", callback_data="back_main")
+            ]])
+        )
+        return
+
+# ══════════════════════════════════════════════
+#  🚀 نقطة التشغيل
+# ══════════════════════════════════════════════
+async def post_init(application: Application):
+    await application.bot.set_my_commands([
+        BotCommand("start",    "بدء البوت"),
+        BotCommand("menu",     "القائمة الرئيسية"),
+        BotCommand("list",     "قائمة الطلبات"),
+        BotCommand("search",   "البحث في الطلبات"),
+        BotCommand("request",  "عرض طلب بالرقم"),
+        BotCommand("stats",    "الإحصائيات"),
+        BotCommand("password", "تسجيل الدخول"),
+        BotCommand("logout",   "تسجيل الخروج"),
+    ])
+
+def main():
+    init_firebase()
+    app = (
+        Application.builder()
+        .token(BOT_TOKEN)
+        .post_init(post_init)
+        .build()
     )
-
-    app.add_handler(conv)
-    return app
-
+    app.add_handler(CommandHandler("start",    start))
+    app.add_handler(CommandHandler("password", password_cmd))
+    app.add_handler(CommandHandler("logout",   logout_cmd))
+    app.add_handler(CommandHandler("menu",     menu_cmd))
+    app.add_handler(CommandHandler("stats",    stats_cmd))
+    app.add_handler(CommandHandler("search",   search_cmd))
+    app.add_handler(CommandHandler("request",  request_cmd))
+    app.add_handler(CommandHandler("list",     list_cmd))
+    app.add_handler(CallbackQueryHandler(button_handler))
+    app.add_handler(MessageHandler(
+        filters.PHOTO | filters.Document.ALL | filters.VIDEO |
+        filters.AUDIO | filters.VOICE,
+        handle_media
+    ))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_input))
+    logger.info("🚀 Bot started!")
+    app.run_polling(allowed_updates=Update.ALL_TYPES)
 
 if __name__ == "__main__":
-    logger.info("🚀 Starting Parliamentary Bot...")
-    application = build_app()
-    application.run_polling(drop_pending_updates=True)
+    main()
