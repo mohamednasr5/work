@@ -2,7 +2,9 @@
 # -*- coding: utf-8 -*-
 """
 بوت تيليجرام - نظام إدارة الطلبات البرلمانية
-يتحكم كاملاً في البرنامج + رفع الملفات على قناة تيليجرام
+✅ عرض الملفات مباشرة عند الضغط عليها
+✅ زر ثابت "📎 رفع مستند لطلب" في Reply Keyboard
+✅ رفع الملفات على قناة + حفظ message_id في Firebase
 """
 
 import os
@@ -13,7 +15,8 @@ import io
 from datetime import datetime
 from telegram import (
     Update, InlineKeyboardButton, InlineKeyboardMarkup,
-    InputMediaPhoto, BotCommand
+    InputMediaPhoto, BotCommand, ReplyKeyboardMarkup, KeyboardButton,
+    ReplyKeyboardRemove
 )
 from telegram.ext import (
     Application, CommandHandler, MessageHandler, CallbackQueryHandler,
@@ -150,20 +153,27 @@ def get_stats():
     return stats
 
 def save_file_to_firebase(req_id: str, file_id: str, filename: str,
-                           filetype: str, caption: str = ""):
+                           filetype: str, caption: str = "",
+                           channel_msg_id: int = None):
+    """
+    يحفظ بيانات الملف في Firebase مع message_id من القناة لعرضه لاحقاً.
+    """
     try:
         ref = firebase_db.reference(f"archive/{req_id}")
-        ref.push({
-            "fileid":     file_id,
-            "filename":   filename,
-            "filetype":   filetype,
-            "caption":    caption,
-            "uploadedAt": datetime.utcnow().isoformat(),
-        })
-        return True
+        entry = {
+            "fileid":          file_id,
+            "filename":        filename,
+            "filetype":        filetype,
+            "caption":         caption,
+            "uploadedAt":      datetime.utcnow().isoformat(),
+        }
+        if channel_msg_id:
+            entry["channelMsgId"] = channel_msg_id
+        new_ref = ref.push(entry)
+        return new_ref.key
     except Exception as e:
         logger.error(f"❌ Error saving file metadata: {e}")
-        return False
+        return None
 
 def get_request_files(req_id: str):
     try:
@@ -171,6 +181,9 @@ def get_request_files(req_id: str):
         data = ref.get()
         if not data:
             return []
+        # دعم القوائم والقواميس
+        if isinstance(data, list):
+            return [f for f in data if f is not None]
         return list(data.values())
     except Exception as e:
         logger.error(f"❌ Error fetching files: {e}")
@@ -249,7 +262,6 @@ user_state = {}
 pending_uploads = {}
 
 def is_authenticated(user_id: int) -> bool:
-    """تحقق من جلسة المستخدم في Firebase"""
     try:
         ref = firebase_db.reference(f"sessions/{user_id}")
         val = ref.get()
@@ -258,7 +270,6 @@ def is_authenticated(user_id: int) -> bool:
         return False
 
 def set_authenticated(user_id: int, value: bool):
-    """حفظ جلسة المستخدم في Firebase"""
     try:
         ref = firebase_db.reference(f"sessions/{user_id}")
         if value:
@@ -271,6 +282,21 @@ def set_authenticated(user_id: int, value: bool):
 # ══════════════════════════════════════════════
 #  ⌨️ لوحات المفاتيح
 # ══════════════════════════════════════════════
+
+# ✅ القائمة الثابتة (Reply Keyboard) - تظهر دائماً أسفل الشاشة
+def persistent_keyboard():
+    """لوحة المفاتيح الثابتة في أسفل الشاشة"""
+    return ReplyKeyboardMarkup(
+        [
+            [KeyboardButton("📎 رفع مستند لطلب"), KeyboardButton("📋 قائمة الطلبات")],
+            [KeyboardButton("🔍 بحث"), KeyboardButton("📊 إحصائيات")],
+            [KeyboardButton("📱 القائمة الرئيسية")],
+        ],
+        resize_keyboard=True,
+        persistent=True,
+        is_persistent=True,
+    )
+
 def main_menu_keyboard():
     return InlineKeyboardMarkup([
         [
@@ -370,6 +396,27 @@ def pagination_keyboard(page: int, total_pages: int,
     buttons.append([InlineKeyboardButton("🔙 القائمة الرئيسية", callback_data="back_main")])
     return InlineKeyboardMarkup(buttons)
 
+def files_list_keyboard(files: list, req_id: str, fire_key: str):
+    """
+    لوحة مفاتيح لعرض الملفات - كل ملف زر يمكن الضغط عليه لعرضه مباشرة.
+    """
+    icons = {"photo": "🖼", "document": "📄", "video": "🎬", "audio": "🔊"}
+    buttons = []
+    for i, f in enumerate(files[:10]):
+        icon = icons.get(f.get("filetype", ""), "📎")
+        name = f.get("filename", f"ملف {i+1}")[:30]
+        buttons.append([
+            InlineKeyboardButton(
+                f"{icon} {i+1}. {name}",
+                callback_data=f"show_file:{req_id}:{i}"
+            )
+        ])
+    buttons.append([
+        InlineKeyboardButton("📤 رفع ملف جديد", callback_data=f"upload_for:{req_id}:{fire_key}"),
+        InlineKeyboardButton("🔙 رجوع",         callback_data="back_main"),
+    ])
+    return InlineKeyboardMarkup(buttons)
+
 # ══════════════════════════════════════════════
 #  🤖 معالجات الأوامر
 # ══════════════════════════════════════════════
@@ -377,7 +424,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if is_authenticated(user.id):
         await update.message.reply_text(
-            f"مرحباً *{user.first_name}* 👋\nأنت مسجّل الدخول بالفعل ✅",
+            f"مرحباً *{user.first_name}* 👋\nأنت مسجّل الدخول بالفعل ✅\n\n"
+            "يمكنك استخدام الأزرار أدناه أو القائمة الثابتة:",
+            parse_mode="Markdown",
+            reply_markup=persistent_keyboard()
+        )
+        await update.message.reply_text(
+            "📱 *القائمة الرئيسية*",
             parse_mode="Markdown",
             reply_markup=main_menu_keyboard()
         )
@@ -385,7 +438,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🔐 *مرحباً بك في بوت إدارة الطلبات البرلمانية*\n\n"
         "يرجى إدخال كلمة المرور للوصول:\n"
-        "_أرسل /password ثم كلمة المرور_",
+        "_أرسل كلمة المرور مباشرة_",
         parse_mode="Markdown"
     )
 
@@ -400,6 +453,11 @@ async def password_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(
             f"✅ *تم تسجيل الدخول بنجاح!*\n\nمرحباً *{user.first_name}*",
             parse_mode="Markdown",
+            reply_markup=persistent_keyboard()
+        )
+        await update.message.reply_text(
+            "📱 *القائمة الرئيسية*",
+            parse_mode="Markdown",
             reply_markup=main_menu_keyboard()
         )
     else:
@@ -409,7 +467,10 @@ async def logout_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     set_authenticated(user.id, False)
     user_state.pop(user.id, None)
-    await update.message.reply_text("👋 تم تسجيل الخروج.")
+    await update.message.reply_text(
+        "👋 تم تسجيل الخروج.",
+        reply_markup=ReplyKeyboardRemove()
+    )
 
 async def menu_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -567,12 +628,17 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     text = update.message.text.strip()
 
-    # ✅ قبول الباسورد كنص مباشر (بدون /password)
+    # ✅ قبول الباسورد كنص مباشر
     if not is_authenticated(user.id):
         if text == BOT_PASSWORD:
             set_authenticated(user.id, True)
             await update.message.reply_text(
                 f"✅ *تم تسجيل الدخول بنجاح!*\n\nمرحباً *{user.first_name}*",
+                parse_mode="Markdown",
+                reply_markup=persistent_keyboard()
+            )
+            await update.message.reply_text(
+                "📱 *القائمة الرئيسية*",
                 parse_mode="Markdown",
                 reply_markup=main_menu_keyboard()
             )
@@ -580,6 +646,49 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🔐 أرسل /start للوصول للنظام.")
         return
 
+    # ══════════════════════════════════════════
+    #  أزرار القائمة الثابتة (Reply Keyboard)
+    # ══════════════════════════════════════════
+    if text == "📎 رفع مستند لطلب":
+        user_state[user.id] = {"step": "upload_req_id_input"}
+        await update.message.reply_text(
+            "📎 *رفع مستند لطلب*\n\nأرسل *رقم الطلب* الذي تريد إرفاق مستند له:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("❌ إلغاء", callback_data="back_main")
+            ]])
+        )
+        return
+
+    if text == "📋 قائمة الطلبات":
+        await send_request_page(update.message, context, 0)
+        return
+
+    if text == "🔍 بحث":
+        user_state[user.id] = {"step": "search_input"}
+        await update.message.reply_text(
+            "🔍 أرسل نص البحث (رقم، عنوان، جهة، تفاصيل):",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("❌ إلغاء", callback_data="back_main")
+            ]])
+        )
+        return
+
+    if text == "📊 إحصائيات":
+        await send_stats(update.message, context)
+        return
+
+    if text == "📱 القائمة الرئيسية":
+        await update.message.reply_text(
+            "📱 *القائمة الرئيسية*",
+            parse_mode="Markdown",
+            reply_markup=main_menu_keyboard()
+        )
+        return
+
+    # ══════════════════════════════════════════
+    #  معالجة حالات المستخدم
+    # ══════════════════════════════════════════
     state = user_state.get(user.id, {})
     step  = state.get("step", "")
 
@@ -673,19 +782,26 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if step == "upload_req_id_input":
         req = get_request_by_id(text)
         if not req:
-            await update.message.reply_text(f"❌ لم يُعثر على الطلب رقم {text}")
-            user_state.pop(user.id, None)
+            await update.message.reply_text(
+                f"❌ لم يُعثر على طلب برقم *{text}*\nتأكد من الرقم وأعد المحاولة:",
+                parse_mode="Markdown"
+            )
             return
         req_id   = str(req.get("reqId"))
         fire_key = req.get("firebaseKey", "")
         user_state[user.id] = {
-            "step": "upload_caption",
+            "step": "awaiting_file",   # ✅ نتخطى خطوة الوصف مباشرة
             "upload_req_id": req_id,
             "upload_fire_key": fire_key,
+            "caption": ""
         }
         await update.message.reply_text(
-            f"📤 *رفع ملف للطلب* `#{req_id}`\n_{req.get('title','')[:60]}_\n\nأرسل وصفاً أو `0` للتخطي:",
-            parse_mode="Markdown"
+            f"✅ *الطلب #{req_id}* — _{req.get('title','')[:60]}_\n\n"
+            f"📤 الآن أرسل الملف (صورة، مستند، فيديو):",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([[
+                InlineKeyboardButton("❌ إلغاء", callback_data="back_main")
+            ]])
         )
         return
 
@@ -723,7 +839,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await do_search(update.message, context, text)
 
 # ══════════════════════════════════════════════
-#  📁 معالجة الملفات
+#  📁 معالجة الملفات المرسلة
 # ══════════════════════════════════════════════
 async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
@@ -733,8 +849,9 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     state = user_state.get(user.id, {})
     if state.get("step") != "awaiting_file":
         await update.message.reply_text(
-            "📁 لرفع ملف على طلب، اختر الطلب أولاً ثم انقر '📤 رفع ملف للطلب'\n"
-            "أو استخدم القائمة ← 📁 رفع ملف",
+            "📁 لرفع ملف على طلب، استخدم زر *📎 رفع مستند لطلب* من القائمة الثابتة\n"
+            "أو اختر الطلب ← 📤 رفع ملف للطلب",
+            parse_mode="Markdown",
             reply_markup=main_menu_keyboard()
         )
         return
@@ -773,11 +890,9 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await msg.reply_text("❌ نوع الملف غير مدعوم.")
         return
 
-    saved = save_file_to_firebase(req_id, file_id, filename, filetype, caption)
-    if fire_key and saved:
-        update_request(fire_key, {"hasDocuments": True})
-
-    channel_sent = False
+    # ✅ رفع الملف على القناة أولاً للحصول على message_id
+    channel_msg_id = None
+    channel_sent   = False
     try:
         req = get_request_by_id(req_id)
         ch_cap = (
@@ -788,23 +903,44 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if caption:
             ch_cap += f"\n💬 {caption}"
 
+        sent_msg = None
         if filetype == "photo":
-            await context.bot.send_photo(TELEGRAM_CHANNEL_ID, file_id, caption=ch_cap)
+            sent_msg = await context.bot.send_photo(TELEGRAM_CHANNEL_ID, file_id, caption=ch_cap)
         elif filetype == "document":
-            await context.bot.send_document(TELEGRAM_CHANNEL_ID, file_id, caption=ch_cap)
+            sent_msg = await context.bot.send_document(TELEGRAM_CHANNEL_ID, file_id, caption=ch_cap)
         elif filetype == "video":
-            await context.bot.send_video(TELEGRAM_CHANNEL_ID, file_id, caption=ch_cap)
-        channel_sent = True
+            sent_msg = await context.bot.send_video(TELEGRAM_CHANNEL_ID, file_id, caption=ch_cap)
+        else:
+            # audio/voice - send as document fallback
+            sent_msg = await context.bot.send_document(TELEGRAM_CHANNEL_ID, file_id, caption=ch_cap)
+
+        if sent_msg:
+            channel_msg_id = sent_msg.message_id
+            channel_sent   = True
     except Exception as e:
         logger.error(f"Channel send error: {e}")
 
+    # ✅ حفظ في Firebase مع message_id للقناة
+    file_key = save_file_to_firebase(req_id, file_id, filename, filetype, caption, channel_msg_id)
+    saved = bool(file_key)
+
+    if fire_key and saved:
+        update_request(fire_key, {"hasDocuments": True})
+
     user_state.pop(user.id, None)
+
+    # رسالة التأكيد مع زر عرض الملفات
+    channel_link = ""
+    if channel_sent and channel_msg_id and TELEGRAM_CHANNEL_ID.startswith("@"):
+        ch_name = TELEGRAM_CHANNEL_ID.lstrip("@")
+        channel_link = f"\n🔗 [عرض في القناة](https://t.me/{ch_name}/{channel_msg_id})"
 
     await msg.reply_text(
         f"{'✅' if saved else '⚠️'} *تم رفع الملف* `{filename}`\n\n"
         f"  🗂 الطلب: `#{req_id}`\n"
         f"  📦 النوع: {filetype}\n"
-        f"  📢 القناة: {'✅ تم النشر' if channel_sent else '⚠️ لم يُنشر'}\n"
+        f"  📢 القناة: {'✅ تم النشر' if channel_sent else '⚠️ لم يُنشر'}"
+        f"{channel_link}\n"
         f"  💾 Firebase: {'✅ محفوظ' if saved else '❌ فشل'}",
         parse_mode="Markdown",
         reply_markup=InlineKeyboardMarkup([[
@@ -908,14 +1044,21 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
+    # ══════════════════════════════════════════
+    #  📁 عرض قائمة الملفات مع أزرار قابلة للضغط
+    # ══════════════════════════════════════════
     if data.startswith("view_files:"):
         parts    = data.split(":")
         req_id   = parts[1]
         fire_key = parts[2] if len(parts) > 2 else ""
         files    = get_request_files(req_id)
+
+        # حفظ الملفات في context لاستخدامها عند الضغط
+        context.user_data[f"files_{req_id}"] = files
+
         if not files:
             await query.message.edit_text(
-                f"📁 لا توجد ملفات للطلب `{req_id}`",
+                f"📁 لا توجد ملفات للطلب `#{req_id}`",
                 parse_mode="Markdown",
                 reply_markup=InlineKeyboardMarkup([[
                     InlineKeyboardButton("📤 رفع ملف", callback_data=f"upload_for:{req_id}:{fire_key}"),
@@ -923,21 +1066,110 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 ]])
             )
             return
+
         icons = {"photo": "🖼", "document": "📄", "video": "🎬", "audio": "🔊"}
         text  = f"📁 *ملفات الطلب #{req_id}* ({len(files)} ملف)\n━━━━━━━━━━━━━━━━━━━━\n\n"
-        for i, f in enumerate(files[:10], 1):
-            icon = icons.get(f.get("filetype",""), "📎")
-            text += f"{i}. {icon} `{f.get('filename','—')}`\n   📅 {f.get('uploadedAt','')[:10]}"
+        text += "اضغط على أي ملف لعرضه مباشرة 👇\n\n"
+
+        for i, f in enumerate(files[:10]):
+            icon = icons.get(f.get("filetype", ""), "📎")
+            text += f"{i+1}. {icon} `{f.get('filename', '—')}`\n"
+            text += f"   📅 {f.get('uploadedAt','')[:10]}"
             if f.get("caption"):
                 text += f"  💬 _{f['caption'][:40]}_"
             text += "\n\n"
+
         await query.message.edit_text(
             text, parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup([[
-                InlineKeyboardButton("📤 رفع ملف جديد", callback_data=f"upload_for:{req_id}:{fire_key}"),
-                InlineKeyboardButton("🔙 رجوع",         callback_data="back_main"),
-            ]])
+            reply_markup=files_list_keyboard(files, req_id, fire_key)
         )
+        return
+
+    # ══════════════════════════════════════════
+    #  🖼 عرض الملف مباشرة عند الضغط عليه
+    # ══════════════════════════════════════════
+    if data.startswith("show_file:"):
+        parts  = data.split(":")
+        req_id = parts[1]
+        idx    = int(parts[2])
+
+        files = context.user_data.get(f"files_{req_id}", [])
+        if not files:
+            # أعد جلب الملفات من Firebase
+            files = get_request_files(req_id)
+            context.user_data[f"files_{req_id}"] = files
+
+        if idx >= len(files):
+            await query.message.reply_text("❌ الملف غير موجود.")
+            return
+
+        f = files[idx]
+        filetype = f.get("filetype", "")
+        file_id  = f.get("fileid", "")
+        caption  = f.get("caption", "") or f.get("filename", "")
+        channel_msg_id = f.get("channelMsgId")
+
+        # ✅ إذا كان الملف منشوراً في القناة نوجّه المستخدم مباشرة
+        # ولكن أيضاً نرسل الملف مباشرة في المحادثة
+        try:
+            if filetype == "photo":
+                await context.bot.send_photo(
+                    chat_id=query.message.chat_id,
+                    photo=file_id,
+                    caption=f"🖼 {caption}" if caption else None
+                )
+            elif filetype == "video":
+                await context.bot.send_video(
+                    chat_id=query.message.chat_id,
+                    video=file_id,
+                    caption=f"🎬 {caption}" if caption else None
+                )
+            elif filetype == "audio":
+                await context.bot.send_audio(
+                    chat_id=query.message.chat_id,
+                    audio=file_id,
+                    caption=f"🔊 {caption}" if caption else None
+                )
+            else:
+                # document
+                await context.bot.send_document(
+                    chat_id=query.message.chat_id,
+                    document=file_id,
+                    caption=f"📄 {caption}" if caption else None
+                )
+
+            # إضافة رابط القناة إن وجد
+            extra_kbd = []
+            if channel_msg_id and TELEGRAM_CHANNEL_ID.startswith("@"):
+                ch_name = TELEGRAM_CHANNEL_ID.lstrip("@")
+                channel_url = f"https://t.me/{ch_name}/{channel_msg_id}"
+                extra_kbd.append(
+                    InlineKeyboardButton("🔗 عرض في القناة", url=channel_url)
+                )
+
+            back_kbd = InlineKeyboardMarkup([
+                [extra_kbd[0]] if extra_kbd else [],
+                [InlineKeyboardButton("🔙 رجوع للملفات", callback_data=f"view_files:{req_id}:")]
+            ] if extra_kbd else [
+                [InlineKeyboardButton("🔙 رجوع للملفات", callback_data=f"view_files:{req_id}:")]
+            ])
+
+            await query.message.reply_text(
+                f"✅ تم عرض الملف: `{f.get('filename','')}`",
+                parse_mode="Markdown",
+                reply_markup=back_kbd
+            )
+
+        except Exception as e:
+            logger.error(f"Show file error: {e}")
+            await query.message.reply_text(
+                f"❌ تعذّر عرض الملف: `{str(e)[:100]}`\n\n"
+                f"🆔 File ID: `{file_id}`",
+                parse_mode="Markdown",
+                reply_markup=InlineKeyboardMarkup([[
+                    InlineKeyboardButton("🔙 رجوع", callback_data=f"view_files:{req_id}:")
+                ]])
+            )
         return
 
     if data.startswith("upload_for:"):
@@ -945,12 +1177,13 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         req_id   = parts[1]
         fire_key = parts[2] if len(parts) > 2 else ""
         user_state[user.id] = {
-            "step": "upload_caption",
+            "step": "awaiting_file",
             "upload_req_id": req_id,
             "upload_fire_key": fire_key,
+            "caption": ""
         }
         await query.message.edit_text(
-            f"📤 *رفع ملف للطلب* `#{req_id}`\n\nأرسل وصفاً أو `0` للتخطي:",
+            f"📤 *رفع ملف للطلب* `#{req_id}`\n\nأرسل الملف الآن (صورة، مستند، فيديو):",
             parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("❌ إلغاء", callback_data="back_main")
@@ -1146,7 +1379,8 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if data == "upload_file":
         user_state[user.id] = {"step": "upload_req_id_input"}
         await query.message.edit_text(
-            "📁 أرسل رقم الطلب الذي تريد إرفاق ملف به:",
+            "📎 *رفع مستند لطلب*\n\nأرسل رقم الطلب:",
+            parse_mode="Markdown",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("❌ إلغاء", callback_data="back_main")
             ]])
