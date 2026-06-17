@@ -302,12 +302,20 @@ user_state = {}
 pending_uploads = {}
 
 def is_authenticated(user_id: int) -> bool:
-    try:
-        ref = firebase_db.reference(f"sessions/{user_id}")
-        val = ref.get()
-        return bool(val and val.get("authenticated"))
-    except Exception:
-        return False
+    """
+    يتحقق من تسجيل الدخول في Firebase.
+    في حال فشل الاتصال، يُعيد False فقط (لا يُعيد True بشكل افتراضي لأسباب أمنية).
+    """
+    for attempt in range(2):  # محاولتان
+        try:
+            ref = firebase_db.reference(f"sessions/{user_id}")
+            val = ref.get()
+            return bool(val and val.get("authenticated"))
+        except Exception as e:
+            logger.warning(f"is_authenticated attempt {attempt+1} failed: {e}")
+            if attempt == 0:
+                time.sleep(1)  # انتظر ثانية قبل المحاولة الثانية
+    return False
 
 def set_authenticated(user_id: int, value: bool):
     try:
@@ -338,6 +346,9 @@ def persistent_keyboard():
 def main_menu_keyboard():
     return InlineKeyboardMarkup([
         [
+            InlineKeyboardButton("📎 رفع مستند لطلب", callback_data="upload_file"),
+        ],
+        [
             InlineKeyboardButton("📋 قائمة الطلبات", callback_data="list_requests"),
             InlineKeyboardButton("🔍 بحث",           callback_data="search_mode"),
         ],
@@ -346,11 +357,10 @@ def main_menu_keyboard():
             InlineKeyboardButton("📊 إحصائيات",      callback_data="stats"),
         ],
         [
-            InlineKeyboardButton("📁 رفع ملف",       callback_data="upload_file"),
             InlineKeyboardButton("🔎 فلترة",          callback_data="filter_menu"),
+            InlineKeyboardButton("📢 نشر على القناة", callback_data="publish_channel"),
         ],
         [
-            InlineKeyboardButton("📢 نشر على القناة", callback_data="publish_channel"),
             InlineKeyboardButton("⚙️ إعدادات",       callback_data="settings"),
         ],
     ])
@@ -461,9 +471,9 @@ def files_list_keyboard(files: list, req_id: str, fire_key: str):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if is_authenticated(user.id):
+        # ✅ المستخدم مسجّل - أظهر القائمة مباشرة بدون طلب كلمة مرور
         await update.message.reply_text(
-            f"مرحباً *{user.first_name}* 👋\nأنت مسجّل الدخول بالفعل ✅\n\n"
-            "يمكنك استخدام الأزرار أدناه أو القائمة الثابتة:",
+            f"مرحباً *{user.first_name}* 👋",
             parse_mode="Markdown",
             reply_markup=persistent_keyboard()
         )
@@ -473,10 +483,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=main_menu_keyboard()
         )
         return
+    # ✅ غير مسجّل - اطلب كلمة المرور مرة واحدة فقط
     await update.message.reply_text(
         "🔐 *مرحباً بك في بوت إدارة الطلبات البرلمانية*\n\n"
-        "يرجى إدخال كلمة المرور للوصول:\n"
-        "_أرسل كلمة المرور مباشرة_",
+        "أرسل كلمة المرور للدخول:",
         parse_mode="Markdown"
     )
 
@@ -513,7 +523,7 @@ async def logout_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def menu_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not is_authenticated(user.id):
-        await update.message.reply_text("🔐 أرسل /start أولاً.")
+        await update.message.reply_text("🔐 أرسل كلمة المرور للدخول:")
         return
     await update.message.reply_text(
         "📱 *القائمة الرئيسية*",
@@ -524,14 +534,14 @@ async def menu_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def stats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not is_authenticated(user.id):
-        await update.message.reply_text("🔐 أرسل /start أولاً.")
+        await update.message.reply_text("🔐 أرسل كلمة المرور للدخول:")
         return
     await send_stats(update.message, context)
 
 async def search_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not is_authenticated(user.id):
-        await update.message.reply_text("🔐 أرسل /start أولاً.")
+        await update.message.reply_text("🔐 أرسل كلمة المرور للدخول:")
         return
     query = " ".join(context.args).strip()
     if not query:
@@ -545,7 +555,7 @@ async def search_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def request_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not is_authenticated(user.id):
-        await update.message.reply_text("🔐 أرسل /start أولاً.")
+        await update.message.reply_text("🔐 أرسل كلمة المرور للدخول:")
         return
     if not context.args:
         await update.message.reply_text("❓ أرسل: /request رقم_الطلب")
@@ -561,7 +571,7 @@ async def request_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def list_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     if not is_authenticated(user.id):
-        await update.message.reply_text("🔐 أرسل /start أولاً.")
+        await update.message.reply_text("🔐 أرسل كلمة المرور للدخول:")
         return
     await send_request_page(update.message, context, 0)
 
@@ -681,7 +691,10 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 reply_markup=main_menu_keyboard()
             )
             return
-        await update.message.reply_text("🔐 أرسل /start للوصول للنظام.")
+        # ❌ كلمة مرور خاطئة أو لم يُسجّل بعد
+        await update.message.reply_text(
+            "🔐 كلمة المرور غير صحيحة.\nأرسل كلمة المرور للدخول:"
+        )
         return
 
     # ══════════════════════════════════════════
@@ -1009,7 +1022,7 @@ async def button_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
 
     if not is_authenticated(user.id):
-        await query.message.reply_text("🔐 أرسل /start لتسجيل الدخول.")
+        await query.message.reply_text("🔐 أرسل كلمة المرور للدخول:")
         return
 
     if data == "back_main":
