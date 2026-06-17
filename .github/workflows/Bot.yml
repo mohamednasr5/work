@@ -1,32 +1,45 @@
-name: Run Telegram Bot
+name: El Ashry Bot - Deploy
 
 on:
-  schedule:
-    - cron: '*/50 * * * *'   # يشتغل كل 50 دقيقة تلقائياً
-  workflow_dispatch:           # تشغيل يدوي من GitHub لو أردت
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
 
 jobs:
-  run-bot:
+  deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 50        # يشتغل 50 دقيقة ثم يعيد التشغيل
+    timeout-minutes: 300
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-
-      - name: Run bot
-        env:
-          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
-          FIREBASE_CREDENTIALS_JSON: ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
-          FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
-          BOT_PASSWORD: ${{ secrets.BOT_PASSWORD }}
-          ARCHIVE_CHANNEL_ID: ${{ secrets.ARCHIVE_CHANNEL_ID }}
-        run: python bot.py
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Create .env file
+      run: |
+        cat > .env << EOF
+        BOT_TOKEN=${{ secrets.BOT_TOKEN }}
+        FIREBASE_URL=${{ secrets.FIREBASE_URL }}
+        FIREBASE_CREDENTIALS_JSON=${{ secrets.FIREBASE_CREDENTIALS_JSON }}
+        CHANNEL_ID=${{ secrets.TELEGRAM_CHANNEL_ID }}
+        BOT_PASSWORD=${{ secrets.BOT_PASSWORD }}
+        FIREBASE_PATH=${{ secrets.FIREBASE_PATH }}
+        EOF
+    
+    - name: Run bot
+      env:
+        BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
+        FIREBASE_CREDENTIALS_JSON: ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
+        CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+        BOT_PASSWORD: ${{ secrets.BOT_PASSWORD }}
+        FIREBASE_PATH: ${{ secrets.FIREBASE_PATH }}
+      run: python bot_merged.py
