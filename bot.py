@@ -11,6 +11,7 @@ import os
 import logging
 import json
 import asyncio
+import time
 import io
 from datetime import datetime
 from telegram import (
@@ -1465,8 +1466,35 @@ async def post_init(application: Application):
         BotCommand("logout",   "تسجيل الخروج"),
     ])
 
+def kill_other_instances():
+    """
+    يحذف الـ webhook ويرسل getUpdates بـ timeout=0 لإنهاء أي نسخة أخرى شغالة،
+    ثم ينتظر ثانيتين للتأكد من انتهائها.
+    """
+    import urllib.request
+    import urllib.error
+    base = f"https://api.telegram.org/bot{BOT_TOKEN}"
+    try:
+        # 1) حذف أي webhook قائم
+        urllib.request.urlopen(f"{base}/deleteWebhook?drop_pending_updates=false", timeout=10)
+        logger.info("🔪 deleteWebhook done")
+    except Exception as e:
+        logger.warning(f"deleteWebhook error: {e}")
+    try:
+        # 2) استدعاء getUpdates بـ timeout=0 يُنهي أي polling آخر (يسبب Conflict له)
+        urllib.request.urlopen(f"{base}/getUpdates?offset=-1&timeout=0&limit=1", timeout=10)
+        logger.info("🔪 getUpdates kick done")
+    except Exception as e:
+        logger.warning(f"getUpdates kick error: {e}")
+    # 3) انتظر 3 ثوانٍ حتى تنتهي النسخة الأخرى
+    logger.info("⏳ Waiting 3s for other instances to die...")
+    time.sleep(3)
+    logger.info("✅ Ready to start polling")
+
+
 def main():
     init_firebase()
+    kill_other_instances()
     app = (
         Application.builder()
         .token(BOT_TOKEN)
@@ -1489,7 +1517,10 @@ def main():
     ))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_input))
     logger.info("🚀 Bot started!")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+    app.run_polling(
+        allowed_updates=Update.ALL_TYPES,
+        drop_pending_updates=False,
+    )
 
 if __name__ == "__main__":
     main()
