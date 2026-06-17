@@ -1,4 +1,11 @@
+# ─────────────────────────────────────────
+# متطلبات بوت تليجرام - إدارة الطلبات البرلمانية
+# ─────────────────────────────────────────
+
+# Telegram Bot API
 python-telegram-bot==20.7
-firebase-admin
-flask
-gunicorn
+
+# Firebase Admin SDK
+firebase-admin==6.5.0
+
+# (Python 3.11+ مطلوب - http.server, socketserver, pickle مدمجون)
