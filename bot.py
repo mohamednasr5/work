@@ -46,7 +46,7 @@ ARCHIVE_PATH   = "archive"  # مسار قسم المستندات
 STORAGE_BUCKET = os.getenv("FIREBASE_STORAGE_BUCKET", "")
 
 # ✅ معرف القناة
-CHANNEL_ID     = "-1003882612870"  # معرف القناة
+CHANNEL_ID     = "-1003882612870"معرف القناة
 
 # ─────────────────────────────────────────
 # حالات المحادثة
@@ -142,11 +142,31 @@ def add_document_to_req(key: str, doc_info: dict) -> bool:
 
 
 def add_document_to_archive(req_id: str, doc_info: dict) -> bool:
-    """إضافة مستند لقسم archive بناءً على رقم الطلب - بنية dict مباشرة"""
+    """إضافة مستند لقسم archive بناءً على رقم الطلب"""
     try:
-        # استخدام req_id كـ key مباشرة في dict (أكثر استقراراً من list)
-        archive_ref = db.reference(f"{ARCHIVE_PATH}/{req_id}")
-        archive_ref.push(doc_info)
+        req_index = int(req_id)
+        archive_ref = db.reference(ARCHIVE_PATH)
+        
+        # جلب البيانات الحالية
+        archive_data = archive_ref.get() or []
+        if isinstance(archive_data, dict):
+            archive_data = list(archive_data.values())
+        
+        # التأكد من أن القائمة كبيرة بما يكفي
+        while len(archive_data) <= req_index:
+            archive_data.append(None)
+        
+        # إنشاء مفتاح فريد للمستند
+        doc_key = archive_ref.child(str(req_index)).push().key
+        
+        # إضافة المستند
+        if archive_data[req_index] is None:
+            archive_data[req_index] = {}
+        
+        archive_data[req_index][doc_key] = doc_info
+        
+        # حفظ البيانات
+        archive_ref.set(archive_data)
         logger.info(f"✅ تم حفظ المستند في archive للطلب {req_id}")
         return True
     except Exception as e:
@@ -156,68 +176,59 @@ def add_document_to_archive(req_id: str, doc_info: dict) -> bool:
 
 def get_archive_docs(req_id: str) -> list:
     """
-    جلب المستندات من archive — يدعم البنيتين القديمة والجديدة معاً:
-    - القديمة: archive كـ list، req_id هو index
-    - الجديدة: archive/{req_id} كـ dict مباشر
+    جلب جميع المستندات المرتبطة برقم طلب معين من قسم archive
+    البنية: archive -> [index] -> {document_key: {file_info}}
+    ملاحظة: الفهرس = reqId (الطلب يأخذ نفس رقمه كفهرس في القائمة)
     """
-    docs = []
-    
     try:
-        # ======= البنية الجديدة: archive/{req_id} =======
-        new_ref = db.reference(f"{ARCHIVE_PATH}/{req_id}")
-        new_docs = new_ref.get()
-        if new_docs and isinstance(new_docs, dict):
-            for doc_key, doc_info in new_docs.items():
-                if isinstance(doc_info, dict):
-                    docs.append({"doc_key": doc_key, "source": "new", **doc_info})
-            logger.info(f"✅ [new] Found {len(docs)} docs for req_id {req_id}")
+        archive_data = db.reference(ARCHIVE_PATH).get()
+        if not archive_data:
+            logger.warning(f"⚠️ No archive data found")
+            return []
+        
+        # تحويل البيانات إلى قائمة
+        if isinstance(archive_data, list):
+            archive_list = archive_data
+        else:
+            archive_list = list(archive_data.values()) if isinstance(archive_data, dict) else []
+        
+        # تحويل req_id إلى index
+        try:
+            req_index = int(req_id)
+        except (ValueError, TypeError):
+            logger.error(f"Invalid req_id: {req_id}")
+            return []
+        
+        # التحقق من أن الفهرس ضمن النطاق
+        if req_index < 0 or req_index >= len(archive_list):
+            logger.warning(f"req_index {req_index} out of range (max: {len(archive_list)-1})")
+            return []
+        
+        # جلب المستندات في هذا الفهرس
+        req_docs = archive_list[req_index]
+        
+        # إذا كان None، لا توجد مستندات
+        if req_docs is None:
+            return []
+        
+        if not isinstance(req_docs, dict):
+            logger.warning(f"req_docs at index {req_index} is not a dict")
+            return []
+        
+        # تحويل المستندات إلى قائمة مع الحفاظ على المعلومات
+        docs = []
+        for doc_key, doc_info in req_docs.items():
+            if isinstance(doc_info, dict):
+                docs.append({
+                    "doc_key": doc_key,
+                    **doc_info
+                })
+        
+        logger.info(f"✅ Found {len(docs)} documents for req_id {req_id}")
+        return docs
     except Exception as e:
-        logger.warning(f"⚠️ [new] get_archive_docs error: {e}")
-
-    try:
-        # ======= البنية القديمة: archive كـ list/dict =======
-        all_archive = db.reference(ARCHIVE_PATH).get()
-        if all_archive:
-            # Firebase يحوّل list إلى dict بمفاتيح "0","1","2"...
-            if isinstance(all_archive, dict):
-                # نحذف مفاتيح req_id الجديدة (غير رقمية أو رقمية كبيرة)
-                # نبحث فقط في الـ index الرقمي القديم
-                try:
-                    req_index = int(req_id)
-                    # البنية القديمة: المفتاح هو الرقم كـ string
-                    old_slot = all_archive.get(str(req_index))
-                    if old_slot and isinstance(old_slot, dict):
-                        # تحقق إن القيم فيها بيانات ملف (file_id) وليست push keys للبنية الجديدة
-                        for doc_key, doc_info in old_slot.items():
-                            if isinstance(doc_info, dict) and "file_id" in doc_info:
-                                # تجنب التكرار
-                                already = any(d.get("file_id") == doc_info.get("file_id") for d in docs)
-                                if not already:
-                                    docs.append({"doc_key": doc_key, "source": "old", **doc_info})
-                        logger.info(f"✅ [old] Found extra docs, total now: {len(docs)}")
-                except (ValueError, TypeError):
-                    pass
-            elif isinstance(all_archive, list):
-                try:
-                    req_index = int(req_id)
-                    if 0 <= req_index < len(all_archive):
-                        old_slot = all_archive[req_index]
-                        if old_slot and isinstance(old_slot, dict):
-                            for doc_key, doc_info in old_slot.items():
-                                if isinstance(doc_info, dict) and "file_id" in doc_info:
-                                    already = any(d.get("file_id") == doc_info.get("file_id") for d in docs)
-                                    if not already:
-                                        docs.append({"doc_key": doc_key, "source": "old", **doc_info})
-                            logger.info(f"✅ [old-list] Found extra docs, total now: {len(docs)}")
-                except (ValueError, TypeError):
-                    pass
-    except Exception as e:
-        logger.warning(f"⚠️ [old] get_archive_docs error: {e}")
-
-    if not docs:
-        logger.warning(f"⚠️ No docs found at all for req_id {req_id}")
-    
-    return docs
+        logger.error(f"get_archive_docs error: {e}")
+        return []
 
 
 # ─────────────────────────────────────────
