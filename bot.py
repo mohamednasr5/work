@@ -800,6 +800,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     if step == "upload_caption":
+        # المستخدم أرسل نصاً - نحفظه كوصف ثم ننتظر الملف
         req_id   = state.get("upload_req_id", "")
         fire_key = state.get("upload_fire_key", "")
         user_state[user.id] = {
@@ -809,7 +810,7 @@ async def handle_text_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "caption": text if text != "0" else ""
         }
         await update.message.reply_text(
-            "📎 الآن أرسل الملف (صورة، فيديو، مستند):",
+            "📎 الآن أرسل الملف (صورة، مستند، فيديو):",
             reply_markup=InlineKeyboardMarkup([[
                 InlineKeyboardButton("❌ إلغاء", callback_data="back_main")
             ]])
@@ -884,6 +885,17 @@ async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     state = user_state.get(user.id, {})
+
+    # ✅ إذا أرسل المستخدم ملفاً أثناء خطوة الوصف، نقبله مباشرة بدون وصف
+    if state.get("step") == "upload_caption":
+        user_state[user.id] = {
+            "step": "awaiting_file",
+            "upload_req_id":   state.get("upload_req_id", ""),
+            "upload_fire_key": state.get("upload_fire_key", ""),
+            "caption": ""
+        }
+        state = user_state[user.id]
+
     if state.get("step") != "awaiting_file":
         await update.message.reply_text(
             "📁 لرفع ملف على طلب، استخدم زر *📎 رفع مستند لطلب* من القائمة الثابتة\n"
