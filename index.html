@@ -441,6 +441,128 @@
         .doc-item { display: flex; gap: 10px; align-items: center; background: white; padding: 8px; border-radius: 6px; border: 1px solid #e2e8f0; }
         .doc-item input, .doc-item textarea { flex: 1; border: none; padding: 5px; font-family: inherit; }
 
+        /* ============================================================
+           ARCHIVED FILES VIEWER (ملفات البوت المرفوعة)
+           ============================================================ */
+        .archive-files-section {
+            margin-top: 15px;
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border: 2px solid #3b82f6;
+            border-radius: 12px;
+            padding: 15px;
+            animation: fadeIn 0.3s;
+        }
+        .archive-files-header {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #bfdbfe;
+        }
+        .archive-files-header h4 {
+            display: flex; align-items: center; gap: 8px;
+            color: #1d4ed8; font-size: 1rem; font-weight: 800;
+            margin: 0;
+        }
+        .archive-files-count {
+            background: #2563eb; color: white;
+            padding: 4px 12px; border-radius: 14px;
+            font-size: 0.8rem; font-weight: 700;
+        }
+        .archive-files-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 12px;
+        }
+        .archive-file-card {
+            background: white;
+            border: 2px solid #e0e7ff;
+            border-radius: 10px;
+            padding: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex; flex-direction: column;
+            gap: 6px;
+            position: relative;
+            overflow: hidden;
+        }
+        .archive-file-card:hover {
+            border-color: #2563eb;
+            transform: translateY(-3px);
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.2);
+        }
+        .archive-file-thumb {
+            background: #f1f5f9;
+            border-radius: 8px;
+            height: 80px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2rem;
+            color: #64748b;
+        }
+        .archive-file-thumb.photo { background: linear-gradient(135deg, #fef3c7, #fde68a); color: #92400e; }
+        .archive-file-thumb.document { background: linear-gradient(135deg, #fee2e2, #fecaca); color: #991b1b; }
+        .archive-file-thumb.video { background: linear-gradient(135deg, #ddd6fe, #c4b5fd); color: #5b21b6; }
+        .archive-file-thumb.audio { background: linear-gradient(135deg, #d1fae5, #a7f3d0); color: #065f46; }
+        .archive-file-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #1e293b;
+            line-height: 1.3;
+            word-break: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            min-height: 2.2em;
+        }
+        .archive-file-meta {
+            font-size: 0.68rem;
+            color: #64748b;
+            display: flex; justify-content: space-between;
+        }
+        .archive-file-loading {
+            text-align: center; padding: 30px 15px;
+            color: #64748b; font-size: 0.9rem;
+        }
+        .archive-file-loading i { font-size: 1.5rem; color: #2563eb; animation: spin 1s linear infinite; display: block; margin-bottom: 8px; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        .archive-file-empty {
+            text-align: center; padding: 20px 15px;
+            color: #64748b; font-size: 0.85rem;
+            background: #f8fafc; border-radius: 8px;
+            border: 2px dashed #cbd5e1;
+        }
+        .archive-file-empty i { font-size: 1.8rem; color: #94a3b8; display: block; margin-bottom: 8px; }
+
+        /* Photo Preview Modal */
+        .photo-preview-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.92);
+            display: none;
+            justify-content: center; align-items: center;
+            z-index: 5000;
+            padding: 20px;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .photo-preview-overlay.active { display: flex; animation: fadeIn 0.3s; }
+        .photo-preview-overlay img {
+            max-width: 95%; max-height: 80vh;
+            border-radius: 8px;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+        }
+        .photo-preview-overlay .preview-caption {
+            color: white; text-align: center;
+            max-width: 700px; font-size: 0.9rem;
+        }
+        .photo-preview-overlay .preview-close {
+            position: absolute; top: 20px; left: 20px;
+            background: rgba(255,255,255,0.1);
+            color: white; border: none;
+            width: 40px; height: 40px;
+            border-radius: 50%; cursor: pointer;
+            font-size: 1.5rem; font-weight: bold;
+        }
+
         /* --- Luxury Footer Styles --- */
         .luxury-footer {
             margin-top: 40px;
@@ -969,6 +1091,13 @@
                 <button class="btn-action" onclick="closeAuthorityModal()" style="background: var(--secondary); flex: 1;"><i class="fas fa-times"></i> إغلاق</button>
             </div>
         </div>
+    </div>
+
+    <!-- Photo / File Preview Overlay -->
+    <div id="photoPreviewOverlay" class="photo-preview-overlay">
+        <button class="preview-close" onclick="closePhotoPreview()">×</button>
+        <img id="photoPreviewImg" src="" alt="" style="display:none;">
+        <div id="photoPreviewCaption" class="preview-caption"></div>
     </div>
 
     <script>
@@ -1832,12 +1961,142 @@
                 <div style="margin-bottom:10px;"><strong>الجهة:</strong> ${req.authority}</div>
                 <div style="background:#f8fafc; padding:10px; margin-bottom:10px; border-radius:8px;">${req.details}</div>
                 <div style="margin-bottom:10px;"><strong>الحالة:</strong> <span class="status-badge status-${req.status}">${statusMap[req.status]}</span></div>
-                <div><strong>المستندات:</strong> ${docsHtml}</div>
+                <div><strong>المستندات المُسجَّلة:</strong> ${docsHtml}</div>
                 ${repliesHtml}
+                <div id="archiveFilesContainer" class="archive-files-section">
+                    <div class="archive-files-header">
+                        <h4><i class="fas fa-folder-open"></i> مستندات الأرشيف (المرفوعة عبر البوت)</h4>
+                        <span class="archive-files-count" id="archiveFilesCount">...</span>
+                    </div>
+                    <div id="archiveFilesGrid" class="archive-files-grid">
+                        <div class="archive-file-loading">
+                            <i class="fas fa-spinner"></i>
+                            جاري تحميل المستندات...
+                        </div>
+                    </div>
+                </div>
             `;
             document.getElementById('detailsModal').style.display = 'flex';
+            // تحميل مستندات الأرشيف بشكل غير متزامن
+            loadArchiveFiles(req.reqId);
         }
         function closeModal() { document.getElementById('detailsModal').style.display = 'none'; currentRequestKey = null; }
+
+        // --- 11b. Archive Files Loader ---
+        async function loadArchiveFiles(reqId) {
+            const grid = document.getElementById('archiveFilesGrid');
+            const countEl = document.getElementById('archiveFilesCount');
+            if (!grid || !countEl) return;
+
+            if (!reqId) {
+                grid.innerHTML = `<div class="archive-file-empty"><i class="fas fa-exclamation-circle"></i>رقم الطلب غير متاح</div>`;
+                countEl.innerText = '0';
+                return;
+            }
+
+            try {
+                const db = getDatabase();
+                const snap = await db.ref(`archive/${reqId}`).get();
+                const data = snap.val();
+
+                if (!data || typeof data !== 'object') {
+                    grid.innerHTML = `<div class="archive-file-empty"><i class="fas fa-folder-open"></i>لا توجد مستندات مرفوعة لهذا الطلب</div>`;
+                    countEl.innerText = '0';
+                    return;
+                }
+
+                // data is a dict of { pushKey: { file_id, file_name, file_type, caption, uploadedAt } }
+                const files = Object.entries(data)
+                    .map(([k, v]) => ({ docKey: k, ...(v || {}) }))
+                    .filter(f => f.file_id)
+                    // ترتيب حسب تاريخ الرفع
+                    .sort((a, b) => (a.uploadedAt || '').localeCompare(b.uploadedAt || ''));
+
+                countEl.innerText = files.length;
+                if (files.length === 0) {
+                    grid.innerHTML = `<div class="archive-file-empty"><i class="fas fa-folder-open"></i>لا توجد مستندات مرفوعة لهذا الطلب</div>`;
+                    return;
+                }
+
+                const iconMap = {
+                    'photo':    { icon: 'fa-image',       cls: 'photo',    label: 'صورة'   },
+                    'document': { icon: 'fa-file-pdf',    cls: 'document', label: 'مستند'  },
+                    'video':    { icon: 'fa-video',       cls: 'video',    label: 'فيديو'  },
+                    'audio':    { icon: 'fa-music',       cls: 'audio',    label: 'صوت'    },
+                };
+
+                grid.innerHTML = files.map(f => {
+                    const ft = f.file_type || 'document';
+                    const info = iconMap[ft] || iconMap.document;
+                    const date = (f.uploadedAt || '').slice(0, 10);
+                    const name = (f.file_name || 'مستند بدون اسم').substring(0, 50);
+                    const fileId = f.file_id;
+                    const caption = (f.caption || '').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                    // الرابط عبر Telegram Bot API (يفتح في المتصفح)
+                    // ملاحظة: file_id خاص بـ Telegram ولا يمكن فتحه مباشرة من المتصفح دون المرور بـ Bot API
+                    // سنستخدم رابط t.me/<bot>?start=file_<reqId>_<docKey> كحل بديل لو أردت،
+                    // لكن الأسلم هنا هو عرض المعلومات فقط مع إمكانية المعاينة للصور
+                    return `
+                        <div class="archive-file-card" 
+                             onclick="previewArchiveFile('${fileId}', '${ft}', '${name.replace(/'/g, "\\'")}', '${caption}')"
+                             title="${name}">
+                            <div class="archive-file-thumb ${info.cls}">
+                                <i class="fas ${info.icon}"></i>
+                            </div>
+                            <div class="archive-file-name">${name}</div>
+                            <div class="archive-file-meta">
+                                <span>${info.label}</span>
+                                <span>${date || '—'}</span>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } catch (err) {
+                console.error('loadArchiveFiles error:', err);
+                grid.innerHTML = `<div class="archive-file-empty" style="border-color:#fecaca;color:#b91c1c;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    تعذّر تحميل المستندات. تحقق من الاتصال.
+                </div>`;
+                countEl.innerText = '!';
+            }
+        }
+
+        // --- 11c. Archive File Preview ---
+        // ملاحظة مهمة: file_id الخاص بـ Telegram لا يمكن فتحه مباشرة من المتصفح.
+        // هذه الدالة تعرض معلومات الملف وتُعلِّم المستخدم بضرورة استخدام البوت لعرضه.
+        async function previewArchiveFile(fileId, fileType, fileName, caption) {
+            // إن كان صورة، نحاول جلبها عبر Telegram Bot API getFile → يُعطى رابط مؤقت
+            // لكن هذا يتطلب server-side call (BOT_TOKEN لا يمكن كشفه في الويب).
+            // البديل: نعرض modal بمعلومات الملف وتعليمات للوصول إليه عبر البوت.
+            const overlay = document.getElementById('photoPreviewOverlay');
+            const captionEl = document.getElementById('photoPreviewCaption');
+            const imgEl = document.getElementById('photoPreviewImg');
+
+            const fileTypeLabels = {
+                'photo': '📷 صورة',
+                'document': '📄 مستند',
+                'video': '🎥 فيديو',
+                'audio': '🎵 ملف صوتي',
+            };
+
+            captionEl.innerHTML = `
+                <div style="font-size:1.05rem; font-weight:700; margin-bottom:6px;">${fileName}</div>
+                <div style="opacity:0.85; font-size:0.85rem;">${fileTypeLabels[fileType] || '📄 مستند'}</div>
+                ${caption ? `<div style="margin-top:8px; opacity:0.9;">📝 ${caption}</div>` : ''}
+                <div style="margin-top:12px; padding:10px; background:rgba(255,255,255,0.1); border-radius:8px; font-size:0.8rem;">
+                    <i class="fas fa-info-circle"></i> لتحميل أو عرض الملف الأصلي، استخدم بوت التليجرام:
+                    أرسل <code style="background:rgba(0,0,0,0.3); padding:2px 6px; border-radius:4px;">/start</code>
+                    ثم اضغط "كل الطلبات" → اختر الطلب → اضغط "📎 المستندات".
+                </div>
+            `;
+            imgEl.style.display = 'none';
+            overlay.classList.add('active');
+            LogManager.log("معاينة مستند", `${fileName} (${fileType})`);
+        }
+
+        function closePhotoPreview() {
+            document.getElementById('photoPreviewOverlay').classList.remove('active');
+        }
 
         async function performEdit() {
             const req = requestsData.find(r => r.firebaseKey === currentRequestKey);
