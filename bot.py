@@ -332,8 +332,6 @@ def persistent_keyboard():
             [KeyboardButton("📱 القائمة الرئيسية")],
         ],
         resize_keyboard=True,
-        persistent=True,
-        is_persistent=True,
     )
 
 def main_menu_keyboard():
