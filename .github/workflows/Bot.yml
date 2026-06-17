@@ -10,6 +10,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 50        # يشتغل 50 دقيقة ثم يعيد التشغيل
 
+    # تم إضافة هذا القسم لحل مشكلة إصدار Node.js
+    env:
+      ACTIONS_ALLOW_USE_UNSECURE_NODE_VERSION: true
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
