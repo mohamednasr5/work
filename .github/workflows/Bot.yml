@@ -5,12 +5,12 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    - cron: '*/50 * * * *'   # يُعيد التشغيل كل 50 دقيقة تلقائياً
+    - cron: '0 */5 * * *'  # يُعيد التشغيل كل 5 ساعات تلقائياً
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-    timeout-minutes: 55
+    timeout-minutes: 290  # 4 ساعة و50 دقيقة (أقل من 5 ساعات بقليل)
 
     steps:
       - name: Checkout code
