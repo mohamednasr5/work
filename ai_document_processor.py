@@ -42,7 +42,12 @@ def _clean(value: Any) -> str | None:
 
 
 def _ocr_api_key() -> str:
-    return os.environ.get("OCR_SPACE_API_KEY", "").strip() or "helloworld"
+    key = os.environ.get("OCR_SPACE_API_KEY", "").strip()
+    if not key:
+        raise RuntimeError(
+            "لم يتم ضبط OCR_SPACE_API_KEY. أضف مفتاح OCR.space المجاني إلى GitHub Secrets."
+        )
+    return key
 
 
 def _compress_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> tuple[bytes, str]:
