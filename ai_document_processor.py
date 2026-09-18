@@ -185,7 +185,7 @@ def analyze_image(image_bytes: bytes, mime_type: str = "image/jpeg", hint: str =
                     timeout=120,
                 )
                 if response.status_code >= 400:
-                    preview = response.text[:350].replace("\\n", " ")
+                    preview = response.text[:350].replace("\n", " ")
                     errors.append(f"{model}: HTTP {response.status_code} {preview}")
                     if strict_json and response.status_code == 400:
                         continue
