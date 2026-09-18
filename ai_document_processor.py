@@ -14,6 +14,7 @@ import json
 import os
 import re
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Any, Dict, List
 
 import requests
@@ -35,8 +36,8 @@ OCR_SPACE_URL = "https://api.ocr.space/parse/image"
 # Text-only calls are much lighter than Vision calls. Keep the user's preferred
 # Gemma models first, then let OpenRouter choose a compatible free model.
 TEXT_MODELS = [
-    "google/gemma-4-31b-it:free",
     "google/gemma-4-26b-a4b-it:free",
+    "google/gemma-4-31b-it:free",
     "openrouter/free",
 ]
 
@@ -147,7 +148,7 @@ def _compress_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> tuple[
         src = src.convert("RGB")
 
         # Downscale very large phone scans while preserving enough detail for OCR.
-        max_side = 2200
+        max_side = 1800
         if max(src.size) > max_side:
             ratio = max_side / float(max(src.size))
             src = src.resize((max(1, int(src.width * ratio)), max(1, int(src.height * ratio))), Image.LANCZOS)
@@ -157,7 +158,7 @@ def _compress_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> tuple[
             out = BytesIO()
             src.save(out, format="JPEG", quality=quality, optimize=True)
             data = out.getvalue()
-            if len(data) <= 900_000:
+            if len(data) <= 700_000:
                 return data, "image/jpeg"
             quality -= 7
 
@@ -183,8 +184,8 @@ def _pdf_pages_as_images(document_bytes: bytes, max_pages: int = 3) -> List[byte
 
         for page_index in range(min(pdf.page_count, max_pages)):
             page = pdf.load_page(page_index)
-            pix = page.get_pixmap(matrix=fitz.Matrix(1.55, 1.55), alpha=False)
-            jpg = pix.tobytes("jpeg", jpg_quality=82)
+            pix = page.get_pixmap(matrix=fitz.Matrix(1.35, 1.35), alpha=False)
+            jpg = pix.tobytes("jpeg", jpg_quality=78)
             jpg, _ = _compress_image(jpg, "image/jpeg")
             pages.append(jpg)
     finally:
@@ -205,9 +206,9 @@ def _ocr_one(image_bytes: bytes, filename: str, api_key: str) -> str:
     }
     data = {
         "language": "ara",
-        "OCREngine": "3",
+        "OCREngine": "1",
         "detectOrientation": "true",
-        "scale": "true",
+        "scale": "false",
         "isOverlayRequired": "false",
         "isTable": "false",
     }
@@ -218,7 +219,7 @@ def _ocr_one(image_bytes: bytes, filename: str, api_key: str) -> str:
         headers=headers,
         files=files,
         data=data,
-        timeout=120,
+        timeout=30,
     )
     if response.status_code >= 400:
         raise RuntimeError(f"OCR.space HTTP {response.status_code}: {response.text[:500]}")
@@ -249,21 +250,29 @@ def ocr_document(document_bytes: bytes, mime_type: str) -> Dict[str, Any]:
 
     if mime == "application/pdf":
         pages = _pdf_pages_as_images(document_bytes, max_pages=3)
-        page_texts = []
-        for index, page in enumerate(pages, start=1):
-            try:
-                text = _ocr_one(page, f"page_{index}.jpg", api_key)
-                page_texts.append(f"[الصفحة {index}]\n{text}")
-            except Exception as exc:
-                # One bad page must not discard the readable pages.
-                page_texts.append(f"[الصفحة {index}]\n[تعذر OCR لهذه الصفحة: {exc}]")
+        page_texts = [""] * len(pages)
+
+        with ThreadPoolExecutor(max_workers=min(3, len(pages) or 1)) as pool:
+            futures = {
+                pool.submit(_ocr_one, page, f"page_{index}.jpg", api_key): index
+                for index, page in enumerate(pages, start=1)
+            }
+            for future in as_completed(futures):
+                index = futures[future]
+                try:
+                    text = future.result()
+                    page_texts[index - 1] = f"[الصفحة {index}]\n{text}"
+                except Exception as exc:
+                    page_texts[index - 1] = (
+                        f"[الصفحة {index}]\n[تعذر OCR لهذه الصفحة: {exc}]"
+                    )
         full_text = "\n\n".join(page_texts).strip()
         if not full_text:
             raise RuntimeError("تعذر استخراج النص من صفحات PDF.")
         return {
             "text": full_text,
             "pages": len(pages),
-            "engine": "ocr.space-engine-3",
+            "engine": "ocr.space-engine-1",
         }
 
     if not mime.startswith("image/"):
@@ -274,7 +283,7 @@ def ocr_document(document_bytes: bytes, mime_type: str) -> Dict[str, Any]:
     return {
         "text": text,
         "pages": 1,
-        "engine": "ocr.space-engine-3",
+        "engine": "ocr.space-engine-1",
     }
 
 
@@ -288,85 +297,57 @@ def _openrouter_headers(api_key: str) -> Dict[str, str]:
 
 
 def _analyze_ocr_text(text: str, hint: str = "") -> Dict[str, Any]:
+    """Fast structured extraction: one OpenRouter request with server-side fallback."""
     api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
     if not api_key:
         raise RuntimeError("OPENROUTER_API_KEY غير موجود في GitHub Secrets")
 
-    prompt = SYSTEM_PROMPT + "\n\nنص المستند المستخرج بواسطة OCR:\n---\n" + text[:30000] + "\n---"
+    prompt = SYSTEM_PROMPT + "\n\nنص المستند المستخرج بواسطة OCR:\n---\n" + text[:18000] + "\n---"
     if hint:
-        prompt += "\nملاحظة المستخدم:\n" + hint[:1200]
+        prompt += "\nملاحظة المستخدم:\n" + hint[:800]
 
     payload = {
         "model": TEXT_MODELS[0],
         "models": TEXT_MODELS[1:],
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
-        "max_tokens": 2400,
+        "max_tokens": 1200,
         "provider": {"allow_fallbacks": True},
-        "response_format": {"type": "json_object"},
     }
 
-    last_error = ""
-    for attempt in range(3):
-        try:
-            response = requests.post(
-                OPENROUTER_URL,
-                headers=_openrouter_headers(api_key),
-                json=payload,
-                timeout=120,
-            )
+    try:
+        response = requests.post(
+            OPENROUTER_URL,
+            headers=_openrouter_headers(api_key),
+            json=payload,
+            timeout=30,
+        )
+    except requests.RequestException as exc:
+        raise RuntimeError(f"OpenRouter connection error: {exc}") from exc
 
-            # Some providers reject response_format even though the model
-            # supports it. Retry once without that parameter.
-            if response.status_code == 400 and "response_format" in response.text:
-                payload.pop("response_format", None)
-                response = requests.post(
-                    OPENROUTER_URL,
-                    headers=_openrouter_headers(api_key),
-                    json=payload,
-                    timeout=120,
-                )
+    if response.status_code >= 400:
+        raise RuntimeError(
+            f"OpenRouter HTTP {response.status_code}: {response.text[:900]}"
+        )
 
-            if response.status_code == 429:
-                last_error = response.text[:700].replace("\n", " ")
-                if attempt < 2:
-                    time.sleep(4 * (attempt + 1))
-                    continue
-                raise RuntimeError("OpenRouter text model rate-limited: " + last_error)
+    body = response.json()
+    message = body.get("choices", [{}])[0].get("message", {})
+    content = message.get("content", "")
+    if isinstance(content, list):
+        content = "\n".join(
+            str(x.get("text", ""))
+            for x in content
+            if isinstance(x, dict) and x.get("text")
+        )
 
-            if response.status_code >= 400:
-                raise RuntimeError(f"OpenRouter HTTP {response.status_code}: {response.text[:900]}")
+    parsed = _extract_json(content)
+    if not parsed:
+        raise RuntimeError("AI returned invalid JSON")
 
-            body = response.json()
-            message = body.get("choices", [{}])[0].get("message", {})
-            content = message.get("content", "")
-            if isinstance(content, list):
-                content = "\n".join(
-                    str(x.get("text", "")) for x in content
-                    if isinstance(x, dict) and x.get("text")
-                )
-
-            parsed = _extract_json(content)
-            if not parsed:
-                raise RuntimeError("AI returned invalid JSON after OCR")
-
-            result = _normalize(parsed)
-            result["aiModel"] = body.get("model") or TEXT_MODELS[0]
-            result["aiRequestedModel"] = TEXT_MODELS[0]
-            return result
-
-        except requests.RequestException as exc:
-            last_error = str(exc)
-            if attempt < 2:
-                time.sleep(3 * (attempt + 1))
-                continue
-            break
-        except Exception as exc:
-            last_error = str(exc)
-            break
-
-    raise RuntimeError("تعذر تحويل نص OCR إلى بيانات منظمة. " + last_error[:1200])
-
+    result = _normalize(parsed)
+    result["aiModel"] = body.get("model") or TEXT_MODELS[0]
+    result["aiRequestedModel"] = TEXT_MODELS[0]
+    return result
 
 def _document_data_urls(document_bytes: bytes, mime_type: str) -> list[str]:
     """Legacy Vision fallback: render PDF pages as compact images."""
@@ -476,28 +457,17 @@ def _analyze_vision(document_bytes: bytes, mime_type: str, hint: str = "") -> Di
 
 
 def analyze_document(document_bytes: bytes, mime_type: str = "image/jpeg", hint: str = "") -> Dict[str, Any]:
-    """NEW pipeline: OCR.space -> text AI -> Vision fallback."""
-    ocr_error = ""
-    try:
-        ocr = ocr_document(document_bytes, mime_type)
-        result = _analyze_ocr_text(ocr["text"], hint)
-        result["pagesAnalyzed"] = ocr["pages"]
-        result["ocrEngine"] = ocr["engine"]
-        result["ocrText"] = ocr["text"][:12000]
-        return result
-    except Exception as exc:
-        ocr_error = str(exc)
+    """Fast path: Arabic OCR -> one OpenRouter text request.
 
-    # If OCR or the text-only AI route fails, preserve the previous Vision path.
-    try:
-        result = _analyze_vision(document_bytes, mime_type, hint)
-        result["ocrFallbackError"] = ocr_error[:800]
-        return result
-    except Exception as vision_exc:
-        raise RuntimeError(
-            "فشل مسار OCR ثم مسار Vision. "
-            f"OCR: {ocr_error[:500]} | Vision: {str(vision_exc)[:700]}"
-        )
+    Vision remains implemented for compatibility, but is intentionally not
+    auto-triggered here because free-provider fallback chains can be slow.
+    """
+    ocr = ocr_document(document_bytes, mime_type)
+    result = _analyze_ocr_text(ocr["text"], hint)
+    result["pagesAnalyzed"] = ocr["pages"]
+    result["ocrEngine"] = ocr["engine"]
+    result["ocrText"] = ocr["text"][:12000]
+    return result
 
 
 # Backward-compatible alias for existing callers.
