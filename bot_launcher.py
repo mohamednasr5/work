@@ -554,6 +554,84 @@ async def _show_ai_review(message, context):
     )
 
 
+
+async def _approve_pending_item(item, context):
+    """Save one approved new request and link its original Telegram document."""
+    result = item["data"]
+    candidate = {
+        "reqDate": result.get("reqDate") or "",
+        "requestType": result.get("requestType") or "special",
+        "authority": result.get("authority") or "غير محددة",
+        "title": result.get("title") or "طلب رسمي",
+        "details": result.get("details") or "",
+        "applicantName": result.get("applicantName"),
+        "jobTitle": result.get("jobTitle"),
+        "workplace": result.get("workplace"),
+    }
+    duplicate = find_exact_duplicate(candidate)
+    if duplicate:
+        return {"duplicate": duplicate, "created": False}
+
+    all_reqs = legacy_bot.get_all_requests()
+    max_id = max(
+        (int(r.get("reqId") or 0) for r in all_reqs if str(r.get("reqId", "")).isdigit()),
+        default=0,
+    )
+    req_data = {
+        **candidate,
+        "reqId": str(max_id + 1),
+        "status": "replied" if result.get("hasOfficialReply") else "execution",
+        "hasDocuments": False,
+        "aiGenerated": True,
+        "aiModel": result.get("aiModel"),
+        "aiConfidence": result.get("confidence", 0),
+        "hasOfficialReply": bool(result.get("hasOfficialReply")),
+        "officialReplyText": result.get("officialReplyText"),
+        "requestNumberFromDocument": result.get("requestNumber"),
+        "ocrText": result.get("ocrText") or result.get("details") or "",
+        "aiRequestedModel": result.get("aiRequestedModel"),
+        "aiPagesAnalyzed": result.get("pagesAnalyzed", 1),
+        "createdAt": datetime.utcnow().isoformat(),
+    }
+    fire_key = legacy_bot.add_request(req_data)
+    if not fire_key:
+        return {"error": "فشل حفظ الطلب في Firebase"}
+
+    channel_msg_id = None
+    channel_sent = False
+    try:
+        cap = f"📋 طلب #${req_data['reqId']}\n📝 ${req_data['title']}\n🏛 ${req_data['authority']}"
+        if item.get("caption"):
+            cap += f"\n💬 ${item['caption']}"
+        if item["filetype"] == "photo":
+            sent = await context.bot.send_photo(
+                legacy_bot.TELEGRAM_CHANNEL_ID, item["file_id"], caption=cap
+            )
+        else:
+            sent = await context.bot.send_document(
+                legacy_bot.TELEGRAM_CHANNEL_ID, item["file_id"], caption=cap
+            )
+        channel_msg_id = sent.message_id
+        channel_sent = True
+    except Exception as exc:
+        legacy_bot.logger.error(f"AI channel send error: ${exc}")
+
+    file_key = legacy_bot.save_file_to_firebase(
+        req_data["reqId"], item["file_id"], item["filename"],
+        item["filetype"], item.get("caption", ""), channel_msg_id,
+    )
+    if file_key:
+        legacy_bot.update_request(fire_key, {"hasDocuments": True})
+
+    return {
+        "created": True,
+        "fire_key": fire_key,
+        "req_data": req_data,
+        "channel_sent": channel_sent,
+        "file_key": file_key,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Callback layer.
 # ---------------------------------------------------------------------------
@@ -564,6 +642,43 @@ async def ai_button_handler(update, context):
 
     if not data.startswith(("ai_", "req_reply:", "req_action:", "action_status:", "view_req_plus:", "dup_open:")):
         return await _original_button_handler(update, context)
+
+
+    if data == "ai_approve_all":
+        batch = context.user_data.get("ai_pending_requests")
+        if not isinstance(batch, list) or not batch:
+            await query.answer("لا توجد مجموعة بانتظار الاعتماد.", show_alert=True)
+            return
+        results = []
+        for item in batch:
+            results.append(await _approve_pending_item(item, context))
+
+        created = [x for x in results if x.get("created")]
+        duplicates = [x for x in results if x.get("duplicate")]
+        errors = [x for x in results if x.get("error")]
+        lines = [
+            "✅ *تمت معالجة المجموعة*",
+            "━━━━━━━━━━━━━━━━━━━━",
+            f"📦 إجمالي المستندات: ${len(batch)}",
+            f"✅ تم إنشاء: ${len(created)}",
+            f"⚠️ موجود مسبقًا: ${len(duplicates)}",
+            f"❌ أخطاء: ${len(errors)}",
+        ]
+        if created:
+            lines.append("🔢 أرقام الطلبات الجديدة: " + ", ".join(
+                f"`${x['req_data']['reqId']}`" for x in created
+            ))
+        if duplicates:
+            lines.append("⚠️ لم يتم إنشاء طلب مكرر لأي مستند موجود.")
+        context.user_data.pop("ai_pending_requests", None)
+        await query.message.edit_text(
+            "\n".join(lines),
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("🔙 القائمة", callback_data="back_main")]
+            ]),
+        )
+        return
 
     # Manual editing of the pending NEW request. Nothing is written to
     # Firebase until the user presses "اعتماد وحفظ".
