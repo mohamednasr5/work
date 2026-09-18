@@ -5,12 +5,12 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    - cron: '0 */5 * * *'  # يُعيد التشغيل كل 5 ساعات تلقائياً
+    - cron: '0 */5 * * *'
 
 jobs:
   run-bot:
     runs-on: ubuntu-latest
-    timeout-minutes: 290  # 4 ساعة و50 دقيقة (أقل من 5 ساعات بقليل)
+    timeout-minutes: 290
 
     steps:
       - name: Checkout code
@@ -30,17 +30,12 @@ jobs:
         run: |
           echo "🔪 Sending deleteWebhook..."
           curl -s "https://api.telegram.org/bot${BOT_TOKEN}/deleteWebhook?drop_pending_updates=false" | python3 -m json.tool || true
-
-          echo "🔪 Kick #1 — getUpdates to terminate old polling..."
+          echo "🔪 Kick #1..."
           curl -s "https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=-1&timeout=0&limit=1" > /dev/null || true
           sleep 3
-
-          echo "🔪 Kick #2 — second getUpdates for safety..."
+          echo "🔪 Kick #2..."
           curl -s "https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=-1&timeout=0&limit=1" > /dev/null || true
-
-          echo "⏳ Waiting 12 seconds for old instances to fully terminate..."
           sleep 12
-          echo "✅ Done — starting fresh instance"
 
       - name: Run Telegram Bot
         env:
@@ -50,4 +45,5 @@ jobs:
           FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
           FIREBASE_PATH: ${{ secrets.FIREBASE_PATH }}
           FIREBASE_CREDENTIALS_JSON: ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
-        run: python bot.py
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: python bot_launcher.py
