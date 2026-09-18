@@ -5,41 +5,86 @@ on:
     branches: [main]
   workflow_dispatch:
   schedule:
-    - cron: '0 */5 * * *'
+    - cron: "0 */5 * * *"
 
+# Only one bot process may consume Telegram updates at a time.
+# A new deployment cancels the previous bot process and starts the latest commit.
 concurrency:
-  group: telegram-bot
+  group: telegram-bot-main
   cancel-in-progress: true
+
+permissions:
+  contents: read
 
 jobs:
   run-bot:
+    name: Run Telegram request bot
     runs-on: ubuntu-latest
-    timeout-minutes: 290
+    timeout-minutes: 280
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
+          cache: "pip"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
 
-      - name: Kill any running bot instances
+      - name: Validate Python files
+        run: |
+          python -m py_compile bot.py bot_launcher.py ai_document_processor.py
+          echo "✅ Python syntax check passed"
+
+      - name: Validate required secrets
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+          BOT_PASSWORD: ${{ secrets.BOT_PASSWORD }}
+          TELEGRAM_CHANNEL_ID: ${{ secrets.TELEGRAM_CHANNEL_ID }}
+          FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
+          FIREBASE_PATH: ${{ secrets.FIREBASE_PATH }}
+          FIREBASE_CREDENTIALS_JSON: ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
+        run: |
+          python - <<'PY'
+          import os
+          required = [
+              "BOT_TOKEN",
+              "BOT_PASSWORD",
+              "TELEGRAM_CHANNEL_ID",
+              "FIREBASE_URL",
+              "FIREBASE_PATH",
+              "FIREBASE_CREDENTIALS_JSON",
+              "OPENROUTER_API_KEY",
+          ]
+          missing = [name for name in required if not os.environ.get(name, "").strip()]
+          if missing:
+              raise SystemExit("Missing required GitHub Secrets: " + ", ".join(missing))
+          print("✅ Required secrets are present")
+          PY
+
+      - name: Validate Telegram bot token
         env:
           BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
         run: |
-          echo "🔪 Sending deleteWebhook..."
-          curl -s "https://api.telegram.org/bot${BOT_TOKEN}/deleteWebhook?drop_pending_updates=false" | python3 -m json.tool || true
-          echo "🔪 Kick #1..."
-          curl -s "https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=-1&timeout=0&limit=1" > /dev/null || true
-          sleep 3
-          echo "🔪 Kick #2..."
-          curl -s "https://api.telegram.org/bot${BOT_TOKEN}/getUpdates?offset=-1&timeout=0&limit=1" > /dev/null || true
-          sleep 12
+          python - <<'PY'
+          import json, os, urllib.request
+          url = "https://api.telegram.org/bot" + os.environ["BOT_TOKEN"] + "/getMe"
+          with urllib.request.urlopen(url, timeout=20) as response:
+              data = json.load(response)
+          if not data.get("ok"):
+              raise SystemExit("Telegram getMe failed")
+          bot = data.get("result", {})
+          print("✅ Telegram token valid for @" + str(bot.get("username", "unknown")))
+          PY
 
       - name: Run Telegram Bot
         env:
