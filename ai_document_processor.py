@@ -22,6 +22,7 @@ OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODELS = [
     "google/gemma-4-26b-a4b-it:free",
     "google/gemma-4-31b-it:free",
+    "openrouter/free",
 ]
 
 SYSTEM_PROMPT = r"""
@@ -133,7 +134,7 @@ def _document_data_urls(document_bytes: bytes, mime_type: str) -> list[str]:
 
 
 def analyze_image(image_bytes: bytes, mime_type: str = "image/jpeg", hint: str = "") -> Dict[str, Any]:
-    """Analyze one new image with Gemma 4 using a resilient fallback chain."""
+    """Analyze a NEW document with resilient model + provider failover."""
     api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
     if not api_key:
         raise RuntimeError("OPENROUTER_API_KEY غير موجود في GitHub Secrets")
@@ -154,69 +155,91 @@ def analyze_image(image_bytes: bytes, mime_type: str = "image/jpeg", hint: str =
         "X-Title": "Work Telegram Requests AI",
     }
 
-    errors = []
-    for model in MODELS:
-        base_payload = {
-            "model": model,
-            "messages": [{
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    *[
-                        {"type": "image_url", "image_url": {"url": url}}
-                        for url in data_urls
-                    ],
-                ],
-            }],
-            "temperature": 0,
-            "max_tokens": 2400,
-        }
+    content = [{"type": "text", "text": prompt}] + [
+        {"type": "image_url", "image_url": {"url": url}}
+        for url in data_urls
+    ]
 
-        # Some providers can reject response_format even when the model supports it.
-        for strict_json in (True, False):
-            payload = dict(base_payload)
-            if strict_json:
-                payload["response_format"] = {"type": "json_object"}
-            try:
+    # OpenRouter supports model-level fallback. A provider 429 is therefore
+    # allowed to fall through to another provider/model before we fail.
+    payload = {
+        "model": MODELS[0],
+        "models": MODELS[1:],
+        "messages": [{"role": "user", "content": content}],
+        "temperature": 0,
+        "max_tokens": 2400,
+        "provider": {"allow_fallbacks": True},
+        "response_format": {"type": "json_object"},
+    }
+
+    last_error = ""
+    for attempt in range(3):
+        try:
+            response = requests.post(
+                OPENROUTER_URL,
+                headers=headers,
+                json=payload,
+                timeout=150,
+            )
+            if response.status_code == 429:
+                last_error = response.text[:700].replace("\n", " ")
+                if attempt < 2:
+                    import time
+                    time.sleep(4 * (attempt + 1))
+                    continue
+                raise RuntimeError(
+                    "OpenRouter/AI provider rate-limited the request (429). "
+                    "سيتم استخدام المسار الاحتياطي في المحاولة التالية. " + last_error
+                )
+
+            if response.status_code == 400 and "response_format" in response.text:
+                # Some free providers do not implement JSON response_format.
+                payload.pop("response_format", None)
                 response = requests.post(
                     OPENROUTER_URL,
                     headers=headers,
                     json=payload,
-                    timeout=120,
+                    timeout=150,
                 )
-                if response.status_code >= 400:
-                    preview = response.text[:350].replace("\n", " ")
-                    errors.append(f"{model}: HTTP {response.status_code} {preview}")
-                    if strict_json and response.status_code == 400:
-                        continue
-                    break
 
-                body = response.json()
-                message = body.get("choices", [{}])[0].get("message", {})
-                content = message.get("content", "")
-                if isinstance(content, list):
-                    content = "\\n".join(
-                        str(x.get("text", "")) for x in content
-                        if isinstance(x, dict) and x.get("text")
-                    )
-                parsed = _extract_json(content)
-                if parsed:
-                    result = _normalize(parsed)
-                    result["aiModel"] = body.get("model") or model
-                    result["aiRequestedModel"] = model
-                    result["pagesAnalyzed"] = len(data_urls)
-                    return result
-                errors.append(f"{model}: JSON غير صالح")
-                break
-            except requests.RequestException as exc:
-                errors.append(f"{model}: {exc}")
-                break
-            except Exception as exc:
-                errors.append(f"{model}: {exc}")
-                break
+            if response.status_code >= 400:
+                raise RuntimeError(
+                    f"HTTP {response.status_code}: {response.text[:900].replace(chr(10), ' ')}"
+                )
 
-    raise RuntimeError("تعذر تحليل المستند: " + " | ".join(errors)[:1200])
+            body = response.json()
+            message = body.get("choices", [{}])[0].get("message", {})
+            content_out = message.get("content", "")
+            if isinstance(content_out, list):
+                content_out = "\n".join(
+                    str(x.get("text", "")) for x in content_out
+                    if isinstance(x, dict) and x.get("text")
+                )
+            parsed = _extract_json(content_out)
+            if not parsed:
+                raise RuntimeError("AI returned invalid JSON")
 
+            result = _normalize(parsed)
+            result["aiModel"] = body.get("model") or MODELS[0]
+            result["aiRequestedModel"] = MODELS[0]
+            result["pagesAnalyzed"] = len(data_urls)
+            return result
+
+        except requests.RequestException as exc:
+            last_error = str(exc)
+            if attempt < 2:
+                import time
+                time.sleep(3 * (attempt + 1))
+                continue
+            break
+        except Exception as exc:
+            last_error = str(exc)
+            break
+
+    raise RuntimeError(
+        "تعذر تحليل المستند بعد استخدام مسارات الذكاء الاحتياطية. "
+        + last_error[:1200]
+    )
 
 # Backward-compatible alias for existing callers.
 def analyze_document(document_bytes: bytes, mime_type: str = "image/jpeg", hint: str = "") -> Dict[str, Any]:
