@@ -236,22 +236,35 @@ def _today_egypt() -> str:
 
 
 def _header_person(text: str) -> str | None:
-    """Extract the person named after 'مقدمة لسيادتكم' for special requests."""
-    match = re.search(
+    """Extract the applicant/complainant named by a document label."""
+    # Any explicit applicant label makes the request a special/personal
+    # request, even when the same document also starts with 'إلى السيد...'.
+    patterns = [
         r"مقدمة\s*(?:ل|إلى)?\s*سيادتكم\s*[/\\:：-]?\s*([^\n\r]+)",
-        text,
-        flags=re.IGNORECASE,
-    )
-    if not match:
-        return None
+        r"مقدم(?:ة)?\s*(?:الطلب)?\s*[/\\:：-]?\s*([^\n\r]+)",
+        r"صاحب\s*الطلب\s*[/\\:：-]?\s*([^\n\r]+)",
+        r"المقدم\s*[/\\:：-]?\s*([^\n\r]+)",
+        r"الشاكي\s*[/\\:：-]?\s*([^\n\r]+)",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if not match:
+            continue
 
-    value = _clean(match.group(1))
-    if not value:
-        return None
+        value = _clean(match.group(1))
+        if not value:
+            continue
 
-    # Stop before phone/address/contact lines when OCR places them nearby.
-    value = re.split(r"\s+(?:ت|تليفون|هاتف|موبايل|قومي|الرقم القومي)\s*[/\\:：-]?", value, maxsplit=1, flags=re.IGNORECASE)[0]
-    return _clean(value)
+        # Stop before phone/address/contact lines when OCR places them nearby.
+        value = re.split(
+            r"\s+(?:ت|تليفون|هاتف|موبايل|قومي|الرقم القومي|الوظيفة|جهة العمل)\s*[/\\:：-]?",
+            value,
+            maxsplit=1,
+            flags=re.IGNORECASE,
+        )[0]
+        return _clean(value)
+
+    return None
 
 
 def _recipient_header(text: str) -> tuple[str | None, str | None]:
@@ -360,8 +373,14 @@ def _detect_request_type(text: str) -> str:
     if re.search(r"طلب\s+إحاطة|طلب\s+احاطة", top, flags=re.IGNORECASE):
         return "briefing"
 
-    # Special request: the name after 'مقدمة لسيادتكم' is the title.
-    if re.search(r"مقدمة\s*(?:ل|إلى)?\s*سيادتكم", text, flags=re.IGNORECASE):
+    # Any explicit applicant/complainant label means a special request.
+    # This rule wins over 'إلى السيد...' because the recipient and applicant
+    # are separate fields in the same document.
+    if re.search(
+        r"مقدمة\s*(?:ل|إلى)?\s*سيادتكم|مقدم(?:ة)?\s*(?:الطلب)?\s*[/\\:：-]|صاحب\s*الطلب\s*[/\\:：-]|المقدم\s*[/\\:：-]|الشاكي\s*[/\\:：-]",
+        text,
+        flags=re.IGNORECASE,
+    ):
         return "special"
 
     # General request: addressed to a person/official and asking for an objective.
