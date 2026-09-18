@@ -321,12 +321,13 @@ def _openrouter_headers(api_key: str) -> Dict[str, str]:
 
 
 def _analyze_ocr_text(text: str, hint: str = "") -> Dict[str, Any]:
-    """Fast structured extraction: one OpenRouter request with server-side fallback."""
+    """Structured extraction with a strict JSON response and one fast retry."""
     api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
     if not api_key:
         raise RuntimeError("OPENROUTER_API_KEY غير موجود في GitHub Secrets")
 
-    prompt = SYSTEM_PROMPT + "\n\nنص المستند المستخرج بواسطة OCR:\n---\n" + text[:18000] + "\n---"
+    source_text = text.strip()
+    prompt = SYSTEM_PROMPT + "\n\nنص المستند المستخرج بواسطة OCR:\n---\n" + source_text[:18000] + "\n---"
     if hint:
         prompt += "\nملاحظة المستخدم:\n" + hint[:800]
 
@@ -335,19 +336,28 @@ def _analyze_ocr_text(text: str, hint: str = "") -> Dict[str, Any]:
         "models": TEXT_MODELS[1:],
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
-        "max_tokens": 1200,
+        "max_tokens": 1400,
         "provider": {"allow_fallbacks": True},
+        "response_format": {"type": "json_object"},
     }
 
-    try:
-        response = requests.post(
-            OPENROUTER_URL,
-            headers=_openrouter_headers(api_key),
-            json=payload,
-            timeout=30,
-        )
-    except requests.RequestException as exc:
-        raise RuntimeError(f"OpenRouter connection error: {exc}") from exc
+    def call(body):
+        try:
+            return requests.post(
+                OPENROUTER_URL,
+                headers=_openrouter_headers(api_key),
+                json=body,
+                timeout=30,
+            )
+        except requests.RequestException as exc:
+            raise RuntimeError(f"OpenRouter connection error: {exc}") from exc
+
+    response = call(payload)
+
+    # Some free models do not implement response_format. Retry once without it.
+    if response.status_code == 400 and "response_format" in response.text.lower():
+        payload.pop("response_format", None)
+        response = call(payload)
 
     if response.status_code >= 400:
         raise RuntimeError(
@@ -365,14 +375,55 @@ def _analyze_ocr_text(text: str, hint: str = "") -> Dict[str, Any]:
         )
 
     parsed = _extract_json(content)
+
+    # A second, deliberately tiny repair request handles models that returned
+    # prose/markdown despite the JSON constraint. It does not receive any new
+    # information, so it cannot legitimately add facts.
     if not parsed:
-        raise RuntimeError("AI returned invalid JSON")
+        repair_prompt = (
+            "حوّل النص التالي إلى JSON فقط وفق الحقول المحددة. "
+            "ممنوع إضافة أو تخمين أي معلومة غير موجودة. "
+            "لا تكتب شرحاً ولا Markdown.\n"
+            + SYSTEM_PROMPT
+            + "\nالنص:\n---\n"
+            + source_text[:18000]
+            + "\n---"
+        )
+        repair_payload = {
+            "model": TEXT_MODELS[0],
+            "models": TEXT_MODELS[1:],
+            "messages": [{"role": "user", "content": repair_prompt}],
+            "temperature": 0,
+            "max_tokens": 1400,
+            "provider": {"allow_fallbacks": True},
+            "response_format": {"type": "json_object"},
+        }
+        repair_response = call(repair_payload)
+        if repair_response.status_code == 400 and "response_format" in repair_response.text.lower():
+            repair_payload.pop("response_format", None)
+            repair_response = call(repair_payload)
+        if repair_response.status_code >= 400:
+            raise RuntimeError(
+                f"OpenRouter repair HTTP {repair_response.status_code}: {repair_response.text[:900]}"
+            )
+        repair_body = repair_response.json()
+        repair_message = repair_body.get("choices", [{}])[0].get("message", {})
+        repair_content = repair_message.get("content", "")
+        if isinstance(repair_content, list):
+            repair_content = "\n".join(
+                str(x.get("text", ""))
+                for x in repair_content
+                if isinstance(x, dict) and x.get("text")
+            )
+        parsed = _extract_json(repair_content)
+        if not parsed:
+            raise RuntimeError("AI returned invalid JSON after repair attempt")
+        body = repair_body
 
     result = _normalize(parsed)
 
-    # Ground every extracted text field in the OCR. If the model invents a
-    # value that does not occur in the source text, discard that value.
-    source_text = text.strip()
+    # Ground every extracted field in the OCR. If the model invents a value
+    # that does not occur in the source text, discard that value.
     for field in ("title", "authority", "applicantName", "jobTitle", "workplace", "requestNumber", "officialReplyText"):
         value = result.get(field)
         if value and not _grounded(value, source_text):
