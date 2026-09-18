@@ -110,6 +110,10 @@ def _is_ai_document(msg):
 
 def _review_keyboard():
     return InlineKeyboardMarkup([
+        [InlineKeyboardButton("✏️ تعديل نوع الطلب", callback_data="ai_edit:type"),
+         InlineKeyboardButton("✏️ تعديل العنوان", callback_data="ai_edit:title")],
+        [InlineKeyboardButton("✏️ تعديل الجهة المعنية", callback_data="ai_edit:authority"),
+         InlineKeyboardButton("💬 تعديل الرد", callback_data="ai_edit:reply")],
         [InlineKeyboardButton("✅ اعتماد وحفظ", callback_data="ai_approve"),
          InlineKeyboardButton("❌ إلغاء", callback_data="ai_cancel")],
         [InlineKeyboardButton("🔄 إعادة التحليل", callback_data="ai_retry")],
@@ -269,6 +273,59 @@ async def ai_handle_media(update, context):
 async def ai_text_handler(update, context):
     user = update.effective_user
     text = (update.message.text or "").strip()
+
+    # Manual edits to the NEW AI review form. These edits only change the
+    # pending in-memory draft; Firebase is untouched until explicit approval.
+    state = legacy_bot.user_state.get(user.id, {})
+    if state.get("step") == "ai_edit_field":
+        pending = context.user_data.get("ai_pending_request")
+        field = state.get("ai_field")
+        if not pending or field not in {"type", "title", "authority", "reply"}:
+            legacy_bot.user_state.pop(user.id, None)
+            await update.message.reply_text("❌ انتهت جلسة تعديل المستند. أرسل المستند مرة أخرى.")
+            return
+        if not text:
+            await update.message.reply_text("✍️ اكتب القيمة الجديدة أولاً.")
+            return
+
+        data = dict(pending.get("data") or {})
+        if field == "type":
+            # Accept the canonical Arabic labels too, while storing the
+            # existing internal values used by the legacy system.
+            type_aliases = {
+                "خاص": "special", "عام": "general",
+                "طلب إحاطة": "briefing", "احاطة": "briefing", "إحاطة": "briefing",
+                "عاجل": "urgent", "استجواب": "interrogation",
+                "special": "special", "general": "general",
+                "briefing": "briefing", "urgent": "urgent", "interrogation": "interrogation",
+            }
+            key = text.strip()
+            data["requestType"] = type_aliases.get(key, key)
+        elif field == "title":
+            data["title"] = text
+        elif field == "authority":
+            data["authority"] = text
+        elif field == "reply":
+            if text in {"لا يوجد رد", "لا يوجد", "بدون رد", "لا رد"}:
+                data["hasOfficialReply"] = False
+                data["officialReplyText"] = None
+            else:
+                data["hasOfficialReply"] = True
+                data["officialReplyText"] = text
+
+        pending["data"] = data
+        context.user_data["ai_pending_request"] = pending
+        legacy_bot.user_state.pop(user.id, None)
+
+        # Immediately redraw the same review screen with the new value.
+        await update.message.reply_text(
+            "✅ تم تعديل الحقل.
+
+" + _review_text(data),
+            parse_mode="Markdown",
+            reply_markup=_review_keyboard(),
+        )
+        return
     state = legacy_bot.user_state.get(user.id, {})
     step = state.get("step", "")
 
@@ -350,6 +407,28 @@ async def ai_text_handler(update, context):
     await _original_text_handler(update, context)
 
 # ---------------------------------------------------------------------------
+# Manual edits for the AI review form.
+# ---------------------------------------------------------------------------
+EDIT_FIELD_LABELS = {
+    "type": "نوع الطلب",
+    "title": "عنوان الطلب",
+    "authority": "الجهة المعنية",
+    "reply": "الرد على الطلب",
+}
+
+async def _show_ai_review(message, context):
+    pending = context.user_data.get("ai_pending_request")
+    if not pending:
+        await message.edit_text("❌ لا يوجد مستند بانتظار المراجعة.")
+        return
+    await message.edit_text(
+        _review_text(pending["data"]),
+        parse_mode="Markdown",
+        reply_markup=_review_keyboard(),
+    )
+
+
+# ---------------------------------------------------------------------------
 # Callback layer.
 # ---------------------------------------------------------------------------
 async def ai_button_handler(update, context):
@@ -359,6 +438,83 @@ async def ai_button_handler(update, context):
 
     if not data.startswith(("ai_", "req_reply:", "req_action:", "action_status:", "view_req_plus:", "dup_open:")):
         return await _original_button_handler(update, context)
+
+    # Manual editing of the pending NEW request. Nothing is written to
+    # Firebase until the user presses "اعتماد وحفظ".
+    if data.startswith("ai_edit:"):
+        pending = context.user_data.get("ai_pending_request")
+        if not pending:
+            await query.answer("لا يوجد مستند بانتظار المراجعة.", show_alert=True)
+            return
+        field = data.split(":", 1)[1]
+        if field not in EDIT_FIELD_LABELS:
+            await query.answer("حقل غير معروف.", show_alert=True)
+            return
+
+        if field == "type":
+            kbd = InlineKeyboardMarkup([
+                [InlineKeyboardButton("🌟 خاص", callback_data="ai_set_type:special"),
+                 InlineKeyboardButton("📢 عام", callback_data="ai_set_type:general")],
+                [InlineKeyboardButton("📜 طلب إحاطة", callback_data="ai_set_type:briefing")],
+                [InlineKeyboardButton("🚨 عاجل", callback_data="ai_set_type:urgent"),
+                 InlineKeyboardButton("🎤 استجواب", callback_data="ai_set_type:interrogation")],
+                [InlineKeyboardButton("✍️ كتابة النوع يدويًا", callback_data="ai_edit_text:type")],
+                [InlineKeyboardButton("🔙 رجوع", callback_data="ai_back_review")],
+            ])
+            await query.message.edit_text(
+                "✏️ *تعديل نوع الطلب*\n\nاختر النوع الصحيح:",
+                parse_mode="Markdown",
+                reply_markup=kbd,
+            )
+            return
+
+        legacy_bot.user_state[user.id] = {
+            "step": "ai_edit_field",
+            "ai_field": field,
+        }
+        await query.message.edit_text(
+            f"✏️ *تعديل {EDIT_FIELD_LABELS[field]}*\n\n"
+            "اكتب القيمة الجديدة كما تريد حفظها:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("❌ إلغاء التعديل", callback_data="ai_back_review")]
+            ]),
+        )
+        return
+
+    if data.startswith("ai_edit_text:type"):
+        legacy_bot.user_state[user.id] = {
+            "step": "ai_edit_field",
+            "ai_field": "type",
+        }
+        await query.message.edit_text(
+            "✏️ *تعديل نوع الطلب*\n\nاكتب نوع الطلب كما تريد:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("❌ إلغاء التعديل", callback_data="ai_back_review")]
+            ]),
+        )
+        return
+
+    if data.startswith("ai_set_type:"):
+        pending = context.user_data.get("ai_pending_request")
+        if not pending:
+            await query.message.edit_text("❌ لا يوجد مستند بانتظار المراجعة.")
+            return
+        value = data.split(":", 1)[1]
+        if value not in legacy_bot.TYPE_MAP:
+            await query.message.edit_text("❌ نوع الطلب غير صالح.")
+            return
+        pending["data"]["requestType"] = value
+        context.user_data["ai_pending_request"] = pending
+        legacy_bot.user_state.pop(user.id, None)
+        await _show_ai_review(query.message, context)
+        return
+
+    if data == "ai_back_review":
+        legacy_bot.user_state.pop(user.id, None)
+        await _show_ai_review(query.message, context)
+        return
 
     await query.answer()
     if not legacy_bot.is_authenticated(user.id):
