@@ -14,7 +14,7 @@ from typing import Any, Dict
 import requests
 
 try:
-    import fitz  # PyMuPDF
+    import pymupdf as fitz  # PyMuPDF
 except ImportError:
     fitz = None
 
