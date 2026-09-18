@@ -36,9 +36,9 @@ OCR_SPACE_URL = "https://api.ocr.space/parse/image"
 # Text-only calls are much lighter than Vision calls. Keep the user's preferred
 # Gemma models first, then let OpenRouter choose a compatible free model.
 TEXT_MODELS = [
+    "openrouter/free",
     "google/gemma-4-26b-a4b-it:free",
     "google/gemma-4-31b-it:free",
-    "openrouter/free",
 ]
 
 VISION_MODELS = [
