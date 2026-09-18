@@ -48,32 +48,36 @@ VISION_MODELS = [
 ]
 
 SYSTEM_PROMPT = r"""
-أنت محلل مستندات عربية رسمية. أمامك نص مستخرج بواسطة OCR من خطاب/طلب رسمي.
-استخرج البيانات المنظمة بدقة.
+أنت أداة استخراج بيانات من مستندات عربية رسمية، ولست كاتباً ولا محرراً.
 
-قواعد صارمة:
-1. لا تخترع أي معلومة غير موجودة في النص.
-2. إذا تعذر قراءة معلومة اجعلها null.
-3. أصلح أخطاء OCR الواضحة فقط عندما يكون المقصود مؤكداً من سياق النص.
-4. حافظ على أسماء الأشخاص والجهات كما تظهر في المستند قدر الإمكان.
-5. استخرج مضمون الطلب الحقيقي، وليس وصف الصورة أو عبارة "المستند".
-6. اجعل العنوان مختصراً وواضحاً ويصف موضوع الطلب.
-7. requestType واحد فقط من: special, general, briefing, urgent, interrogation.
-8. suggestedReply رد مقترح فقط، وليس رداً صادراً فعلياً.
-9. confidence رقم صحيح من 0 إلى 100 ويعبّر عن ثقتك في الاستخراج.
-10. أخرج JSON فقط.
+الهدف الأساسي:
+- انقل النص المقروء من المستند كما هو.
+- املأ حقول نموذج الطلب فقط من معلومات موجودة فعلياً في المستند.
+- ممنوع تماماً اختراع أسماء أو جهات أو وظائف أو تواريخ أو وقائع أو ردود.
+- ممنوع تلخيص أو إعادة صياغة نص الطلب داخل details؛ سيتم حفظ النص الكامل المستخرج من OCR كما هو.
+- لا تكتب أي رد مقترح من عندك.
+- إذا كانت معلومة غير موجودة أو غير مقروءة اجعلها null.
+- أي قيمة تستخرجها لحقول title/authority/applicantName/jobTitle/workplace يجب أن تكون منقولة حرفياً من المستند قدر الإمكان، وليست صياغة جديدة.
+- requestType يحدد فقط من صيغة المستند إن كان ذلك واضحاً، وإلا استخدم special.
+- إذا كان على المستند رد فعلي من جهة خارجية، فاستخرجه فقط إذا كان النص مقروءاً فعلاً، ولا تنشئ رداً جديداً. قد يكون الرد مطبوعاً أو مكتوباً بخط اليد بالقلم الأزرق.
+- hasOfficialReply = true فقط إذا كان هناك رد فعلي ظاهر/مقروء على المستند؛ لا تعتمد على التخمين.
+- officialReplyText يجب أن يكون النص الفعلي للرد فقط، وليس اقتراحاً.
+- requestNumber استخرج رقم الطلب إن كان مكتوباً في المستند.
+- أخرج JSON فقط.
 
 الصيغة:
 {
-  "title": "",
+  "title": null,
   "reqDate": null,
   "requestType": "special",
-  "authority": "",
+  "authority": null,
   "applicantName": null,
   "jobTitle": null,
   "workplace": null,
   "details": "",
-  "suggestedReply": "",
+  "requestNumber": null,
+  "hasOfficialReply": false,
+  "officialReplyText": null,
   "confidence": 0
 }
 """
@@ -132,7 +136,9 @@ def _normalize(data: Dict[str, Any]) -> Dict[str, Any]:
         "jobTitle": _clean(data.get("jobTitle")),
         "workplace": _clean(data.get("workplace")),
         "details": _clean(data.get("details")) or "",
-        "suggestedReply": _clean(data.get("suggestedReply")) or "",
+        "requestNumber": _clean(data.get("requestNumber")),
+        "hasOfficialReply": bool(data.get("hasOfficialReply")),
+        "officialReplyText": _clean(data.get("officialReplyText")),
         "confidence": max(0, min(100, confidence)),
     }
 
@@ -345,6 +351,10 @@ def _analyze_ocr_text(text: str, hint: str = "") -> Dict[str, Any]:
         raise RuntimeError("AI returned invalid JSON")
 
     result = _normalize(parsed)
+    # details is always the complete OCR text. AI is never allowed to summarize it.
+    result["details"] = text[:18000].strip()
+    if not result.get("hasOfficialReply"):
+        result["officialReplyText"] = None
     result["aiModel"] = body.get("model") or TEXT_MODELS[0]
     result["aiRequestedModel"] = TEXT_MODELS[0]
     return result
