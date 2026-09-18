@@ -166,7 +166,7 @@ def _compress_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> tuple[
         return image_bytes, mime_type or "image/jpeg"
 
 
-def _pdf_pages_as_images(document_bytes: bytes, max_pages: int = 8) -> List[bytes]:
+def _pdf_pages_as_images(document_bytes: bytes, max_pages: int = 3) -> List[bytes]:
     """Render PDF pages to OCR-friendly JPEGs so each request stays under 1 MB."""
     if fitz is None:
         raise RuntimeError("دعم PDF غير مثبت في بيئة التشغيل.")
@@ -248,7 +248,7 @@ def ocr_document(document_bytes: bytes, mime_type: str) -> Dict[str, Any]:
     api_key = _ocr_api_key()
 
     if mime == "application/pdf":
-        pages = _pdf_pages_as_images(document_bytes, max_pages=8)
+        pages = _pdf_pages_as_images(document_bytes, max_pages=3)
         page_texts = []
         for index, page in enumerate(pages, start=1):
             try:
