@@ -301,6 +301,42 @@ def _recipient_header(text: str) -> tuple[str | None, str | None]:
     return line, None
 
 
+def _extract_recipient_authority(text: str) -> str | None:
+    """Read the receiving authority from the formal addressee line."""
+    lines = [x.strip() for x in text.splitlines() if x.strip()]
+    for line in lines[:15]:
+        if not re.search(r"(?:إلى|الى|السيد|السيدة)", line, flags=re.IGNORECASE):
+            continue
+
+        # Examples:
+        # السيد الدكتور / وكيل وزارة الصحة بالدقهلية
+        # السيد الوزير اللواء - طارق مرزوق - محافظ الدقهلية
+        after_slash = re.split(r"[/\\:：]", line, maxsplit=1)
+        if len(after_slash) == 2:
+            value = _clean(after_slash[1])
+            if value:
+                # Prefer the official title at the end of a compound addressee.
+                title_match = re.search(
+                    r"(محافظ\s+.+|وكيل\s+وزارة\s+.+|وزير\s+.+|رئيس\s+مجلس\s+.+|مدير\s+.+|رئيس\s+.+|وكيل\s+.+)$",
+                    value,
+                    flags=re.IGNORECASE,
+                )
+                return _clean(title_match.group(1) if title_match else value)
+
+        # Handle hyphen-separated addressee lines.
+        parts = [p.strip() for p in re.split(r"\s*[-–—]\s*", line) if p.strip()]
+        if parts:
+            for part in reversed(parts):
+                if re.search(
+                    r"محافظ|وكيل\s+وزارة|وزير|رئيس|مدير|وكيل|هيئة|إدارة|وزارة|مديرية",
+                    part,
+                    flags=re.IGNORECASE,
+                ):
+                    return _clean(part)
+
+    return None
+
+
 def _extract_authority(text: str, request_type: str) -> str | None:
     """Extract the receiving authority, independently from the applicant."""
     # In a special request, the presence of 'مقدمة لسيادتكم' wins over the
@@ -326,11 +362,12 @@ def _extract_authority(text: str, request_type: str) -> str | None:
     if governor:
         return _clean(governor.group(0))
 
-    # Otherwise use the recipient's explicitly written job/title.
-    _, recipient_job = _recipient_header(top)
-    if recipient_job:
-        return recipient_job
+    # The formal addressee line is authoritative for the receiving authority.
+    recipient_authority = _extract_recipient_authority(text)
+    if recipient_authority:
+        return recipient_authority
 
+    # Otherwise use an explicitly labelled authority.
     return _line_value(
         text, ["الجهة", "الجهة المعنية", "الجهة المختصة", "الوزارة", "المؤسسة"]
     )
