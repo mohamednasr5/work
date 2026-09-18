@@ -53,7 +53,6 @@ jobs:
           FIREBASE_PATH: ${{ secrets.FIREBASE_PATH }}
           FIREBASE_CREDENTIALS_JSON: ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
           OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-              OCR_SPACE_API_KEY: ${{ secrets.OCR_SPACE_API_KEY }}
         run: |
           python - <<'PY'
           import os
