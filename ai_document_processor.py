@@ -172,7 +172,7 @@ def _compress_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> tuple[
         src = src.convert("RGB")
 
         # Downscale very large phone scans while preserving enough detail for OCR.
-        max_side = 1800
+        max_side = 1500
         if max(src.size) > max_side:
             ratio = max_side / float(max(src.size))
             src = src.resize((max(1, int(src.width * ratio)), max(1, int(src.height * ratio))), Image.LANCZOS)
@@ -182,7 +182,7 @@ def _compress_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> tuple[
             out = BytesIO()
             src.save(out, format="JPEG", quality=quality, optimize=True)
             data = out.getvalue()
-            if len(data) <= 700_000:
+            if len(data) <= 500_000:
                 return data, "image/jpeg"
             quality -= 7
 
@@ -331,12 +331,12 @@ def _basic_extract_from_ocr(source_text: str) -> Dict[str, Any]:
     }
 
     patterns = {
-        "reqDate": r"(?:التاريخ|تاريخ الطلب|تاريخ التقديم)\\s*[:：-]?\\s*(.+)",
-        "authority": r"(?:الجهة|الجهة المعنية|الوزارة|المؤسسة)\\s*[:：-]?\\s*(.+)",
-        "applicantName": r"(?:مقدم الطلب|مقدم|الاسم)\\s*[:：-]?\\s*(.+)",
-        "jobTitle": r"(?:الوظيفة|المسمى الوظيفي)\\s*[:：-]?\\s*(.+)",
-        "workplace": r"(?:جهة العمل|مكان العمل)\\s*[:：-]?\\s*(.+)",
-        "requestNumber": r"(?:رقم الطلب|رقم)\\s*[:：#-]?\\s*([0-9٠-٩]+)",
+        "reqDate": r"(?:التاريخ|تاريخ الطلب|تاريخ التقديم)\s*[:：-]?\\s*(.+)",
+        "authority": r"(?:الجهة|الجهة المعنية|الوزارة|المؤسسة)\s*[:：-]?\\s*(.+)",
+        "applicantName": r"(?:مقدم الطلب|مقدم|الاسم)\s*[:：-]?\\s*(.+)",
+        "jobTitle": r"(?:الوظيفة|المسمى الوظيفي)\s*[:：-]?\\s*(.+)",
+        "workplace": r"(?:جهة العمل|مكان العمل)\s*[:：-]?\\s*(.+)",
+        "requestNumber": r"(?:رقم الطلب|رقم)\s*[:：#-]?\\s*([0-9٠-٩]+)",
     }
     for field, pattern in patterns.items():
         m = re.search(pattern, source_text, re.I)
@@ -346,7 +346,7 @@ def _basic_extract_from_ocr(source_text: str) -> Dict[str, Any]:
     lines = [x.strip() for x in source_text.splitlines() if x.strip()]
     if lines:
         # A title is copied from an explicit "الموضوع/العنوان" line only.
-        m = re.search(r"(?:الموضوع|العنوان)\\s*[:：-]?\\s*(.+)", source_text, re.I)
+        m = re.search(r"(?:الموضوع|العنوان)\s*[:：-]?\\s*(.+)", source_text, re.I)
         if m:
             result["title"] = m.group(1).strip()
 
@@ -415,7 +415,7 @@ def _analyze_ocr_text(text: str, hint: str = "") -> Dict[str, Any]:
             OPENROUTER_URL,
             headers=_openrouter_headers(api_key),
             json=payload,
-            timeout=30,
+            timeout=8,
         )
         if response.status_code >= 400:
             return safe
