@@ -206,7 +206,7 @@ def _ocr_one(image_bytes: bytes, filename: str, api_key: str) -> str:
     }
     data = {
         "language": "ara",
-        "OCREngine": "1",
+        "OCREngine": "3",
         "detectOrientation": "true",
         "scale": "false",
         "isOverlayRequired": "false",
