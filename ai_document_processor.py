@@ -323,7 +323,7 @@ def _detect_request_type(text: str) -> str:
     # Check the beginning because OCR may find the phrase elsewhere in the body.
     top = "\n".join(text.splitlines()[:8])
     if re.search(r"طلب\s+إحاطة|طلب\s+احاطة", top, flags=re.IGNORECASE):
-        return "طلب إحاطة"
+        return "briefing"
 
     # Special request: the name after 'مقدمة لسيادتكم' is the title.
     if re.search(r"مقدمة\s*(?:ل|إلى)?\s*سيادتكم", text, flags=re.IGNORECASE):
