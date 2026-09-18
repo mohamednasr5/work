@@ -15,7 +15,7 @@ from datetime import datetime
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup
 
 import bot as legacy_bot
-from ai_document_processor import analyze_image
+from ai_document_processor import analyze_document
 
 _original_handle_media = legacy_bot.handle_media
 _original_button_handler = legacy_bot.button_handler
@@ -96,12 +96,16 @@ STATUS_LABELS = {
 }
 
 
-def _is_image_document(msg):
+def _is_ai_document(msg):
     if not msg.document:
         return False
     mime = (msg.document.mime_type or "").lower()
     name = (msg.document.file_name or "").lower()
-    return mime.startswith("image/") or name.endswith((".jpg", ".jpeg", ".png", ".webp", ".bmp"))
+    return (
+        mime.startswith("image/")
+        or mime == "application/pdf"
+        or name.endswith((".jpg", ".jpeg", ".png", ".webp", ".bmp", ".pdf"))
+    )
 
 
 def _review_keyboard():
@@ -135,6 +139,7 @@ def _review_text(data):
         (data.get('suggestedReply') or "لا يوجد اقتراح")[:1200],
         "",
         f"🎯 *ثقة التحليل:* {data.get('confidence', 0)}%",
+        f"📄 *الصفحات المحللة:* {data.get('pagesAnalyzed', 1)}",
         f"🧠 *النموذج:* {data.get('aiModel', '—')}",
         "",
         "راجع البيانات قبل الاعتماد. لن يتم إنشاء الطلب قبل موافقتك.",
@@ -218,7 +223,7 @@ async def ai_handle_media(update, context):
         return await _original_handle_media(update, context)
 
     msg = update.message
-    if not (msg.photo or _is_image_document(msg)):
+    if not (msg.photo or _is_ai_document(msg)):
         return await _original_handle_media(update, context)
 
     status = await msg.reply_text("🤖 جاري قراءة المستند واستخراج البيانات...")
@@ -236,8 +241,14 @@ async def ai_handle_media(update, context):
             mime = msg.document.mime_type or "image/jpeg"
             filetype = "document"
 
+        if getattr(msg.document, "file_size", None) and msg.document.file_size > 20 * 1024 * 1024:
+            await status.edit_text(
+                "❌ الملف أكبر من 20MB. Telegram Bot API لا يسمح للبوت بتنزيل ملفات بهذا الحجم."
+            )
+            return
+
         data_bytes = bytes(await tg_file.download_as_bytearray())
-        result = await asyncio.to_thread(analyze_image, data_bytes, mime, msg.caption or "")
+        result = await asyncio.to_thread(analyze_document, data_bytes, mime, msg.caption or "")
         context.user_data["ai_pending_request"] = {
             "data": result,
             "file_id": file_id,
@@ -289,7 +300,6 @@ async def ai_text_handler(update, context):
             "repliesList": replies,
             "replyHistory": history,
             "lastReplyAt": datetime.utcnow().isoformat(),
-            "status": "replied",
         })
         legacy_bot.user_state.pop(user.id, None)
         if ok:
@@ -397,7 +407,10 @@ async def ai_button_handler(update, context):
             [InlineKeyboardButton("✅ تم التنفيذ", callback_data=f"action_status:{fire_key}:executed")],
             [InlineKeyboardButton("🟢 مكتمل", callback_data=f"action_status:{fire_key}:completed")],
             [InlineKeyboardButton("🟡 قيد المتابعة", callback_data=f"action_status:{fire_key}:follow_up")],
+            [InlineKeyboardButton("🔍 قيد المراجعة", callback_data=f"action_status:{fire_key}:review")],
+            [InlineKeyboardButton("✉️ تم الرد", callback_data=f"action_status:{fire_key}:replied")],
             [InlineKeyboardButton("🔴 متوقف", callback_data=f"action_status:{fire_key}:stopped")],
+            [InlineKeyboardButton("❌ مرفوض", callback_data=f"action_status:{fire_key}:rejected")],
             [InlineKeyboardButton("❌ إلغاء", callback_data=f"view_req_plus:{fire_key}")],
         ])
         await query.message.edit_text(
@@ -439,7 +452,7 @@ async def ai_button_handler(update, context):
             tg_file = await context.bot.get_file(pending["file_id"])
             image_bytes = bytes(await tg_file.download_as_bytearray())
             result = await asyncio.to_thread(
-                analyze_image,
+                analyze_document,
                 image_bytes,
                 pending.get("mime", "image/jpeg"),
                 pending.get("caption", ""),
@@ -493,6 +506,9 @@ async def ai_button_handler(update, context):
             "aiModel": result.get("aiModel"),
             "aiConfidence": result.get("confidence", 0),
             "aiSuggestedReply": result.get("suggestedReply") or "",
+            "aiRequestedModel": result.get("aiRequestedModel"),
+            "aiPagesAnalyzed": result.get("pagesAnalyzed", 1),
+            "createdAt": datetime.utcnow().isoformat(),
         }
 
         fire_key = legacy_bot.add_request(req_data)
