@@ -319,9 +319,7 @@ async def ai_text_handler(update, context):
 
         # Immediately redraw the same review screen with the new value.
         await update.message.reply_text(
-            "✅ تم تعديل الحقل.
-
-" + _review_text(data),
+            "✅ تم تعديل الحقل.\n\n" + _review_text(data),
             parse_mode="Markdown",
             reply_markup=_review_keyboard(),
         )
