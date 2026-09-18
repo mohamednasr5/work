@@ -53,14 +53,19 @@ logger = logging.getLogger(__name__)
 #  🔥 تهيئة Firebase
 # ══════════════════════════════════════════════
 def init_firebase():
-    if not firebase_admin._apps:
-        try:
-            creds_dict = json.loads(FIREBASE_CREDS_JSON)
-            cred = credentials.Certificate(creds_dict)
-            firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_URL})
-            logger.info("✅ Firebase initialized successfully")
-        except Exception as e:
-            logger.error(f"❌ Firebase init error: {e}")
+    if firebase_admin._apps:
+        return True
+    try:
+        if not FIREBASE_CREDS_JSON or FIREBASE_CREDS_JSON.strip() in ("", "{}"):
+            raise RuntimeError("FIREBASE_CREDENTIALS_JSON is missing or empty")
+        creds_dict = json.loads(FIREBASE_CREDS_JSON)
+        cred = credentials.Certificate(creds_dict)
+        firebase_admin.initialize_app(cred, {"databaseURL": FIREBASE_URL})
+        logger.info("✅ Firebase initialized successfully")
+        return True
+    except Exception as e:
+        logger.exception(f"❌ Firebase init error: {e}")
+        return False
 
 def get_all_requests():
     try:
@@ -1481,45 +1486,39 @@ async def post_init(application: Application):
 
 def kill_other_instances():
     """
-    يقتل أي نسخة أخرى شغّالة من البوت بشكل موثوق:
-    1) حذف webhook
-    2) ضرب getUpdates مرتين لإنهاء أي polling آخر
-    3) انتظار كافٍ حتى تموت النسخة القديمة
+    Prepare Telegram polling safely.
+    We deliberately do NOT call getUpdates here because that can consume
+    a real pending user update and make a request disappear on restart.
+    GitHub Actions concurrency prevents overlapping workflow instances.
     """
     import urllib.request
     base = f"https://api.telegram.org/bot{BOT_TOKEN}"
 
-    # 1) حذف webhook
     for attempt in range(3):
         try:
-            urllib.request.urlopen(
-                f"{base}/deleteWebhook?drop_pending_updates=false", timeout=10
-            )
-            logger.info("🔪 deleteWebhook done")
+            with urllib.request.urlopen(
+                f"{base}/deleteWebhook?drop_pending_updates=false", timeout=15
+            ) as response:
+                body = response.read().decode("utf-8", errors="replace")
+                if '"ok":true' not in body:
+                    raise RuntimeError(body[:500])
+            logger.info("✅ Telegram webhook cleared without dropping updates")
             break
         except Exception as e:
-            logger.warning(f"deleteWebhook attempt {attempt+1}: {e}")
-            time.sleep(1)
-
-    # 2) استدعاء getUpdates مرتين لضمان إنهاء أي polling آخر
-    for i in range(2):
-        try:
-            urllib.request.urlopen(
-                f"{base}/getUpdates?offset=-1&timeout=0&limit=1", timeout=10
-            )
-            logger.info(f"🔪 getUpdates kick #{i+1} done")
-        except Exception as e:
-            logger.warning(f"getUpdates kick #{i+1}: {e}")
-        time.sleep(2)
-
-    # 3) انتظار إضافي لضمان انتهاء النسخة القديمة تماماً
-    logger.info("⏳ Waiting 8s for old instances to fully terminate...")
-    time.sleep(8)
-    logger.info("✅ Ready to start polling")
+            logger.warning(f"deleteWebhook attempt {attempt + 1}: {e}")
+            if attempt < 2:
+                time.sleep(2)
+            else:
+                raise RuntimeError("Unable to prepare Telegram polling") from e
 
 
 def main():
-    init_firebase()
+    if not init_firebase():
+        raise SystemExit("Firebase initialization failed. Check GitHub Secrets.")
+    if not BOT_TOKEN or BOT_TOKEN == "YOUR_BOT_TOKEN":
+        raise SystemExit("BOT_TOKEN is missing or invalid.")
+    if not TELEGRAM_CHANNEL_ID or TELEGRAM_CHANNEL_ID == "@your_channel":
+        logger.warning("⚠️ TELEGRAM_CHANNEL_ID is not configured.")
     kill_other_instances()
     app = (
         Application.builder()
@@ -1545,7 +1544,7 @@ def main():
     logger.info("🚀 Bot started!")
     app.run_polling(
         allowed_updates=Update.ALL_TYPES,
-        drop_pending_updates=True,   # ✅ تجاهل الرسائل القديمة المتراكمة عند كل إعادة تشغيل
+        drop_pending_updates=False,  # Preserve messages that arrived during a runner restart
     )
 
 if __name__ == "__main__":
