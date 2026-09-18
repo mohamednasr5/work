@@ -288,6 +288,41 @@ def _recipient_header(text: str) -> tuple[str | None, str | None]:
     return line, None
 
 
+def _extract_authority(text: str, request_type: str) -> str | None:
+    """Extract the receiving authority, independently from the applicant."""
+    # In a special request, the presence of 'مقدمة لسيادتكم' wins over the
+    # existence of an 'إلى السيد...' header. The recipient header identifies
+    # the authority; it is NOT a general request.
+    top_lines = []
+    for line in text.splitlines()[:12]:
+        line = line.strip()
+        if not line:
+            continue
+        if re.search(r"تحية\s+طيبة|وبعد", line, flags=re.IGNORECASE):
+            break
+        top_lines.append(line)
+    top = "\n".join(top_lines)
+
+    # Explicit Egyptian governorate pattern. For example:
+    # 'السيد ... - محافظ الدقهلية' -> 'محافظ الدقهلية'
+    governor = re.search(
+        r"محافظ\s+(الدقهلية|القاهرة|الجيزة|الإسكندرية|البحيرة|الشرقية|الغربية|المنوفية|القليوبية|كفر\s+الشيخ|دمياط|بورسعيد|الإسماعيلية|السويس|شمال\s+سيناء|جنوب\s+سيناء|مطروح|الفيوم|بني\s+سويف|المنيا|أسيوط|سوهاج|قنا|الأقصر|أسوان|الوادي\s+الجديد)",
+        top,
+        flags=re.IGNORECASE,
+    )
+    if governor:
+        return _clean(governor.group(0))
+
+    # Otherwise use the recipient's explicitly written job/title.
+    _, recipient_job = _recipient_header(top)
+    if recipient_job:
+        return recipient_job
+
+    return _line_value(
+        text, ["الجهة", "الجهة المعنية", "الجهة المختصة", "الوزارة", "المؤسسة"]
+    )
+
+
 def _extract_general_title(text: str) -> str | None:
     """For general requests, title = the actual requested objective."""
     explicit = _line_value(text, ["الموضوع", "موضوع الطلب", "المطلوب", "الطلب"])
@@ -372,13 +407,7 @@ def _basic_extract_from_ocr(source_text: str) -> Dict[str, Any]:
 
     # In general requests, the authority is the recipient's official job/title
     # when it is explicitly present in the opening 'إلى السيد...' line.
-    authority = (
-        recipient_job
-        or _line_value(
-            source_text,
-            ["الجهة", "الجهة المعنية", "الجهة المختصة", "الوزارة", "المؤسسة"],
-        )
-    )
+    authority = _extract_authority(source_text, request_type)
 
     applicant = special_person or _line_value(
         source_text, ["مقدم الطلب", "اسم مقدم الطلب", "الاسم"]
