@@ -394,6 +394,52 @@ async def ai_text_handler(update, context):
     user = update.effective_user
     text = (update.message.text or "").strip()
 
+    # Manual edits to one item inside a batch.
+    state = legacy_bot.user_state.get(user.id, {})
+    if state.get("step") == "ai_batch_edit_field":
+        batch = context.user_data.get("ai_pending_requests")
+        idx = state.get("ai_index")
+        field = state.get("ai_field")
+        if not isinstance(batch, list) or not isinstance(idx, int) or not (0 <= idx < len(batch)):
+            legacy_bot.user_state.pop(user.id, None)
+            await update.message.reply_text("❌ انتهت جلسة تعديل المجموعة.")
+            return
+        if not text:
+            await update.message.reply_text("✍️ اكتب القيمة الجديدة أولاً.")
+            return
+
+        data = dict(batch[idx].get("data") or {})
+        if field == "type":
+            aliases = {
+                "خاص": "special", "عام": "general",
+                "طلب إحاطة": "briefing", "احاطة": "briefing", "إحاطة": "briefing",
+                "عاجل": "urgent", "استجواب": "interrogation",
+                "special": "special", "general": "general",
+                "briefing": "briefing", "urgent": "urgent", "interrogation": "interrogation",
+            }
+            data["requestType"] = aliases.get(text.strip(), text.strip())
+        elif field == "title":
+            data["title"] = text
+        elif field == "authority":
+            data["authority"] = text
+        elif field == "reply":
+            if text in {"لا يوجد رد", "لا يوجد", "بدون رد", "لا رد"}:
+                data["hasOfficialReply"] = False
+                data["officialReplyText"] = None
+            else:
+                data["hasOfficialReply"] = True
+                data["officialReplyText"] = text
+
+        batch[idx]["data"] = data
+        context.user_data["ai_pending_requests"] = batch
+        legacy_bot.user_state.pop(user.id, None)
+        await update.message.reply_text(
+            f"✅ تم تعديل الطلب رقم {idx + 1}.\n\n" + _batch_review_text(batch),
+            parse_mode="Markdown",
+            reply_markup=_batch_review_keyboard(len(batch)),
+        )
+        return
+
     # Manual edits to the NEW AI review form. These edits only change the
     # pending in-memory draft; Firebase is untouched until explicit approval.
     state = legacy_bot.user_state.get(user.id, {})
@@ -678,6 +724,88 @@ async def ai_button_handler(update, context):
                 [InlineKeyboardButton("🔙 القائمة", callback_data="back_main")]
             ]),
         )
+        return
+
+    # Manual editing inside a batch: ai_edit:<index>:<field>
+    if data.startswith("ai_edit:") and data.count(":") == 2:
+        parts = data.split(":")
+        try:
+            idx = int(parts[1])
+        except ValueError:
+            idx = -1
+        batch = context.user_data.get("ai_pending_requests")
+        field = parts[2] if len(parts) > 2 else ""
+        if not isinstance(batch, list) or idx < 0 or idx >= len(batch):
+            await query.answer("الطلب غير موجود.", show_alert=True)
+            return
+        if field not in EDIT_FIELD_LABELS:
+            await query.answer("حقل غير معروف.", show_alert=True)
+            return
+        if field == "type":
+            kbd = InlineKeyboardMarkup([
+                [InlineKeyboardButton("🌟 خاص", callback_data=f"ai_batch_set_type:{idx}:special"),
+                 InlineKeyboardButton("📢 عام", callback_data=f"ai_batch_set_type:{idx}:general")],
+                [InlineKeyboardButton("📜 طلب إحاطة", callback_data=f"ai_batch_set_type:{idx}:briefing")],
+                [InlineKeyboardButton("✍️ كتابة النوع يدويًا", callback_data=f"ai_batch_edit_text:{idx}:type")],
+                [InlineKeyboardButton("🔙 رجوع", callback_data="ai_back_review")],
+            ])
+            await query.message.edit_text(
+                f"✏️ *تعديل نوع الطلب رقم {idx + 1}*\n\nاختر النوع الصحيح:",
+                parse_mode="Markdown", reply_markup=kbd,
+            )
+            return
+
+        legacy_bot.user_state[user.id] = {
+            "step": "ai_batch_edit_field",
+            "ai_index": idx,
+            "ai_field": field,
+        }
+        await query.message.edit_text(
+            f"✏️ *تعديل {EDIT_FIELD_LABELS[field]} للطلب رقم {idx + 1}*\n\nاكتب القيمة الجديدة:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("❌ إلغاء التعديل", callback_data="ai_back_review")]
+            ]),
+        )
+        return
+
+    if data.startswith("ai_batch_edit_text:"):
+        _, idx_s, field = data.split(":", 2)
+        try:
+            idx = int(idx_s)
+        except ValueError:
+            idx = -1
+        batch = context.user_data.get("ai_pending_requests")
+        if not isinstance(batch, list) or idx < 0 or idx >= len(batch):
+            await query.answer("الطلب غير موجود.", show_alert=True)
+            return
+        legacy_bot.user_state[user.id] = {
+            "step": "ai_batch_edit_field",
+            "ai_index": idx,
+            "ai_field": field,
+        }
+        await query.message.edit_text(
+            f"✏️ *تعديل نوع الطلب رقم {idx + 1}*\n\nاكتب النوع:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup([
+                [InlineKeyboardButton("❌ إلغاء التعديل", callback_data="ai_back_review")]
+            ]),
+        )
+        return
+
+    if data.startswith("ai_batch_set_type:"):
+        _, idx_s, value = data.split(":", 2)
+        try:
+            idx = int(idx_s)
+        except ValueError:
+            idx = -1
+        batch = context.user_data.get("ai_pending_requests")
+        if isinstance(batch, list) and 0 <= idx < len(batch):
+            batch[idx]["data"]["requestType"] = value
+            context.user_data["ai_pending_requests"] = batch
+            await _show_ai_review(query.message, context)
+        else:
+            await query.answer("الطلب غير موجود.", show_alert=True)
         return
 
     # Manual editing of the pending NEW request. Nothing is written to
