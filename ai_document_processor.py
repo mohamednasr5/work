@@ -13,6 +13,11 @@ from typing import Any, Dict
 
 import requests
 
+try:
+    import fitz  # PyMuPDF
+except ImportError:
+    fitz = None
+
 OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 MODELS = [
     "google/gemma-4-26b-a4b-it:free",
@@ -95,6 +100,38 @@ def _normalize(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _document_data_urls(document_bytes: bytes, mime_type: str) -> list[str]:
+    """Return one or more compact image data URLs for the vision model."""
+    mime = (mime_type or "").lower().split(";", 1)[0].strip()
+    if mime == "application/pdf":
+        if fitz is None:
+            raise RuntimeError("دعم PDF غير مثبت في بيئة التشغيل.")
+        try:
+            pdf = fitz.open(stream=document_bytes, filetype="pdf")
+        except Exception as exc:
+            raise RuntimeError(f"تعذر فتح ملف PDF: {exc}") from exc
+        urls = []
+        try:
+            if pdf.page_count == 0:
+                raise RuntimeError("ملف PDF فارغ.")
+            for page_index in range(min(pdf.page_count, 8)):
+                page = pdf.load_page(page_index)
+                pix = page.get_pixmap(matrix=fitz.Matrix(1.25, 1.25), alpha=False)
+                jpg = pix.tobytes("jpeg", jpg_quality=78)
+                urls.append(
+                    "data:image/jpeg;base64," + base64.b64encode(jpg).decode("ascii")
+                )
+        finally:
+            pdf.close()
+        return urls
+    if not mime.startswith("image/"):
+        raise RuntimeError("التحليل التلقائي يدعم الصور وملفات PDF فقط.")
+    safe_mime = "image/jpeg" if mime == "image/jpg" else (mime or "image/jpeg")
+    return [
+        f"data:{safe_mime};base64,{base64.b64encode(document_bytes).decode('ascii')}"
+    ]
+
+
 def analyze_image(image_bytes: bytes, mime_type: str = "image/jpeg", hint: str = "") -> Dict[str, Any]:
     """Analyze one new image with Gemma 4 using a resilient fallback chain."""
     api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
@@ -103,10 +140,12 @@ def analyze_image(image_bytes: bytes, mime_type: str = "image/jpeg", hint: str =
     if not image_bytes:
         raise RuntimeError("المستند فارغ.")
 
-    data_url = f"data:{mime_type or 'image/jpeg'};base64,{base64.b64encode(image_bytes).decode('ascii')}"
+    data_urls = _document_data_urls(image_bytes, mime_type)
     prompt = SYSTEM_PROMPT
+    if len(data_urls) > 1:
+        prompt += f"\nتم تحليل {len(data_urls)} صفحات من المستند."
     if hint:
-        prompt += "\\nملاحظة المستخدم عن المستند:\\n" + hint[:1200]
+        prompt += "\nملاحظة المستخدم عن المستند:\n" + hint[:1200]
 
     headers = {
         "Authorization": f"Bearer {api_key}",
@@ -123,7 +162,10 @@ def analyze_image(image_bytes: bytes, mime_type: str = "image/jpeg", hint: str =
                 "role": "user",
                 "content": [
                     {"type": "text", "text": prompt},
-                    {"type": "image_url", "image_url": {"url": data_url}},
+                    *[
+                        {"type": "image_url", "image_url": {"url": url}}
+                        for url in data_urls
+                    ],
                 ],
             }],
             "temperature": 0,
@@ -162,6 +204,7 @@ def analyze_image(image_bytes: bytes, mime_type: str = "image/jpeg", hint: str =
                     result = _normalize(parsed)
                     result["aiModel"] = body.get("model") or model
                     result["aiRequestedModel"] = model
+                    result["pagesAnalyzed"] = len(data_urls)
                     return result
                 errors.append(f"{model}: JSON غير صالح")
                 break
