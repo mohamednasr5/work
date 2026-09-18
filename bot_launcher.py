@@ -212,6 +212,114 @@ def _duplicate_text(r: dict) -> str:
         + "\n⚠️ لم يتم إنشاء طلب جديد ولم يتم تعديل الطلب الموجود."
     )
 
+
+# ---------------------------------------------------------------------------
+# Batch/album processing for NEW requests.
+# ---------------------------------------------------------------------------
+_album_buffers = {}
+_album_tasks = {}
+
+
+def _batch_review_text(items):
+    chunks = [
+        "🤖 *تم تحليل المستندات*",
+        "━━━━━━━━━━━━━━━━━━━━",
+        f"📦 عدد الطلبات: *${len(items)}*",
+        "",
+    ]
+    for idx, item in enumerate(items, 1):
+        data = item["data"]
+        chunks.extend([
+            f"*📄 الطلب ${idx}*",
+            f"📝 العنوان: {data.get('title') or '—'}",
+            f"📅 التاريخ: {data.get('reqDate') or 'غير موجود'}",
+            f"📌 النوع: {_type_label(data.get('requestType'))}",
+            f"🏛 الجهة: {data.get('authority') or '—'}",
+            f"👤 مقدم الطلب: {data.get('applicantName') or 'غير موجود'}",
+            f"💬 الرد: {data.get('officialReplyText') or 'لا يوجد رد ظاهر/مقروء'}",
+            "",
+        ])
+    chunks.append("راجع الطلبات قبل الاعتماد. لن يتم إنشاء أي طلب قبل موافقتك.")
+    return "\n".join(chunks)
+
+
+def _batch_review_keyboard(count):
+    rows = []
+    for idx in range(count):
+        n = idx + 1
+        rows.append([
+            InlineKeyboardButton(f"✏️ تعديل نوع ${n}", callback_data=f"ai_edit:${idx}:type"),
+            InlineKeyboardButton(f"✏️ تعديل عنوان ${n}", callback_data=f"ai_edit:${idx}:title"),
+        ])
+        rows.append([
+            InlineKeyboardButton(f"✏️ تعديل جهة ${n}", callback_data=f"ai_edit:${idx}:authority"),
+            InlineKeyboardButton(f"💬 تعديل رد ${n}", callback_data=f"ai_edit:${idx}:reply"),
+        ])
+    rows.append([
+        InlineKeyboardButton("✅ اعتماد وحفظ الكل", callback_data="ai_approve_all"),
+        InlineKeyboardButton("❌ إلغاء الكل", callback_data="ai_cancel"),
+    ])
+    return InlineKeyboardMarkup(rows)
+
+
+async def _process_media_album(user_id, chat_id, context, album_id):
+    await asyncio.sleep(1.5)
+    messages = _album_buffers.pop((user_id, album_id), [])
+    _album_tasks.pop((user_id, album_id), None)
+    if not messages:
+        return
+
+    status = await context.bot.send_message(
+        chat_id,
+        f"🤖 جاري قراءة ${len(messages)} مستندات واستخراج البيانات..."
+    )
+    items = []
+    try:
+        for msg in messages:
+            if msg.photo:
+                tg_file = await context.bot.get_file(msg.photo[-1].file_id)
+                file_id = msg.photo[-1].file_id
+                filename = f"ai_request_{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}.jpg"
+                mime = "image/jpeg"
+                filetype = "photo"
+            elif _is_ai_document(msg):
+                tg_file = await context.bot.get_file(msg.document.file_id)
+                file_id = msg.document.file_id
+                filename = msg.document.file_name or f"ai_request_{datetime.utcnow().strftime('%Y%m%d%H%M%S%f')}.jpg"
+                mime = msg.document.mime_type or "image/jpeg"
+                filetype = "document"
+            else:
+                continue
+
+            data_bytes = bytes(await tg_file.download_as_bytearray())
+            result = await asyncio.to_thread(analyze_document, data_bytes, mime, msg.caption or "")
+            items.append({
+                "data": result,
+                "file_id": file_id,
+                "filename": filename,
+                "filetype": filetype,
+                "mime": mime,
+                "caption": msg.caption or "",
+            })
+
+        if not items:
+            await status.edit_text("❌ لم أجد مستندات قابلة للتحليل في المجموعة.")
+            return
+
+        context.user_data["ai_pending_requests"] = items
+        context.user_data.pop("ai_pending_request", None)
+        await status.edit_text(
+            _batch_review_text(items),
+            parse_mode="Markdown",
+            reply_markup=_batch_review_keyboard(len(items)),
+        )
+    except Exception as exc:
+        await status.edit_text(
+            "❌ تعذر تحليل مجموعة المستندات.\n\n"
+            f"خطأ: ${str(exc)[:700]}",
+        )
+
+
 # ---------------------------------------------------------------------------
 # Media: preserve existing upload flow; AI only for NEW image uploads.
 # ---------------------------------------------------------------------------
@@ -226,6 +334,18 @@ async def ai_handle_media(update, context):
     msg = update.message
     if not (msg.photo or _is_ai_document(msg)):
         return await _original_handle_media(update, context)
+
+    # Telegram albums share media_group_id. Collect the album briefly and
+    # process all its documents in one review.
+    album_id = getattr(msg, "media_group_id", None)
+    if album_id:
+        key = (user.id, str(album_id))
+        _album_buffers.setdefault(key, []).append(msg)
+        if key not in _album_tasks:
+            _album_tasks[key] = asyncio.create_task(
+                _process_media_album(user.id, msg.chat_id, context, str(album_id))
+            )
+        return
 
     status = await msg.reply_text("🤖 جاري قراءة المستند واستخراج البيانات...")
     try:
@@ -415,6 +535,14 @@ EDIT_FIELD_LABELS = {
 }
 
 async def _show_ai_review(message, context):
+    batch = context.user_data.get("ai_pending_requests")
+    if isinstance(batch, list) and batch:
+        await message.edit_text(
+            _batch_review_text(batch),
+            parse_mode="Markdown",
+            reply_markup=_batch_review_keyboard(len(batch)),
+        )
+        return
     pending = context.user_data.get("ai_pending_request")
     if not pending:
         await message.edit_text("❌ لا يوجد مستند بانتظار المراجعة.")
