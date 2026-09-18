@@ -1,20 +1,19 @@
 # -*- coding: utf-8 -*-
-"""Document OCR + AI processor for NEW Telegram requests.
+"""Fast, fail-safe OCR processor for NEW Telegram requests.
 
-Pipeline:
-1) OCR.space (Arabic OCR, Engine 3) extracts the actual document text.
-2) OpenRouter/Gemma structures that OCR text into the request schema.
-3) If OCR.space fails, the existing multimodal Vision path is used as a fallback.
-
-This module NEVER writes to Firebase. Existing requests are untouched.
+Important design rule:
+- OCR is the source of truth.
+- No AI/provider failure may block creating a reviewable extraction.
+- This module never writes to Firebase and never changes existing requests.
+- AI enrichment is OFF by default. It can be enabled later with
+  ENABLE_AI_ENRICHMENT=1, but the bot must still work if the AI provider is
+  unavailable or rate-limited.
 """
 
-import base64
-import json
 import os
 import re
-import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from io import BytesIO
 from typing import Any, Dict, List
 
 import requests
@@ -30,154 +29,41 @@ except ImportError:
     Image = None
 
 
-OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions"
 OCR_SPACE_URL = "https://api.ocr.space/parse/image"
 
-# Text-only calls are much lighter than Vision calls. Keep the user's preferred
-# Gemma models first, then let OpenRouter choose a compatible free model.
-TEXT_MODELS = [
-    "openrouter/free",
-    "google/gemma-4-26b-a4b-it:free",
-    "google/gemma-4-31b-it:free",
-]
 
-VISION_MODELS = [
-    "google/gemma-4-26b-a4b-it:free",
-    "google/gemma-4-31b-it:free",
-    "openrouter/free",
-]
-
-SYSTEM_PROMPT = r"""
-أنت أداة استخراج بيانات من مستندات عربية رسمية، ولست كاتباً ولا محرراً.
-
-الهدف الأساسي:
-- انقل النص المقروء من المستند كما هو.
-- املأ حقول نموذج الطلب فقط من معلومات موجودة فعلياً في المستند.
-- ممنوع تماماً اختراع أسماء أو جهات أو وظائف أو تواريخ أو وقائع أو ردود.
-- ممنوع تلخيص أو إعادة صياغة نص الطلب داخل details؛ سيتم حفظ النص الكامل المستخرج من OCR كما هو.
-- لا تكتب أي رد مقترح من عندك.
-- إذا كانت معلومة غير موجودة أو غير مقروءة اجعلها null.
-- أي قيمة تستخرجها لحقول title/authority/applicantName/jobTitle/workplace يجب أن تكون منقولة حرفياً من المستند قدر الإمكان، وليست صياغة جديدة.
-- requestType يحدد فقط من صيغة المستند إن كان ذلك واضحاً، وإلا استخدم special.
-- إذا كان على المستند رد فعلي من جهة خارجية، فاستخرجه فقط إذا كان النص مقروءاً فعلاً، ولا تنشئ رداً جديداً. قد يكون الرد مطبوعاً أو مكتوباً بخط اليد بالقلم الأزرق.
-- hasOfficialReply = true فقط إذا كان هناك رد فعلي ظاهر/مقروء على المستند؛ لا تعتمد على التخمين.
-- officialReplyText يجب أن يكون النص الفعلي للرد فقط، وليس اقتراحاً.
-- requestNumber استخرج رقم الطلب إن كان مكتوباً في المستند.
-- أخرج JSON فقط.
-
-الصيغة:
-{
-  "title": null,
-  "reqDate": null,
-  "requestType": "special",
-  "authority": null,
-  "applicantName": null,
-  "jobTitle": null,
-  "workplace": null,
-  "details": "",
-  "requestNumber": null,
-  "hasOfficialReply": false,
-  "officialReplyText": null,
-  "confidence": 0
-}
-"""
-
-
-def _extract_json(text: str) -> Dict[str, Any]:
-    text = (text or "").strip()
-    try:
-        value = json.loads(text)
-        return value if isinstance(value, dict) else {}
-    except json.JSONDecodeError:
-        pass
-
-    # Remove common markdown fences before trying a balanced JSON object.
-    cleaned = re.sub(r"^\s*```(?:json)?\s*|\s*```\s*$", "", text, flags=re.I)
-    try:
-        value = json.loads(cleaned)
-        return value if isinstance(value, dict) else {}
-    except json.JSONDecodeError:
-        pass
-
-    match = re.search(r"\{.*\}", text, re.DOTALL)
-    if match:
-        try:
-            value = json.loads(match.group(0))
-            return value if isinstance(value, dict) else {}
-        except json.JSONDecodeError:
-            return {}
-    return {}
-
-
-def _clean(value):
+def _clean(value: Any) -> str | None:
     if value is None:
         return None
     value = str(value).strip()
     return value or None
 
 
-def _grounded(value: Any, source_text: str) -> bool:
-    """Return True only when an extracted value is actually present in OCR text."""
-    if value is None:
-        return False
-    v = _norm_for_grounding(value)
-    s = _norm_for_grounding(source_text)
-    return bool(v and s and v in s)
-
-
-def _norm_for_grounding(value: Any) -> str:
-    s = "" if value is None else str(value)
-    s = re.sub(r"[\u064B-\u065F\u0670]", "", s)
-    s = s.replace("أ", "ا").replace("إ", "ا").replace("آ", "ا")
-    s = s.replace("ى", "ي").replace("ؤ", "و").replace("ئ", "ي")
-    s = re.sub(r"[^\w\u0600-\u06FF]+", " ", s, flags=re.UNICODE)
-    return re.sub(r"\s+", " ", s).strip().lower()
-
-
-def _normalize(data: Dict[str, Any]) -> Dict[str, Any]:
-    allowed = {"special", "general", "briefing", "urgent", "interrogation"}
-    request_type = data.get("requestType")
-    if request_type not in allowed:
-        request_type = "special"
-
-    try:
-        confidence = int(float(data.get("confidence", 0)))
-    except (TypeError, ValueError):
-        confidence = 0
-
-    return {
-        "title": _clean(data.get("title")) or "طلب رسمي",
-        "reqDate": _clean(data.get("reqDate")),
-        "requestType": request_type,
-        "authority": _clean(data.get("authority")) or "غير محددة",
-        "applicantName": _clean(data.get("applicantName")),
-        "jobTitle": _clean(data.get("jobTitle")),
-        "workplace": _clean(data.get("workplace")),
-        "details": _clean(data.get("details")) or "",
-        "requestNumber": _clean(data.get("requestNumber")),
-        "hasOfficialReply": bool(data.get("hasOfficialReply")),
-        "officialReplyText": _clean(data.get("officialReplyText")),
-        "confidence": max(0, min(100, confidence)),
-    }
+def _ocr_api_key() -> str:
+    return os.environ.get("OCR_SPACE_API_KEY", "").strip() or "helloworld"
 
 
 def _compress_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> tuple[bytes, str]:
-    """Keep OCR.space free-tier uploads below its 1 MB file limit."""
+    """Shrink large Telegram images without making OCR unusably blurry."""
     if Image is None:
         return image_bytes, mime_type or "image/jpeg"
 
     try:
-        from io import BytesIO
-        src = Image.open(BytesIO(image_bytes))
-        src = src.convert("RGB")
-
-        # Downscale very large phone scans while preserving enough detail for OCR.
+        src = Image.open(BytesIO(image_bytes)).convert("RGB")
         max_side = 1500
         if max(src.size) > max_side:
             ratio = max_side / float(max(src.size))
-            src = src.resize((max(1, int(src.width * ratio)), max(1, int(src.height * ratio))), Image.LANCZOS)
+            src = src.resize(
+                (
+                    max(1, int(src.width * ratio)),
+                    max(1, int(src.height * ratio)),
+                ),
+                Image.LANCZOS,
+            )
 
+        # OCR.space free upload limit is 1 MB. Aim well below it.
         quality = 88
+        data = image_bytes
         while quality >= 55:
             out = BytesIO()
             src.save(out, format="JPEG", quality=quality, optimize=True)
@@ -185,14 +71,12 @@ def _compress_image(image_bytes: bytes, mime_type: str = "image/jpeg") -> tuple[
             if len(data) <= 500_000:
                 return data, "image/jpeg"
             quality -= 7
-
         return data, "image/jpeg"
     except Exception:
         return image_bytes, mime_type or "image/jpeg"
 
 
-def _pdf_pages_as_images(document_bytes: bytes, max_pages: int = 3) -> List[bytes]:
-    """Render PDF pages to OCR-friendly JPEGs so each request stays under 1 MB."""
+def _pdf_pages_as_images(document_bytes: bytes) -> List[bytes]:
     if fitz is None:
         raise RuntimeError("دعم PDF غير مثبت في بيئة التشغيل.")
 
@@ -201,14 +85,15 @@ def _pdf_pages_as_images(document_bytes: bytes, max_pages: int = 3) -> List[byte
     except Exception as exc:
         raise RuntimeError(f"تعذر فتح ملف PDF: {exc}") from exc
 
-    pages = []
+    pages: List[bytes] = []
     try:
         if pdf.page_count == 0:
             raise RuntimeError("ملف PDF فارغ.")
 
-        for page_index in range(min(pdf.page_count, max_pages)):
+        # Do not silently discard pages. Process the complete document.
+        for page_index in range(pdf.page_count):
             page = pdf.load_page(page_index)
-            pix = page.get_pixmap(matrix=fitz.Matrix(1.35, 1.35), alpha=False)
+            pix = page.get_pixmap(matrix=fitz.Matrix(1.30, 1.30), alpha=False)
             jpg = pix.tobytes("jpeg", jpg_quality=78)
             jpg, _ = _compress_image(jpg, "image/jpeg")
             pages.append(jpg)
@@ -218,35 +103,26 @@ def _pdf_pages_as_images(document_bytes: bytes, max_pages: int = 3) -> List[byte
     return pages
 
 
-def _ocr_api_key() -> str:
-    # helloworld is documented by OCR.space for quick testing only and is
-    # severely rate limited. A user's free API key should be stored in Secrets.
-    return os.environ.get("OCR_SPACE_API_KEY", "").strip() or "helloworld"
-
-
 def _ocr_one(image_bytes: bytes, filename: str, api_key: str) -> str:
-    files = {
-        "file": (filename, image_bytes, "image/jpeg"),
-    }
-    data = {
-        "language": "ara",
-        "OCREngine": "3",
-        "detectOrientation": "true",
-        "scale": "false",
-        "isOverlayRequired": "false",
-        "isTable": "false",
-    }
-    headers = {"apikey": api_key}
-
     response = requests.post(
         OCR_SPACE_URL,
-        headers=headers,
-        files=files,
-        data=data,
+        headers={"apikey": api_key},
+        files={"file": (filename, image_bytes, "image/jpeg")},
+        data={
+            "language": "ara",
+            "OCREngine": "3",
+            "detectOrientation": "true",
+            "scale": "false",
+            "isOverlayRequired": "false",
+            "isTable": "false",
+        },
         timeout=30,
     )
+
     if response.status_code >= 400:
-        raise RuntimeError(f"OCR.space HTTP {response.status_code}: {response.text[:500]}")
+        raise RuntimeError(
+            f"OCR.space HTTP {response.status_code}: {response.text[:500]}"
+        )
 
     body = response.json()
     if body.get("IsErroredOnProcessing"):
@@ -268,15 +144,16 @@ def _ocr_one(image_bytes: bytes, filename: str, api_key: str) -> str:
 
 
 def ocr_document(document_bytes: bytes, mime_type: str) -> Dict[str, Any]:
-    """Extract Arabic text from image/PDF using OCR.space free API."""
+    """OCR Arabic image/PDF. No generative AI is involved in this step."""
     mime = (mime_type or "").lower().split(";", 1)[0].strip()
     api_key = _ocr_api_key()
 
     if mime == "application/pdf":
-        pages = _pdf_pages_as_images(document_bytes, max_pages=3)
+        pages = _pdf_pages_as_images(document_bytes)
         page_texts = [""] * len(pages)
 
-        with ThreadPoolExecutor(max_workers=min(3, len(pages) or 1)) as pool:
+        # Parallel OCR keeps multi-page documents reasonably fast.
+        with ThreadPoolExecutor(max_workers=min(4, len(pages) or 1)) as pool:
             futures = {
                 pool.submit(_ocr_one, page, f"page_{index}.jpg", api_key): index
                 for index, page in enumerate(pages, start=1)
@@ -284,19 +161,23 @@ def ocr_document(document_bytes: bytes, mime_type: str) -> Dict[str, Any]:
             for future in as_completed(futures):
                 index = futures[future]
                 try:
-                    text = future.result()
-                    page_texts[index - 1] = f"[الصفحة {index}]\n{text}"
+                    page_texts[index - 1] = (
+                        f"[الصفحة {index}]\n{future.result()}"
+                    )
                 except Exception as exc:
+                    # Preserve page position and make the failure visible.
                     page_texts[index - 1] = (
                         f"[الصفحة {index}]\n[تعذر OCR لهذه الصفحة: {exc}]"
                     )
+
         full_text = "\n\n".join(page_texts).strip()
         if not full_text:
             raise RuntimeError("تعذر استخراج النص من صفحات PDF.")
+
         return {
             "text": full_text,
             "pages": len(pages),
-            "engine": "ocr.space-engine-1",
+            "engine": "ocr.space-engine-3",
         }
 
     if not mime.startswith("image/"):
@@ -307,270 +188,260 @@ def ocr_document(document_bytes: bytes, mime_type: str) -> Dict[str, Any]:
     return {
         "text": text,
         "pages": 1,
-        "engine": "ocr.space-engine-1",
+        "engine": "ocr.space-engine-3",
     }
 
 
-def _openrouter_headers(api_key: str) -> Dict[str, str]:
-    return {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json",
-        "HTTP-Referer": "https://github.com/mohamednasr5/work",
-        "X-Title": "Work Telegram Requests AI",
-    }
+def _line_value(text: str, labels: List[str]) -> str | None:
+    """Read a value only when it follows an explicit label."""
+    label = "(?:" + "|".join(re.escape(x) for x in labels) + ")"
+    match = re.search(
+        rf"{label}\s*[:：\-#]?\s*([^\n\r]+)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    return _clean(match.group(1)) if match else None
+
+
+def _extract_request_number(text: str) -> str | None:
+    match = re.search(
+        r"(?:رقم\s*(?:الطلب|الخطاب|الصادر)|رقم)\s*[:：#\-]?\s*([0-9٠-٩]+)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    return _clean(match.group(1)) if match else None
+
+
+def _extract_date(text: str) -> str | None:
+    match = re.search(
+        r"(?:التاريخ|تاريخ\s*(?:الطلب|التقديم|الخطاب))\s*[:：\-]?\s*([^\n\r]+)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if match:
+        return _clean(match.group(1))
+
+    match = re.search(
+        r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b",
+        text,
+    )
+    return _clean(match.group(1)) if match else None
+
+
+def _extract_title(text: str) -> str | None:
+    explicit = _line_value(text, ["الموضوع", "عنوان الطلب", "العنوان"])
+    if explicit:
+        return explicit
+
+    # Only copy an existing line; never invent a title.
+    for line in text.splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        if re.search(r"(?:بشأن|طلب\s+بخصوص|طلب\s+الموافقة|التمس)", line):
+            return line[:500]
+    return None
+
+
+def _extract_reply(text: str) -> tuple[bool, str | None]:
+    """Detect an actual reply section only when OCR contains reply markers."""
+    patterns = [
+        r"(?:الرد|رد\s*الجهة|رد\s*الوزارة|رد\s*الإدارة)\s*[:：\-]?\s*([^\n]+(?:\n(?!\s*(?:مقدم الطلب|الموضوع|التاريخ|رقم الطلب)\b)[^\n]+){0,5})",
+        r"(?:نفيدكم|بالإشارة إلى|إفادة)\s*[:：\-]?\s*([^\n]+(?:\n[^\n]+){0,3})",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            value = _clean(match.group(1))
+            if value:
+                return True, value
+
+    # Common official closing phrases can indicate an OCR-visible response.
+    if re.search(r"(?:لا مانع|تمت الموافقة|جار(?:ي|ى) اتخاذ|تم اتخاذ|نفيدكم بأنه|يتعذر|تعذر|مرفوض)", text):
+        # Do not pretend the whole document is a reply. Return only an explicit
+        # reply marker if one exists; otherwise leave it for manual review.
+        return False, None
+
+    return False, None
 
 
 def _basic_extract_from_ocr(source_text: str) -> Dict[str, Any]:
-    """Safe non-generative fallback: only copies values that are explicitly labelled."""
-    result = {
-        "title": None, "reqDate": None, "requestType": "special",
-        "authority": None, "applicantName": None, "jobTitle": None,
-        "workplace": None, "details": source_text,
-        "requestNumber": None, "hasOfficialReply": False,
-        "officialReplyText": None, "confidence": 0,
+    """Deterministic, non-generative extraction. Never invents values."""
+    reply_found, reply_text = _extract_reply(source_text)
+
+    result: Dict[str, Any] = {
+        "title": _extract_title(source_text),
+        "reqDate": _extract_date(source_text),
+        "requestType": "special",
+        "authority": _line_value(
+            source_text, ["الجهة", "الجهة المعنية", "الجهة المختصة", "الوزارة", "المؤسسة"]
+        ),
+        "applicantName": _line_value(
+            source_text, ["مقدم الطلب", "اسم مقدم الطلب", "الاسم"]
+        ),
+        "jobTitle": _line_value(
+            source_text, ["الوظيفة", "المسمى الوظيفي", "الدرجة الوظيفية"]
+        ),
+        "workplace": _line_value(
+            source_text, ["جهة العمل", "مكان العمل", "محل العمل"]
+        ),
+        "details": source_text,
+        "requestNumber": _extract_request_number(source_text),
+        "hasOfficialReply": reply_found,
+        "officialReplyText": reply_text,
+        "confidence": 0,
+        "aiModel": "ocr-only",
+        "aiRequestedModel": None,
     }
 
-    patterns = {
-        "reqDate": r"(?:التاريخ|تاريخ الطلب|تاريخ التقديم)\s*[:：-]?\\s*(.+)",
-        "authority": r"(?:الجهة|الجهة المعنية|الوزارة|المؤسسة)\s*[:：-]?\\s*(.+)",
-        "applicantName": r"(?:مقدم الطلب|مقدم|الاسم)\s*[:：-]?\\s*(.+)",
-        "jobTitle": r"(?:الوظيفة|المسمى الوظيفي)\s*[:：-]?\\s*(.+)",
-        "workplace": r"(?:جهة العمل|مكان العمل)\s*[:：-]?\\s*(.+)",
-        "requestNumber": r"(?:رقم الطلب|رقم)\s*[:：#-]?\\s*([0-9٠-٩]+)",
-    }
-    for field, pattern in patterns.items():
-        m = re.search(pattern, source_text, re.I)
-        if m:
-            result[field] = m.group(1).strip()
-
-    lines = [x.strip() for x in source_text.splitlines() if x.strip()]
-    if lines:
-        # A title is copied from an explicit "الموضوع/العنوان" line only.
-        m = re.search(r"(?:الموضوع|العنوان)\s*[:：-]?\\s*(.+)", source_text, re.I)
-        if m:
-            result["title"] = m.group(1).strip()
-
+    filled = sum(
+        1
+        for key in (
+            "title",
+            "reqDate",
+            "authority",
+            "applicantName",
+            "jobTitle",
+            "workplace",
+            "requestNumber",
+        )
+        if result.get(key)
+    )
+    result["confidence"] = min(100, filled * 12)
     return result
 
 
-def _parse_tagged_ai(content: str) -> Dict[str, Any]:
-    """Parse simple XML-like tags; unlike JSON this is tolerant of free models."""
-    if isinstance(content, list):
-        content = "\n".join(
-            str(x.get("text", "")) for x in content
-            if isinstance(x, dict) and x.get("text")
-        )
-    content = str(content or "")
-    fields = {
-        "title": "title", "date": "reqDate", "reqDate": "reqDate",
-        "type": "requestType", "requestType": "requestType",
-        "authority": "authority", "applicant": "applicantName",
-        "applicantName": "applicantName", "job": "jobTitle",
-        "jobTitle": "jobTitle", "workplace": "workplace",
-        "requestNumber": "requestNumber", "reply": "officialReplyText",
-        "officialReplyText": "officialReplyText", "hasOfficialReply": "hasOfficialReply",
-    }
-    parsed = {}
-    for tag, field in fields.items():
-        m = re.search(r"<" + re.escape(tag) + r">\\s*(.*?)\\s*</" + re.escape(tag) + r">", content, re.I | re.S)
-        if m:
-            parsed[field] = m.group(1).strip()
-    return parsed
+def _optional_ai_enrichment(text: str, base: Dict[str, Any], hint: str = "") -> Dict[str, Any]:
+    """Optional AI enhancement. Disabled by default and never required.
 
+    This deliberately uses no JSON parsing. If the provider returns 429,
+    malformed output, or times out, the OCR result is returned unchanged.
+    """
+    if os.environ.get("ENABLE_AI_ENRICHMENT", "0").strip().lower() not in {
+        "1", "true", "yes", "on"
+    }:
+        return base
 
-def _analyze_ocr_text(text: str, hint: str = "") -> Dict[str, Any]:
-    """Use AI only to locate labelled fields; OCR remains the source of truth."""
     api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
-    source_text = text.strip()
-
-    safe = _basic_extract_from_ocr(source_text)
     if not api_key:
-        return safe
+        return base
 
+    # Keep this feature opt-in. The critical upload path must not depend on it.
+    # We only ask for tagged values that can be grounded against OCR.
     prompt = (
-        "استخرج فقط بيانات موجودة حرفياً في النص التالي. لا تلخص ولا تؤلف ولا تستنتج. "
-        "اكتب TAGS فقط بهذا الشكل، وكل قيمة بين الوسمين، ولا تكتب أي شيء آخر. "
-        "إذا لم تجد قيمة اترك الوسم فارغاً. "
-        "لا تنشئ أي رد. officialReplyText يوضع فقط إذا كان نص الرد الفعلي موجوداً في OCR.\\n"
-        "<title></title>\\n<date></date>\\n<type></type>\\n<authority></authority>\\n"
-        "<applicant></applicant>\\n<job></job>\\n<workplace></workplace>\\n"
-        "<requestNumber></requestNumber>\\n<hasOfficialReply>false</hasOfficialReply>\\n"
-        "<reply></reply>\\n\\n"
-        "النص الأصلي كما هو:\\n---\\n" + source_text[:18000] + "\\n---"
+        "استخرج من النص التالي فقط القيم الموجودة حرفياً، بدون اختراع أو تلخيص. "
+        "لا تكتب JSON. أخرج هذه الوسوم فقط: "
+        "<title>...</title><date>...</date><authority>...</authority>"
+        "<applicant>...</applicant><job>...</job><workplace>...</workplace>"
+        "<requestNumber>...</requestNumber>. "
+        "لا تستخرج أو تنشئ أي رد.\n---\n"
+        + text[:14000]
+        + "\n---"
     )
     if hint:
-        prompt += "\\nملاحظة المستخدم: " + hint[:800]
-
-    payload = {
-        "model": TEXT_MODELS[0],
-        "models": TEXT_MODELS[1:],
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0,
-        "max_tokens": 1000,
-        "provider": {"allow_fallbacks": True},
-    }
+        prompt += "\nملاحظة: " + hint[:500]
 
     try:
         response = requests.post(
-            OPENROUTER_URL,
-            headers=_openrouter_headers(api_key),
-            json=payload,
-            timeout=8,
+            "https://openrouter.ai/api/v1/chat/completions",
+            headers={
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json",
+                "HTTP-Referer": "https://github.com/mohamednasr5/work",
+                "X-Title": "Work Telegram Requests AI",
+            },
+            json={
+                "model": "openrouter/free",
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0,
+                "max_tokens": 500,
+            },
+            timeout=4,
         )
         if response.status_code >= 400:
-            return safe
+            return base
 
         body = response.json()
-        message = body.get("choices", [{}])[0].get("message", {})
-        content = message.get("content", "")
-        parsed = _parse_tagged_ai(content)
-
-        if not parsed:
-            # Never fail the user's upload because an AI provider returned prose.
-            return safe
-
-        result = _normalize(parsed)
-        # Ground every AI field against OCR. Invented values are discarded.
-        for field in ("title", "authority", "applicantName", "jobTitle", "workplace", "requestNumber", "officialReplyText"):
-            value = result.get(field)
-            if value and not _grounded(value, source_text):
-                result[field] = None
-
-        result["details"] = source_text
-        if str(parsed.get("hasOfficialReply", "")).lower() not in ("true", "1", "yes"):
-            result["hasOfficialReply"] = False
-            result["officialReplyText"] = None
-
-        result["aiModel"] = body.get("model") or TEXT_MODELS[0]
-        result["aiRequestedModel"] = TEXT_MODELS[0]
-        return result
-
-    except (requests.RequestException, ValueError, KeyError, TypeError):
-        # OCR itself succeeded, so return the safe extracted form instead of
-        # showing "AI returned invalid JSON".
-        return safe
-
-def _document_data_urls(document_bytes: bytes, mime_type: str) -> list[str]:
-    """Legacy Vision fallback: render PDF pages as compact images."""
-    mime = (mime_type or "").lower().split(";", 1)[0].strip()
-    if mime == "application/pdf":
-        if fitz is None:
-            raise RuntimeError("دعم PDF غير مثبت في بيئة التشغيل.")
-        pdf = fitz.open(stream=document_bytes, filetype="pdf")
-        urls = []
-        try:
-            for page_index in range(min(pdf.page_count, 8)):
-                page = pdf.load_page(page_index)
-                pix = page.get_pixmap(matrix=fitz.Matrix(1.25, 1.25), alpha=False)
-                jpg = pix.tobytes("jpeg", jpg_quality=78)
-                urls.append("data:image/jpeg;base64," + base64.b64encode(jpg).decode("ascii"))
-        finally:
-            pdf.close()
-        return urls
-
-    if not mime.startswith("image/"):
-        raise RuntimeError("التحليل التلقائي يدعم الصور وملفات PDF فقط.")
-    return ["data:" + ("image/jpeg" if mime == "image/jpg" else mime) + ";base64," + base64.b64encode(document_bytes).decode("ascii")]
-
-
-def _analyze_vision(document_bytes: bytes, mime_type: str, hint: str = "") -> Dict[str, Any]:
-    """Original Vision fallback kept intact as a secondary route."""
-    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
-    if not api_key:
-        raise RuntimeError("OPENROUTER_API_KEY غير موجود في GitHub Secrets")
-
-    data_urls = _document_data_urls(document_bytes, mime_type)
-    prompt = SYSTEM_PROMPT
-    if hint:
-        prompt += "\nملاحظة المستخدم عن المستند:\n" + hint[:1200]
-
-    content = [{"type": "text", "text": prompt}] + [
-        {"type": "image_url", "image_url": {"url": url}} for url in data_urls
-    ]
-
-    payload = {
-        "model": VISION_MODELS[0],
-        "models": VISION_MODELS[1:],
-        "messages": [{"role": "user", "content": content}],
-        "temperature": 0,
-        "max_tokens": 2400,
-        "provider": {"allow_fallbacks": True},
-        "response_format": {"type": "json_object"},
-    }
-
-    last_error = ""
-    for attempt in range(3):
-        try:
-            response = requests.post(
-                OPENROUTER_URL,
-                headers=_openrouter_headers(api_key),
-                json=payload,
-                timeout=150,
+        content = body.get("choices", [{}])[0].get("message", {}).get("content", "")
+        if isinstance(content, list):
+            content = "\n".join(
+                str(x.get("text", ""))
+                for x in content
+                if isinstance(x, dict) and x.get("text")
             )
-            if response.status_code == 400 and "response_format" in response.text:
-                payload.pop("response_format", None)
-                response = requests.post(
-                    OPENROUTER_URL,
-                    headers=_openrouter_headers(api_key),
-                    json=payload,
-                    timeout=150,
-                )
 
-            if response.status_code == 429:
-                last_error = response.text[:700].replace("\n", " ")
-                if attempt < 2:
-                    time.sleep(4 * (attempt + 1))
-                    continue
-                raise RuntimeError("Vision provider rate-limited: " + last_error)
+        tags = {
+            "title": "title",
+            "date": "reqDate",
+            "authority": "authority",
+            "applicant": "applicantName",
+            "job": "jobTitle",
+            "workplace": "workplace",
+            "requestNumber": "requestNumber",
+        }
+        enriched = dict(base)
+        for tag, field in tags.items():
+            match = re.search(
+                rf"<{re.escape(tag)}>\s*(.*?)\s*</{re.escape(tag)}>",
+                str(content),
+                flags=re.IGNORECASE | re.DOTALL,
+            )
+            value = _clean(match.group(1)) if match else None
+            if value and _grounded(value, text):
+                enriched[field] = value
 
-            if response.status_code >= 400:
-                raise RuntimeError(f"Vision HTTP {response.status_code}: {response.text[:900]}")
-
-            body = response.json()
-            message = body.get("choices", [{}])[0].get("message", {})
-            content_out = message.get("content", "")
-            if isinstance(content_out, list):
-                content_out = "\n".join(
-                    str(x.get("text", "")) for x in content_out
-                    if isinstance(x, dict) and x.get("text")
-                )
-            parsed = _extract_json(content_out)
-            if not parsed:
-                raise RuntimeError("AI returned invalid JSON")
-
-            result = _normalize(parsed)
-            result["aiModel"] = body.get("model") or VISION_MODELS[0]
-            result["aiRequestedModel"] = VISION_MODELS[0]
-            result["pagesAnalyzed"] = len(data_urls)
-            return result
-
-        except requests.RequestException as exc:
-            last_error = str(exc)
-            if attempt < 2:
-                time.sleep(3 * (attempt + 1))
-                continue
-            break
-        except Exception as exc:
-            last_error = str(exc)
-            break
-
-    raise RuntimeError("تعذر تحليل المستند عبر Vision. " + last_error[:1200])
+        enriched["aiModel"] = body.get("model") or "openrouter/free"
+        enriched["aiRequestedModel"] = "openrouter/free"
+        return enriched
+    except Exception:
+        return base
 
 
-def analyze_document(document_bytes: bytes, mime_type: str = "image/jpeg", hint: str = "") -> Dict[str, Any]:
-    """Fast path: Arabic OCR -> one OpenRouter text request.
+def _grounded(value: Any, source_text: str) -> bool:
+    if value is None:
+        return False
+    return _normalize_for_grounding(value) in _normalize_for_grounding(source_text)
 
-    Vision remains implemented for compatibility, but is intentionally not
-    auto-triggered here because free-provider fallback chains can be slow.
+
+def _normalize_for_grounding(value: Any) -> str:
+    s = "" if value is None else str(value)
+    s = re.sub(r"[\u064B-\u065F\u0670]", "", s)
+    s = (
+        s.replace("أ", "ا")
+        .replace("إ", "ا")
+        .replace("آ", "ا")
+        .replace("ى", "ي")
+        .replace("ؤ", "و")
+        .replace("ئ", "ي")
+    )
+    s = re.sub(r"[^\w\u0600-\u06FF]+", " ", s, flags=re.UNICODE)
+    return re.sub(r"\s+", " ", s).strip().lower()
+
+
+def analyze_document(
+    document_bytes: bytes,
+    mime_type: str = "image/jpeg",
+    hint: str = "",
+) -> Dict[str, Any]:
+    """Main entry point used by bot_launcher.py.
+
+    The returned result is always usable after successful OCR, even when
+    OpenRouter is completely unavailable or rate-limited.
     """
     ocr = ocr_document(document_bytes, mime_type)
-    result = _analyze_ocr_text(ocr["text"], hint)
+    result = _basic_extract_from_ocr(ocr["text"])
+    result = _optional_ai_enrichment(ocr["text"], result, hint)
+
+    result["details"] = ocr["text"]
+    result["ocrText"] = ocr["text"]
     result["pagesAnalyzed"] = ocr["pages"]
     result["ocrEngine"] = ocr["engine"]
-    result["ocrText"] = ocr["text"]
     return result
 
 
-# Backward-compatible alias for existing callers.
-def analyze_image(image_bytes: bytes, mime_type: str = "image/jpeg", hint: str = "") -> Dict[str, Any]:
+def analyze_image(
+    image_bytes: bytes,
+    mime_type: str = "image/jpeg",
+    hint: str = "",
+) -> Dict[str, Any]:
     return analyze_document(image_bytes, mime_type, hint)
