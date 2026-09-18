@@ -320,124 +320,135 @@ def _openrouter_headers(api_key: str) -> Dict[str, str]:
     }
 
 
-def _analyze_ocr_text(text: str, hint: str = "") -> Dict[str, Any]:
-    """Structured extraction with a strict JSON response and one fast retry."""
-    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
-    if not api_key:
-        raise RuntimeError("OPENROUTER_API_KEY غير موجود في GitHub Secrets")
+def _basic_extract_from_ocr(source_text: str) -> Dict[str, Any]:
+    """Safe non-generative fallback: only copies values that are explicitly labelled."""
+    result = {
+        "title": None, "reqDate": None, "requestType": "special",
+        "authority": None, "applicantName": None, "jobTitle": None,
+        "workplace": None, "details": source_text,
+        "requestNumber": None, "hasOfficialReply": False,
+        "officialReplyText": None, "confidence": 0,
+    }
 
+    patterns = {
+        "reqDate": r"(?:التاريخ|تاريخ الطلب|تاريخ التقديم)\\s*[:：-]?\\s*(.+)",
+        "authority": r"(?:الجهة|الجهة المعنية|الوزارة|المؤسسة)\\s*[:：-]?\\s*(.+)",
+        "applicantName": r"(?:مقدم الطلب|مقدم|الاسم)\\s*[:：-]?\\s*(.+)",
+        "jobTitle": r"(?:الوظيفة|المسمى الوظيفي)\\s*[:：-]?\\s*(.+)",
+        "workplace": r"(?:جهة العمل|مكان العمل)\\s*[:：-]?\\s*(.+)",
+        "requestNumber": r"(?:رقم الطلب|رقم)\\s*[:：#-]?\\s*([0-9٠-٩]+)",
+    }
+    for field, pattern in patterns.items():
+        m = re.search(pattern, source_text, re.I)
+        if m:
+            result[field] = m.group(1).strip()
+
+    lines = [x.strip() for x in source_text.splitlines() if x.strip()]
+    if lines:
+        # A title is copied from an explicit "الموضوع/العنوان" line only.
+        m = re.search(r"(?:الموضوع|العنوان)\\s*[:：-]?\\s*(.+)", source_text, re.I)
+        if m:
+            result["title"] = m.group(1).strip()
+
+    return result
+
+
+def _parse_tagged_ai(content: str) -> Dict[str, Any]:
+    """Parse simple XML-like tags; unlike JSON this is tolerant of free models."""
+    if isinstance(content, list):
+        content = "\n".join(
+            str(x.get("text", "")) for x in content
+            if isinstance(x, dict) and x.get("text")
+        )
+    content = str(content or "")
+    fields = {
+        "title": "title", "date": "reqDate", "reqDate": "reqDate",
+        "type": "requestType", "requestType": "requestType",
+        "authority": "authority", "applicant": "applicantName",
+        "applicantName": "applicantName", "job": "jobTitle",
+        "jobTitle": "jobTitle", "workplace": "workplace",
+        "requestNumber": "requestNumber", "reply": "officialReplyText",
+        "officialReplyText": "officialReplyText", "hasOfficialReply": "hasOfficialReply",
+    }
+    parsed = {}
+    for tag, field in fields.items():
+        m = re.search(r"<" + re.escape(tag) + r">\\s*(.*?)\\s*</" + re.escape(tag) + r">", content, re.I | re.S)
+        if m:
+            parsed[field] = m.group(1).strip()
+    return parsed
+
+
+def _analyze_ocr_text(text: str, hint: str = "") -> Dict[str, Any]:
+    """Use AI only to locate labelled fields; OCR remains the source of truth."""
+    api_key = os.environ.get("OPENROUTER_API_KEY", "").strip()
     source_text = text.strip()
-    prompt = SYSTEM_PROMPT + "\n\nنص المستند المستخرج بواسطة OCR:\n---\n" + source_text[:18000] + "\n---"
+
+    safe = _basic_extract_from_ocr(source_text)
+    if not api_key:
+        return safe
+
+    prompt = (
+        "استخرج فقط بيانات موجودة حرفياً في النص التالي. لا تلخص ولا تؤلف ولا تستنتج. "
+        "اكتب TAGS فقط بهذا الشكل، وكل قيمة بين الوسمين، ولا تكتب أي شيء آخر. "
+        "إذا لم تجد قيمة اترك الوسم فارغاً. "
+        "لا تنشئ أي رد. officialReplyText يوضع فقط إذا كان نص الرد الفعلي موجوداً في OCR.\\n"
+        "<title></title>\\n<date></date>\\n<type></type>\\n<authority></authority>\\n"
+        "<applicant></applicant>\\n<job></job>\\n<workplace></workplace>\\n"
+        "<requestNumber></requestNumber>\\n<hasOfficialReply>false</hasOfficialReply>\\n"
+        "<reply></reply>\\n\\n"
+        "النص الأصلي كما هو:\\n---\\n" + source_text[:18000] + "\\n---"
+    )
     if hint:
-        prompt += "\nملاحظة المستخدم:\n" + hint[:800]
+        prompt += "\\nملاحظة المستخدم: " + hint[:800]
 
     payload = {
         "model": TEXT_MODELS[0],
         "models": TEXT_MODELS[1:],
         "messages": [{"role": "user", "content": prompt}],
         "temperature": 0,
-        "max_tokens": 1400,
+        "max_tokens": 1000,
         "provider": {"allow_fallbacks": True},
-        "response_format": {"type": "json_object"},
     }
 
-    def call(body):
-        try:
-            return requests.post(
-                OPENROUTER_URL,
-                headers=_openrouter_headers(api_key),
-                json=body,
-                timeout=30,
-            )
-        except requests.RequestException as exc:
-            raise RuntimeError(f"OpenRouter connection error: {exc}") from exc
-
-    response = call(payload)
-
-    # Some free models do not implement response_format. Retry once without it.
-    if response.status_code == 400 and "response_format" in response.text.lower():
-        payload.pop("response_format", None)
-        response = call(payload)
-
-    if response.status_code >= 400:
-        raise RuntimeError(
-            f"OpenRouter HTTP {response.status_code}: {response.text[:900]}"
+    try:
+        response = requests.post(
+            OPENROUTER_URL,
+            headers=_openrouter_headers(api_key),
+            json=payload,
+            timeout=30,
         )
+        if response.status_code >= 400:
+            return safe
 
-    body = response.json()
-    message = body.get("choices", [{}])[0].get("message", {})
-    content = message.get("content", "")
-    if isinstance(content, list):
-        content = "\n".join(
-            str(x.get("text", ""))
-            for x in content
-            if isinstance(x, dict) and x.get("text")
-        )
+        body = response.json()
+        message = body.get("choices", [{}])[0].get("message", {})
+        content = message.get("content", "")
+        parsed = _parse_tagged_ai(content)
 
-    parsed = _extract_json(content)
-
-    # A second, deliberately tiny repair request handles models that returned
-    # prose/markdown despite the JSON constraint. It does not receive any new
-    # information, so it cannot legitimately add facts.
-    if not parsed:
-        repair_prompt = (
-            "حوّل النص التالي إلى JSON فقط وفق الحقول المحددة. "
-            "ممنوع إضافة أو تخمين أي معلومة غير موجودة. "
-            "لا تكتب شرحاً ولا Markdown.\n"
-            + SYSTEM_PROMPT
-            + "\nالنص:\n---\n"
-            + source_text[:18000]
-            + "\n---"
-        )
-        repair_payload = {
-            "model": TEXT_MODELS[0],
-            "models": TEXT_MODELS[1:],
-            "messages": [{"role": "user", "content": repair_prompt}],
-            "temperature": 0,
-            "max_tokens": 1400,
-            "provider": {"allow_fallbacks": True},
-            "response_format": {"type": "json_object"},
-        }
-        repair_response = call(repair_payload)
-        if repair_response.status_code == 400 and "response_format" in repair_response.text.lower():
-            repair_payload.pop("response_format", None)
-            repair_response = call(repair_payload)
-        if repair_response.status_code >= 400:
-            raise RuntimeError(
-                f"OpenRouter repair HTTP {repair_response.status_code}: {repair_response.text[:900]}"
-            )
-        repair_body = repair_response.json()
-        repair_message = repair_body.get("choices", [{}])[0].get("message", {})
-        repair_content = repair_message.get("content", "")
-        if isinstance(repair_content, list):
-            repair_content = "\n".join(
-                str(x.get("text", ""))
-                for x in repair_content
-                if isinstance(x, dict) and x.get("text")
-            )
-        parsed = _extract_json(repair_content)
         if not parsed:
-            raise RuntimeError("AI returned invalid JSON after repair attempt")
-        body = repair_body
+            # Never fail the user's upload because an AI provider returned prose.
+            return safe
 
-    result = _normalize(parsed)
+        result = _normalize(parsed)
+        # Ground every AI field against OCR. Invented values are discarded.
+        for field in ("title", "authority", "applicantName", "jobTitle", "workplace", "requestNumber", "officialReplyText"):
+            value = result.get(field)
+            if value and not _grounded(value, source_text):
+                result[field] = None
 
-    # Ground every extracted field in the OCR. If the model invents a value
-    # that does not occur in the source text, discard that value.
-    for field in ("title", "authority", "applicantName", "jobTitle", "workplace", "requestNumber", "officialReplyText"):
-        value = result.get(field)
-        if value and not _grounded(value, source_text):
-            result[field] = None
+        result["details"] = source_text
+        if str(parsed.get("hasOfficialReply", "")).lower() not in ("true", "1", "yes"):
+            result["hasOfficialReply"] = False
+            result["officialReplyText"] = None
 
-    # The details field is NEVER generated by AI: it is the complete OCR text.
-    result["details"] = source_text
-    if not result.get("officialReplyText"):
-        result["hasOfficialReply"] = False
-        result["officialReplyText"] = None
+        result["aiModel"] = body.get("model") or TEXT_MODELS[0]
+        result["aiRequestedModel"] = TEXT_MODELS[0]
+        return result
 
-    result["aiModel"] = body.get("model") or TEXT_MODELS[0]
-    result["aiRequestedModel"] = TEXT_MODELS[0]
-    return result
+    except (requests.RequestException, ValueError, KeyError, TypeError):
+        # OCR itself succeeded, so return the safe extracted form instead of
+        # showing "AI returned invalid JSON".
+        return safe
 
 def _document_data_urls(document_bytes: bytes, mime_type: str) -> list[str]:
     """Legacy Vision fallback: render PDF pages as compact images."""
