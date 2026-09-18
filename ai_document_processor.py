@@ -12,6 +12,8 @@ Important design rule:
 
 import os
 import re
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from io import BytesIO
 from typing import Any, Dict, List
@@ -228,19 +230,106 @@ def _extract_date(text: str) -> str | None:
     return _clean(match.group(1)) if match else None
 
 
-def _extract_title(text: str) -> str | None:
-    explicit = _line_value(text, ["الموضوع", "عنوان الطلب", "العنوان"])
-    if explicit:
-        return explicit
+def _today_egypt() -> str:
+    """Return today's date in Egypt, not the document's printed date."""
+    return datetime.now(ZoneInfo("Africa/Cairo")).strftime("%Y-%m-%d")
 
-    # Only copy an existing line; never invent a title.
+
+def _header_person(text: str) -> str | None:
+    """Extract the person named after 'مقدمة لسيادتكم' for special requests."""
+    match = re.search(
+        r"مقدمة\s*(?:ل|إلى)?\s*سيادتكم\s*[/\\:：-]?\s*([^\n\r]+)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return None
+
+    value = _clean(match.group(1))
+    if not value:
+        return None
+
+    # Stop before phone/address/contact lines when OCR places them nearby.
+    value = re.split(r"\s+(?:ت|تليفون|هاتف|موبايل|قومي|الرقم القومي)\s*[/\\:：-]?", value, maxsplit=1, flags=re.IGNORECASE)[0]
+    return _clean(value)
+
+
+def _recipient_header(text: str) -> tuple[str | None, str | None]:
+    """Extract recipient person and the job/title written after him."""
+    match = re.search(
+        r"(?:إلى|الى|السيد|السيد/|مقدم(?:ة)?\s+إلى|مقدمة\s+إلى)\s*(?:السيد\s*[/\\:]?\s*)?([^\n\r]+)",
+        text,
+        flags=re.IGNORECASE,
+    )
+    if not match:
+        return None, None
+
+    line = _clean(match.group(1))
+    if not line:
+        return None, None
+
+    # Typical form: 'اسم الشخص - الوظيفة' or 'اسم الشخص الوظيفة'.
+    line = re.split(r"\s+(?:ت|تليفون|هاتف|موبايل|قومي|الرقم القومي)\s*[/\\:：-]?", line, maxsplit=1, flags=re.IGNORECASE)[0]
+    parts = [p.strip() for p in re.split(r"\s*[-–—|،,]\s*", line) if p.strip()]
+    if len(parts) >= 2:
+        return parts[0], parts[1]
+
+    # If there is no separator, recognize common official job phrases.
+    job_match = re.search(
+        r"(.+?)\s+(وزير|محافظ|رئيس|نائب|وكيل|مدير|رئيس مجلس|سكرتير|رئيس الجهاز|رئيس الهيئة|العميد|اللواء|الدكتور|المهندس|الأستاذ)(?:\s+.*)?$",
+        line,
+        flags=re.IGNORECASE,
+    )
+    if job_match:
+        person = _clean(job_match.group(1))
+        job = _clean(line[len(job_match.group(1)):])
+        return person, job
+
+    return line, None
+
+
+def _extract_general_title(text: str) -> str | None:
+    """For general requests, title = the actual requested objective."""
+    explicit = _line_value(text, ["الموضوع", "موضوع الطلب", "المطلوب", "الطلب"])
+    if explicit:
+        return explicit[:500]
+
+    # Prefer a line that clearly states the requested work/service.
+    objective_pattern = re.compile(
+        r"(?:إنشاء|انشاء|رصف|ترصيف|توفير|إقامة|اقامة|إنارة|انارة|إصلاح|اصلاح|تركيب|توصيل|مد\s+خط|عمل\s+كوبري|إنشاء\s+كوبري|تطوير|رفع\s+كفاءة|تخصيص|إحلال|احلال|تمهيد|ازدواج|توسعة|توسيع)",
+        re.IGNORECASE,
+    )
     for line in text.splitlines():
         line = line.strip()
-        if not line:
-            continue
-        if re.search(r"(?:بشأن|طلب\s+بخصوص|طلب\s+الموافقة|التمس)", line):
+        if line and objective_pattern.search(line):
             return line[:500]
     return None
+
+
+def _extract_title(text: str, request_type: str) -> str | None:
+    """Apply the parliamentary document naming rules."""
+    if request_type == "special":
+        # Special request: the name after 'مقدمة لسيادتكم' is the title.
+        person = _header_person(text)
+        if person:
+            return person
+
+    return _extract_general_title(text)
+
+
+def _detect_request_type(text: str) -> str:
+    """Special = 'مقدمة لسيادتكم'; general = objective/recipient style request."""
+    if re.search(r"مقدمة\s*(?:ل|إلى)?\s*سيادتكم", text, flags=re.IGNORECASE):
+        return "special"
+
+    if re.search(
+        r"(?:إلى|الى)\s*(?:السيد\s*)?[/\\:]?",
+        text,
+        flags=re.IGNORECASE,
+    ):
+        return "general"
+
+    return "special"
 
 
 def _extract_reply(text: str) -> tuple[bool, str | None]:
@@ -266,19 +355,34 @@ def _extract_reply(text: str) -> tuple[bool, str | None]:
 
 
 def _basic_extract_from_ocr(source_text: str) -> Dict[str, Any]:
-    """Deterministic, non-generative extraction. Never invents values."""
+    """Deterministic extraction following the user's request-form rules."""
     reply_found, reply_text = _extract_reply(source_text)
+    request_type = _detect_request_type(source_text)
+
+    special_person = _header_person(source_text)
+    recipient_person, recipient_job = _recipient_header(source_text)
+
+    # In general requests, the authority is the recipient's official job/title
+    # when it is explicitly present in the opening 'إلى السيد...' line.
+    authority = (
+        recipient_job
+        or _line_value(
+            source_text,
+            ["الجهة", "الجهة المعنية", "الجهة المختصة", "الوزارة", "المؤسسة"],
+        )
+    )
+
+    applicant = special_person or _line_value(
+        source_text, ["مقدم الطلب", "اسم مقدم الطلب", "الاسم"]
+    )
 
     result: Dict[str, Any] = {
-        "title": _extract_title(source_text),
-        "reqDate": _extract_date(source_text),
-        "requestType": "special",
-        "authority": _line_value(
-            source_text, ["الجهة", "الجهة المعنية", "الجهة المختصة", "الوزارة", "المؤسسة"]
-        ),
-        "applicantName": _line_value(
-            source_text, ["مقدم الطلب", "اسم مقدم الطلب", "الاسم"]
-        ),
+        # The request date is ALWAYS today's Egypt date.
+        "title": _extract_title(source_text, request_type),
+        "reqDate": _today_egypt(),
+        "requestType": request_type,
+        "authority": authority,
+        "applicantName": applicant,
         "jobTitle": _line_value(
             source_text, ["الوظيفة", "المسمى الوظيفي", "الدرجة الوظيفية"]
         ),
@@ -293,6 +397,26 @@ def _basic_extract_from_ocr(source_text: str) -> Dict[str, Any]:
         "aiModel": "ocr-only",
         "aiRequestedModel": None,
     }
+
+    # For a general request, recipient job/title is the authority by rule.
+    if request_type == "general" and recipient_job:
+        result["authority"] = recipient_job
+
+    filled = sum(
+        1
+        for key in (
+            "title",
+            "reqDate",
+            "authority",
+            "applicantName",
+            "jobTitle",
+            "workplace",
+            "requestNumber",
+        )
+        if result.get(key)
+    )
+    result["confidence"] = min(100, filled * 12)
+    return result
 
     filled = sum(
         1
