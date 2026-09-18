@@ -318,10 +318,18 @@ def _extract_title(text: str, request_type: str) -> str | None:
 
 
 def _detect_request_type(text: str) -> str:
-    """Special = 'مقدمة لسيادتكم'; general = objective/recipient style request."""
+    """Detect the parliamentary document type from the document heading."""
+    # A document headed 'طلب إحاطة' is explicitly an إحاطة request.
+    # Check the beginning because OCR may find the phrase elsewhere in the body.
+    top = "\n".join(text.splitlines()[:8])
+    if re.search(r"طلب\s+إحاطة|طلب\s+احاطة", top, flags=re.IGNORECASE):
+        return "طلب إحاطة"
+
+    # Special request: the name after 'مقدمة لسيادتكم' is the title.
     if re.search(r"مقدمة\s*(?:ل|إلى)?\s*سيادتكم", text, flags=re.IGNORECASE):
         return "special"
 
+    # General request: addressed to a person/official and asking for an objective.
     if re.search(
         r"(?:إلى|الى)\s*(?:السيد\s*)?[/\\:]?",
         text,
