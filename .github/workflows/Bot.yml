@@ -52,6 +52,8 @@ jobs:
           FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
           FIREBASE_PATH: ${{ secrets.FIREBASE_PATH }}
           FIREBASE_CREDENTIALS_JSON: ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
+          OCR_SPACE_API_KEY: ${{ secrets.OCR_SPACE_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: |
           python - <<'PY'
           import os
@@ -62,6 +64,8 @@ jobs:
               "FIREBASE_URL",
               "FIREBASE_PATH",
               "FIREBASE_CREDENTIALS_JSON",
+              "OCR_SPACE_API_KEY",
+              "OPENROUTER_API_KEY",
           ]
           missing = [name for name in required if not os.environ.get(name, "").strip()]
           if missing:
@@ -92,4 +96,6 @@ jobs:
           FIREBASE_URL: ${{ secrets.FIREBASE_URL }}
           FIREBASE_PATH: ${{ secrets.FIREBASE_PATH }}
           FIREBASE_CREDENTIALS_JSON: ${{ secrets.FIREBASE_CREDENTIALS_JSON }}
+          OCR_SPACE_API_KEY: ${{ secrets.OCR_SPACE_API_KEY }}
+          OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
         run: python bot_launcher.py
